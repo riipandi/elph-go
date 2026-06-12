@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/riipandi/elph/internal/config"
-	"github.com/riipandi/elph/internal/views"
+	"github.com/riipandi/elph/internal/renderer"
 	"github.com/spf13/cobra"
 	"github.com/subosito/gotenv"
 )
@@ -32,7 +32,7 @@ var rootCmd = &cobra.Command{
 		}
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-		views.ViewHello()
+		renderer.Render()
 	},
 }
 

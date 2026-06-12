@@ -1,0 +1,13 @@
+{
+    "recommendations": [
+        "darkriszty.markdown-table-prettify",
+        "DrBlury.protobuf-vsc",
+        "EditorConfig.EditorConfig",
+        "foxundermoon.shell-format",
+        "golang.go",
+        "grindlemire.go-tui",
+        "ms-playwright.playwright",
+        "oxc.oxc-vscode",
+        "redhat.vscode-yaml"
+    ]
+}

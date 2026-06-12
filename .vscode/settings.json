@@ -3,6 +3,14 @@
     "editor.codeActionsOnSave": {
         "source.fixAll.oxc": "always"
     },
+    "files.associations": {
+        "*.gohtml": "html",
+        "*.tmpl": "html",
+        "*.vars": "dotenv",
+        "*.yaml.example": "yaml",
+        "*.yml.example": "yaml",
+        "wrangler.json": "jsonc",
+    },
     "files.readonlyInclude": {
         "**/*_gsx.go": true,
         "**/*.lock": true
@@ -15,6 +23,26 @@
 		"**/*_gsx.go": true,
         "**/*.lock": true
     },
+    "go.toolsEnvVars": {
+        "GOFLAGS": "-tags=release,debug"
+    },
+    "gopls": {
+        "buildFlags": ["-tags=release,debug"]
+    },
+    "go.formatTool": "gofmt",
+    "go.lintTool": "golangci-lint",
+    "go.lintOnSave": "package",
+    "protobuf.externalLinter.enabled": true,
+    "protobuf.externalLinter.linter": "buf",
+	"protobuf.externalLinter.bufPath": "buf",
+    "[go]": {
+        "editor.inlayHints.enabled": "onUnlessPressed",
+        "editor.defaultFormatter": "golang.go",
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+            "source.organizeImports": "never"
+        }
+	},
     "[javascript]": {
         "editor.codeActionsOnSave": {
             "source.fixAll": "explicit"

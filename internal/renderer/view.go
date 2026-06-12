@@ -111,20 +111,37 @@ func (m Model) footerView() string {
 	w := m.width
 	wd := filepath.Base(m.workDir)
 
-	line1 := fmt.Sprintf("%s | opencode | T: high | IMG", m.modelName)
-	line1right := "$0.00 | 0.0% (262k)"
-	pad1 := max(w-lipgloss.Width(line1)-lipgloss.Width(line1right), 1)
+	// Content width inside footerStyle is w-2 (Width(w-2) + Padding(0,1))
+	cw := w - 2
 
-	line2 := fmt.Sprintf("%s [%s]", wd, m.sessionID)
-	line2right := fmt.Sprintf("turn: 0 | %s [+00 -00]", m.branch)
-	pad2 := max(w-lipgloss.Width(line2)-lipgloss.Width(line2right), 1)
+	// Truncate session ID to fit (keep prefix + first 8 chars)
+	sid := m.sessionID
+	if len(sid) > 16 {
+		sid = sid[:16]
+	}
 
 	s := lipgloss.NewStyle().Foreground(dimText)
 
+	line1Left := fmt.Sprintf("%s | opencode | T: high | IMG", m.modelName)
+	line1Right := "$0.00 | 0.0% (262k)"
+
+	line2Left := fmt.Sprintf("%s [%s]", wd, sid)
+	line2Right := fmt.Sprintf("turn: 0 | %s [+00 -00]", m.branch)
+
+	// Use JoinHorizontal with fixed width for proper right-alignment
+	row1 := lipgloss.JoinHorizontal(lipgloss.Top,
+		s.Render(line1Left),
+		s.Render(strings.Repeat(" ", max(cw-lipgloss.Width(line1Left)-lipgloss.Width(line1Right), 0))),
+		s.Render(line1Right),
+	)
+
+	row2 := lipgloss.JoinHorizontal(lipgloss.Top,
+		s.Render(line2Left),
+		s.Render(strings.Repeat(" ", max(cw-lipgloss.Width(line2Left)-lipgloss.Width(line2Right), 0))),
+		s.Render(line2Right),
+	)
+
 	return footerStyle(w).Render(
-		lipgloss.JoinVertical(lipgloss.Left,
-			s.Render(line1+strings.Repeat(" ", pad1)+line1right),
-			s.Render(line2+strings.Repeat(" ", pad2)+line2right),
-		),
+		lipgloss.JoinVertical(lipgloss.Left, row1, row2),
 	)
 }

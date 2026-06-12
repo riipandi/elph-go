@@ -3,23 +3,27 @@
 ```
 ╭────────────────────────────────────────────────────────────────────────────────────────╮
 │                                                                                        │
-│   ⣿⣿⡟⣿⡟⣿⣿    Welcome to Elph v0.79.1                                                   │
+│   ⣿⣿⡟⣿⡟⣿⣿    Welcome to Elph v0.79.1 (update available)                                │
 │   ⣿⣿⣿⣿⣿⣿⣿    Send /changelog to show version history.                                  │
 │                                                                                        │
 │  Directory:  ~/some/path/to/project_dir                                                │
-│  Model:      DeepSeek V4 Flash Free [opencode] (000 available)                         │   (BANNER)
+│  Model:      Claude Sonnet 4.6 [anthropic] (000 available)                             │   <- BANNER
 │  Stats:      00 ext, 00 commands, 00 skills, 00 tools                                  │
+│  MCP Server: 0/0 connected (000 tools)                                                 │
 │                                                                                        │
 │  Tip: Use --no-session for ephemeral mode — no session file is saved, useful for       │
 │  one-off queries.                                                                      │
 │                                                                                        │
 ╰────────────────────────────────────────────────────────────────────────────────────────╯
 
- MCP: 0 servers connected (000 tools)                                                        (RESPONSE STREAM)
+ ----------------------------------------------------------------------------------------
+ > This is an example input message from user                                                <- MAIN_AREA / RESPONSE_STREAM
+ ----------------------------------------------------------------------------------------
+ This is an example response from AI agent
 
 ╭────────────────────────────────────────────────────────────────────────────────────────╮
-│ >                                                                                      │   (INPUT PROMPT)
+│ >                                                                                      │   <- INPUT_PROMPT
 ╰────────────────────────────────────────────────────────────────────────────────────────╯
-MODEL_NAME | PROVIDER | T: high | IMG                                  $0.00 | 0.0% (262k)   (FOOTER / STATUSLINE)
+MODEL_NAME | PROVIDER | T: high | IMG                                  $0.00 | 0.0% (262k)   <- FOOTER / STATUSLINE
 project_dir [sess_abcd12345]                                      turn: 0 | main [+00 -00]
 ```

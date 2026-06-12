@@ -9,7 +9,6 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	"github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/riipandi/elph/internal/config"
 	"github.com/riipandi/elph/internal/constants"
 	"go.jetify.com/typeid/v2"
 )
@@ -96,7 +95,7 @@ func New() Model {
 
 	return Model{
 		input:         ti,
-		modelName:     config.AppName,
+		modelName:     "Claude Sonnet 4.6",
 		mode:          constants.ModeBuild,
 		sessionID:     sid,
 		workDir:       wd,

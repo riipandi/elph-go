@@ -9,15 +9,6 @@
 You will need [`Go >=1.26`][golang], [`Node.js >= 24.15`][nodejs], [`PNPM >= 11.5`][pnpm],
 and [`Docker >= 20.10`][docker] installed on your machine.
 
-Also, you need to install the following tools:
-
-```sh
-go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest
-go install github.com/grindlemire/go-tui/cmd/tui@latest
-go install github.com/pressly/goose/v3/cmd/goose@latest
-go install gotest.tools/gotestsum@latest
-```
-
 Read the [CONTRIBUTING.md](./CONTRIBUTING.md) for detailed guidelines on contributing to this project.
 
 ### Up and Running
@@ -26,6 +17,9 @@ Read the [CONTRIBUTING.md](./CONTRIBUTING.md) for detailed guidelines on contrib
 # Clone the repository
 git clone <repository-url>
 cd elph
+
+# Install required toolchain
+make prepare
 
 # Install dependencies
 make deps

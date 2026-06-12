@@ -1,0 +1,77 @@
+package main
+
+import (
+	"fmt"
+	"os"
+
+	"github.com/riipandi/elph/internal/config"
+	"github.com/spf13/cobra"
+	"github.com/subosito/gotenv"
+)
+
+var (
+	argVersionShort    bool
+	argVersionSemantic bool
+	rootEnvFile        string
+)
+
+var rootCmd = &cobra.Command{
+	Use:   "elph",
+	Short: "Minimalist AI agent companion",
+	CompletionOptions: cobra.CompletionOptions{
+		DisableDefaultCmd: true,
+		HiddenDefaultCmd:  true,
+	},
+	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		if rootEnvFile != "" {
+			if err := gotenv.OverLoad(rootEnvFile); err != nil {
+				fmt.Fprintf(os.Stderr, "failed to load env file %s: %v\n", rootEnvFile, err)
+				os.Exit(1)
+			}
+		}
+	},
+	Run: func(cmd *cobra.Command, args []string) {
+		_ = cmd.Help()
+	},
+}
+
+var versionCmd = &cobra.Command{
+	Use:   "version",
+	Short: "Show the application version",
+	Run: func(cmd *cobra.Command, args []string) {
+		if argVersionShort {
+			fmt.Printf("%s (%s)\n", config.AppVersion, config.BuildHash)
+			return
+		} else if argVersionSemantic {
+			fmt.Printf("%s\n", config.AppVersion)
+			return
+		} else {
+			fmt.Printf("%s %s (%s) %s\n", config.AppIdentifier, config.AppVersion, config.BuildHash, config.Platform)
+		}
+	},
+}
+
+func Execute() {
+	if err := rootCmd.Execute(); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+	os.Exit(0)
+}
+
+func init() {
+	// TODO: Initialize application configuration here
+
+	// Set `true` to disable the default help subcommand
+	rootCmd.SetHelpCommand(&cobra.Command{Hidden: false})
+
+	// Add version subcommand
+	rootCmd.AddCommand(versionCmd)
+	versionCmd.Flags().BoolVarP(&argVersionShort, "short", "s", false, "Show short version")
+	versionCmd.Flags().BoolVarP(&argVersionSemantic, "semantic", "S", false, "Show semantic version")
+
+	// Global flags
+	rootCmd.PersistentFlags().StringVar(&rootEnvFile, "env-file", "", "Environment variable file (e.g., .env.local)")
+
+	// TODO: Register subcommand here
+}

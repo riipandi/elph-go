@@ -11,6 +11,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/riipandi/elph/internal/config"
 	"github.com/riipandi/elph/internal/constants"
+	"go.jetify.com/typeid/v2"
 )
 
 // ─── Braille Logo ────────────────────────────────────────────────────────────
@@ -20,20 +21,8 @@ const (
 	logoLine2 = "\u28FF\u28FF\u28FF\u28FF\u28FF\u28FF\u28FF"
 )
 
-// ─── Tips ────────────────────────────────────────────────────────────────────
-
-var tips = []string{
-	"Use --no-session for ephemeral mode — no session file is saved, useful for one-off queries.",
-	"Send /changelog to show version history.",
-	"Use /help to see all available commands.",
-	"Press Ctrl+C once to cancel, twice to exit.",
-	"Type :q and press Enter to quit (vim-style exit).",
-	"Press Ctrl+D to exit the application.",
-	"Use Tab and Shift+Tab to switch between agent modes.",
-}
-
 func randomTip() string {
-	return tips[rand.Intn(len(tips))]
+	return constants.Tips[rand.Intn(len(constants.Tips))]
 }
 
 // ─── Mode Ordering ───────────────────────────────────────────────────────────
@@ -95,6 +84,7 @@ type Model struct {
 
 func New() Model {
 	wd, _ := os.Getwd()
+	sid := typeid.MustGenerate("sess").String()
 
 	ti := textinput.New()
 	ti.Placeholder = "Type a message or /command..."
@@ -108,7 +98,7 @@ func New() Model {
 		input:         ti,
 		modelName:     config.AppName,
 		mode:          constants.ModeBuild,
-		sessionID:     "sess_abc123",
+		sessionID:     sid,
 		workDir:       wd,
 		branch:        "main",
 		messages:      []string{},

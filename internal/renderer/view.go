@@ -113,17 +113,11 @@ func (m Model) footerView() string {
 
 	line1 := fmt.Sprintf("%s | opencode | T: high | IMG", m.modelName)
 	line1right := "$0.00 | 0.0% (262k)"
-	pad1 := w - lipgloss.Width(line1) - lipgloss.Width(line1right)
-	if pad1 < 1 {
-		pad1 = 1
-	}
+	pad1 := max(w-lipgloss.Width(line1)-lipgloss.Width(line1right), 1)
 
 	line2 := fmt.Sprintf("%s [%s]", wd, m.sessionID)
 	line2right := fmt.Sprintf("turn: 0 | %s [+00 -00]", m.branch)
-	pad2 := w - lipgloss.Width(line2) - lipgloss.Width(line2right)
-	if pad2 < 1 {
-		pad2 = 1
-	}
+	pad2 := max(w-lipgloss.Width(line2)-lipgloss.Width(line2right), 1)
 
 	s := lipgloss.NewStyle().Foreground(dimText)
 

@@ -104,6 +104,7 @@ project_dir [sess_abcd12345] agent_mode          turn: 0 | main [-]
 - **Submit**: `Enter` sends message and clears input.
 - **Prompt prefix**: Rendered as a separate element before the textarea (not using textarea's Prompt).
 - **Trigger stripped on submit**: `/cmd` → message is `cmd`, `!!rpt` → message is `rpt`.
+- **Configurable**: `showPromptPrefix` (default: `true`). When `false`, prefix is hidden.
 
 ### Prompt Prefix (dynamic)
 

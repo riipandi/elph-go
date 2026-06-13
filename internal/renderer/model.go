@@ -75,24 +75,25 @@ type message struct {
 }
 
 type Model struct {
-	ready         bool
-	width         int
-	height        int
-	input         textarea.Model
-	vp            viewport.Model
-	messages      []message
-	modelName     string
-	provider      string
-	mode          constants.AgentMode
-	thinkingLevel constants.ThinkingLevel
-	sessionID     string
-	workDir       string
-	branch        string
-	tip           string
-	contextUsed   float64 // 0.0 – 1.0
-	gitAdded      int
-	gitDeleted    int
-	promptChar    string      // >, /, $, #
+	ready            bool
+	width            int
+	height           int
+	input            textarea.Model
+	vp               viewport.Model
+	messages         []message
+	modelName        string
+	provider         string
+	mode             constants.AgentMode
+	thinkingLevel    constants.ThinkingLevel
+	sessionID        string
+	workDir          string
+	branch           string
+	tip              string
+	contextUsed      float64 // 0.0 – 1.0
+	gitAdded         int
+	gitDeleted       int
+	promptChar       string // >, /, $, #
+	showPromptPrefix bool   // show prompt prefix in input
 
 	quitting      bool
 	ctrlCPress    int // 0=none, 1=first, 2=second (input cleared)
@@ -116,20 +117,20 @@ func New() Model {
 	ta.Focus()
 
 	return Model{
-		input:          ta,
-		modelName:      "Claude Sonnet 4.6",
-		provider:       "anthropic",
-		mode:           constants.ModeBuild,
-		thinkingLevel:  constants.ThinkingHigh,
-		sessionID:      sid,
-		workDir:        wd,
-		branch:         "main",
-		messages:       []message{},
-		tip:            randomTip(),
-		contextUsed:    0.0,
-		promptChar:     ">",
-
-		ctrlCNoticeID:  -1,
+		input:            ta,
+		modelName:        "Claude Sonnet 4.6",
+		provider:         "anthropic",
+		mode:             constants.ModeBuild,
+		thinkingLevel:    constants.ThinkingHigh,
+		sessionID:        sid,
+		workDir:          wd,
+		branch:           "main",
+		messages:         []message{},
+		tip:              randomTip(),
+		contextUsed:      0.0,
+		promptChar:       ">",
+		showPromptPrefix: true,
+		ctrlCNoticeID:    -1,
 	}
 }
 

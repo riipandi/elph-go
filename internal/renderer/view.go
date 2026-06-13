@@ -133,10 +133,14 @@ func (m Model) streamView() string {
 
 func (m Model) inputView() string {
 	w := m.width
-	prefix := lipgloss.NewStyle().Foreground(whiteCol).Bold(false).Render(m.promptChar + " ")
-	prefixW := lipgloss.Width(prefix)
-	m.input.SetWidth(w - 6 - prefixW)
-	return inputStyle(w, m.mode).Render(prefix + m.input.View())
+	if m.showPromptPrefix {
+		prefix := lipgloss.NewStyle().Foreground(whiteCol).Bold(true).Render(m.promptChar + " ")
+		prefixW := lipgloss.Width(prefix)
+		m.input.SetWidth(w - 6 - prefixW)
+		return inputStyle(w, m.mode).Render(prefix + m.input.View())
+	}
+	m.input.SetWidth(w - 6)
+	return inputStyle(w, m.mode).Render(m.input.View())
 }
 
 func (m Model) footerView() string {

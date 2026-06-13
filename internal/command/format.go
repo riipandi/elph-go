@@ -1,0 +1,79 @@
+package command
+
+import (
+	"strings"
+
+	"charm.land/lipgloss/v2"
+)
+
+const columnGap = 2
+
+// DisplayName returns the slash command id, including aliases when present.
+func DisplayName(cmd SlashCommand) string {
+	name := "/" + cmd.Name
+	if len(cmd.Aliases) == 0 {
+		return name
+	}
+	return name + " (" + strings.Join(cmd.Aliases, ", ") + ")"
+}
+
+// CommandID returns the slash command id shown in lists and the palette.
+func CommandID(cmd SlashCommand) string {
+	return "/" + cmd.Name
+}
+
+// NameColumnWidth returns the display width of the widest command id column.
+func NameColumnWidth(commands []SlashCommand, includeAliases bool) int {
+	width := 0
+	for _, cmd := range commands {
+		name := CommandID(cmd)
+		if includeAliases {
+			name = DisplayName(cmd)
+		}
+		if w := lipgloss.Width(name); w > width {
+			width = w
+		}
+	}
+	return width
+}
+
+// AlignedRow splits a command into a justified command id and summary.
+func AlignedRow(cmd SlashCommand, nameColW int, includeAliases bool) (name, gap, summary string) {
+	if includeAliases {
+		name = DisplayName(cmd)
+	} else {
+		name = CommandID(cmd)
+	}
+	gap = strings.Repeat(" ", max(nameColW-lipgloss.Width(name)+columnGap, columnGap))
+	summary = cmd.Description
+	return name, gap, summary
+}
+
+// FormatList renders commands as a justified two-column list.
+func FormatList(commands []SlashCommand) string {
+	if len(commands) == 0 {
+		return ""
+	}
+
+	nameColW := NameColumnWidth(commands, true)
+	var b strings.Builder
+	for i, cmd := range commands {
+		name, gap, summary := AlignedRow(cmd, nameColW, true)
+		if i > 0 {
+			b.WriteByte('\n')
+		}
+		b.WriteString("  ")
+		b.WriteString(name)
+		b.WriteString(gap)
+		b.WriteString(summary)
+	}
+	return b.String()
+}
+
+// FormatHelp renders the full /help output.
+func FormatHelp(commands []SlashCommand) string {
+	var b strings.Builder
+	b.WriteString("Available slash commands:\n\n")
+	b.WriteString(FormatList(commands))
+	return strings.TrimRight(b.String(), "\n")
+}

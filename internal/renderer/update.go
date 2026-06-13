@@ -130,6 +130,19 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, cmd
 		}
 
+		if !m.busy && m.input.Focused() {
+			var consumed bool
+			m, consumed = m.handleCommandPaletteKey(msg)
+			if consumed {
+				prevChrome := m.chromeH
+				m = m.syncCommandSuggestions()
+				if m.chromeHeight() != prevChrome {
+					m = m.syncLayout(m.content.AtBottom())
+				}
+				return m, nil
+			}
+		}
+
 		if isContentScrollKey(msg) {
 			var cmd tea.Cmd
 			m.content, cmd = m.content.Update(msg)
@@ -226,6 +239,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m = m.syncInputWidth()
 	}
 
+	prevSuggest := len(m.cmdSuggestions)
+	m = m.syncCommandSuggestions()
+	if len(m.cmdSuggestions) != prevSuggest {
+		m = m.syncLayout(m.content.AtBottom())
+	}
+
 	// Re-layout when chrome height changes (activity, multiline input, etc.).
 	chromeH := m.chromeHeight()
 	if chromeH != m.chromeH {
@@ -239,12 +258,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m Model) addUserMessage(text string) Model {
 	m.messages = append(m.messages, message{text: text, kind: constants.MessageUser})
+	m.session.AppendLog("user", text)
 	m.contentDirty = true
 	return m
 }
 
 func (m Model) addAIMessage(text string) Model {
 	m.messages = append(m.messages, message{text: text, kind: constants.MessageAI})
+	m.session.AppendLog("ai", text)
 	m.contentDirty = true
 	return m
 }
@@ -263,6 +284,7 @@ func (m Model) addThinkingMessage(text string) Model {
 
 func (m Model) withMessage(text string) (Model, tea.Cmd) {
 	m.messages = append(m.messages, message{text: text, kind: constants.MessageSystem})
+	m.session.AppendLog("system", text)
 	m.contentDirty = true
 	m = m.syncLayout(true)
 	return m, nil

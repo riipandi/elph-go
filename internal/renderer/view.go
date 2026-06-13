@@ -38,6 +38,15 @@ func cachedInputBorder(m constants.AgentMode) lipgloss.Style {
 		Padding(0, 1)
 }
 
+// cachedInputBorderAttached is the input border when a command palette sits directly above.
+func cachedInputBorderAttached(m constants.AgentMode) lipgloss.Style {
+	return lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(constants.ModeBorderColor(m)).
+		BorderTop(false).
+		Padding(0, 1)
+}
+
 // ─── View ────────────────────────────────────────────────────────────────────
 
 func (m Model) View() tea.View {
@@ -63,7 +72,7 @@ func (m Model) viewParts() []string {
 	if av := m.activityView(); av != "" {
 		parts = append(parts, av)
 	}
-	parts = append(parts, m.inputView(), m.footerView())
+	parts = append(parts, m.inputChromeView(), m.footerView())
 	return parts
 }
 
@@ -72,7 +81,7 @@ func (m Model) renderedViewHeight() int {
 }
 
 func (m Model) chromeHeight() int {
-	h := lipgloss.Height(m.inputView()) + lipgloss.Height(m.footerView())
+	h := lipgloss.Height(m.inputChromeView()) + lipgloss.Height(m.footerView())
 	if m.activity != agent.ActivityIdle {
 		h += lipgloss.Height(m.activityView())
 	}
@@ -301,19 +310,35 @@ func (m Model) inputBodyView() string {
 	return overlayInputScrollBar(body, m.inputScrollBarView(), m.inputWidth)
 }
 
-func (m Model) inputView() string {
+func (m Model) inputChromeView() string {
+	palette := m.commandPaletteView()
+	inputBox := m.inputBoxView(palette != "")
+
+	if palette != "" {
+		return lipgloss.JoinVertical(lipgloss.Top, palette, inputBox)
+	}
+	if m.activity == agent.ActivityIdle {
+		return lipgloss.NewStyle().MarginTop(1).Render(inputBox)
+	}
+	return inputBox
+}
+
+func (m Model) inputBoxView(attached bool) string {
 	border := cachedInputBorder(m.mode)
+	if attached {
+		border = cachedInputBorderAttached(m.mode)
+	}
 	boxW := borderedChromeWidth(m.chromeOuterWidth())
 	inner := m.inputBodyView()
 	if m.showPromptPrefix {
 		prefix := lipgloss.NewStyle().Foreground(constants.White).Bold(true).Render(m.promptChar + " ")
 		inner = prefix + inner
 	}
-	rendered := border.Width(boxW).Render(inner)
-	if m.activity == agent.ActivityIdle {
-		rendered = lipgloss.NewStyle().MarginTop(1).Render(rendered)
-	}
-	return rendered
+	return border.Width(boxW).Render(inner)
+}
+
+func (m Model) inputView() string {
+	return m.inputChromeView()
 }
 
 func (m Model) footerView() string {

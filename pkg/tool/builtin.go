@@ -92,10 +92,10 @@ var builtin = []Definition{
 		Description:     "Enter Plan mode",
 	},
 	{
-		Name:            ExitPlanMode,
-		Category:        CategoryPlanMode,
-		DefaultApproval: ApprovalAutoAllow,
-		Description:     "Exit Plan mode and submit the plan",
+		Name:                 ExitPlanMode,
+		Category:             CategoryPlanMode,
+		DefaultApproval:      ApprovalAutoAllow,
+		Description:          "Exit Plan mode and submit the plan",
 		RequiresConfirmation: true,
 	},
 

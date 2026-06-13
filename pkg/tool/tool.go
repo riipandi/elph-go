@@ -18,8 +18,8 @@ const (
 type Approval string
 
 const (
-	ApprovalAutoAllow          Approval = "auto-allow"
-	ApprovalRequiresApproval   Approval = "requires-approval"
+	ApprovalAutoAllow        Approval = "auto-allow"
+	ApprovalRequiresApproval Approval = "requires-approval"
 )
 
 // Definition describes a built-in tool's metadata.

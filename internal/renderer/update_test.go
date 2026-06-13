@@ -188,7 +188,6 @@ func TestSubmitStripsTriggerPrefixes(t *testing.T) {
 	}{
 		{"!ls", "ls"},
 		{"!!rm -rf", "rm -rf"},
-		{"/help", "help"},
 	}
 	for _, tc := range cases {
 		m := testInputModel(t)
@@ -199,6 +198,93 @@ func TestSubmitStripsTriggerPrefixes(t *testing.T) {
 		require.Len(t, m.messages, 1, "input %q", tc.input)
 		require.Equal(t, tc.want, m.messages[0].text, "input %q", tc.input)
 	}
+}
+
+func TestSubmitSlashCommandHelp(t *testing.T) {
+	m := testInputModel(t)
+	m.input.SetValue("/help")
+
+	updated, cmd := m.Update(keyEnter())
+	m = updated.(Model)
+
+	require.Nil(t, cmd)
+	require.False(t, m.busy)
+	require.Len(t, m.messages, 2)
+	require.Equal(t, constants.MessageUser, m.messages[0].kind)
+	require.Equal(t, "/help", m.messages[0].text)
+	require.Equal(t, constants.MessageSystem, m.messages[1].kind)
+	require.Contains(t, m.messages[1].text, "/changelog")
+	require.Contains(t, m.messages[1].text, "/diagnostic:list-tools")
+}
+
+func TestSubmitSlashCommandQuitExits(t *testing.T) {
+	m := testInputModel(t)
+	m.input.SetValue("/quit")
+
+	updated, cmd := m.Update(keyEnter())
+	m = updated.(Model)
+
+	require.True(t, m.quitting)
+	require.NotNil(t, cmd)
+}
+
+func TestSubmitSlashCommandExitExits(t *testing.T) {
+	m := testInputModel(t)
+	m.input.SetValue("/exit")
+
+	updated, cmd := m.Update(keyEnter())
+	m = updated.(Model)
+
+	require.True(t, m.quitting)
+	require.NotNil(t, cmd)
+}
+
+func TestSuggestFuzzyQuitInPalette(t *testing.T) {
+	m := testInputModel(t)
+	m.input.SetValue("/quit")
+	m = m.syncCommandSuggestions()
+
+	require.True(t, m.commandPaletteActive())
+	require.Equal(t, "exit", m.cmdSuggestions[0].Name)
+}
+
+func TestSubmitDiagnosticOpenLog(t *testing.T) {
+	m := testInputModel(t)
+	m.input.SetValue("/diagnostic:open-log")
+
+	updated, cmd := m.Update(keyEnter())
+	m = updated.(Model)
+
+	require.Nil(t, cmd)
+	require.False(t, m.busy)
+	require.Equal(t, constants.MessageSystem, m.messages[1].kind)
+	require.Contains(t, m.messages[1].text, ".elph/logs/")
+}
+
+func TestSubmitDiagnosticListTools(t *testing.T) {
+	m := testInputModel(t)
+	m.input.SetValue("/diagnostic:list-tools")
+
+	updated, cmd := m.Update(keyEnter())
+	m = updated.(Model)
+
+	require.Nil(t, cmd)
+	require.False(t, m.busy)
+	require.Equal(t, constants.MessageSystem, m.messages[1].kind)
+	require.Contains(t, m.messages[1].text, "Read")
+	require.Contains(t, m.messages[1].text, "diagnostic_list_tools")
+}
+
+func TestSubmitSlashCommandUnknown(t *testing.T) {
+	m := testInputModel(t)
+	m.input.SetValue("/nope")
+
+	updated, cmd := m.Update(keyEnter())
+	m = updated.(Model)
+
+	require.Nil(t, cmd)
+	require.False(t, m.busy)
+	require.Contains(t, m.messages[1].text, "Unknown command")
 }
 
 func TestSyncPromptPrefixChangesChar(t *testing.T) {

@@ -9,6 +9,7 @@ import (
 	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	"github.com/riipandi/elph/internal/command"
 	"github.com/riipandi/elph/internal/constants"
 	"github.com/riipandi/elph/internal/runtime"
 	"github.com/riipandi/elph/pkg/core/agent"
@@ -107,6 +108,9 @@ type Model struct {
 	quitting      bool
 	ctrlCPress    int // 0=none, 1=first, 2=second (input cleared)
 	ctrlCNoticeID int // index in messages of the notice (-1 = none)
+
+	cmdSuggestions  []command.SlashCommand
+	cmdSuggestIndex int
 }
 
 // Shared "no background" style reused in textarea init to reduce allocations.

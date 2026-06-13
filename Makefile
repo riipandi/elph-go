@@ -47,7 +47,7 @@ integration: ## Run integration tests
 	@$(GOTEST) $(TEST_FLAGS) -tags=integration ./internal/...
 
 coverage: ## Run tests with coverage report
-	@$(GOTEST) ./internal/... -v -coverprofile=coverage.out
+	@$(GOTEST) ./internal/... ./pkg/... -v -coverprofile=coverage.out
 	@$(GO) tool cover -html=coverage.out -o coverage.html
 
 # ─── Code Quality ────────────────────────────────────────────────────────────

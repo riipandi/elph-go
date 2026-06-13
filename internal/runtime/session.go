@@ -12,15 +12,25 @@ type Session struct {
 	ID           typeid.TypeID
 	WorkDir      string
 	SystemPrompt string
+	LogPath      string
 }
 
 // NewSession creates a session with a generated typeid and assembled system prompt.
 func NewSession(workDir string) Session {
+	id := typeid.MustGenerate("sess")
+	logPath, _ := OpenLog(workDir, id)
+
 	return Session{
-		ID:           typeid.MustGenerate("sess"),
+		ID:           id,
 		WorkDir:      workDir,
 		SystemPrompt: prompt.Build(prompt.Options{WorkDir: workDir}),
+		LogPath:      logPath,
 	}
+}
+
+// AppendLog records an event in the session log file.
+func (s Session) AppendLog(kind, text string) {
+	_ = AppendLog(s.LogPath, kind, text)
 }
 
 // RunTurn starts an agent turn for the given user prompt.

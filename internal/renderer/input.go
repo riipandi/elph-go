@@ -11,6 +11,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
+	"github.com/riipandi/elph/internal/command"
 	"github.com/riipandi/elph/pkg/core/agent"
 )
 
@@ -231,7 +232,11 @@ func (m Model) maxInputHeight() int {
 	if m.activity != agent.ActivityIdle {
 		activityH = lipgloss.Height(m.activityView())
 	}
-	avail := m.height - footerH - activityH - minViewportRows - inputChromeSlack
+	paletteH := 0
+	if m.commandPaletteActive() {
+		paletteH = m.commandPaletteHeight()
+	}
+	avail := m.height - footerH - activityH - paletteH - minViewportRows - inputChromeSlack
 	return min(max(avail, 1), maxInputLines)
 }
 
@@ -368,6 +373,32 @@ func (m Model) resetInput() Model {
 	return m
 }
 
+func isSlashCommand(s string) bool {
+	return strings.HasPrefix(strings.TrimLeft(s, " \t"), "/")
+}
+
+func (m Model) handleSlashCommand(raw string) (Model, tea.Cmd, bool) {
+	m = m.addUserMessage(strings.TrimSpace(raw))
+	m = m.resetInput()
+
+	result := command.Execute(raw, command.Context{
+		WorkDir:      m.workDir,
+		SystemPrompt: m.session.SystemPrompt,
+		LogPath:      m.session.LogPath,
+	})
+	if result.Quit {
+		m.quitting = true
+		return m, tea.Sequence(disableTerminalFeatures(), tea.Quit), true
+	}
+	if output := strings.TrimSpace(result.Output); output != "" {
+		m, cmd := m.withMessage(output)
+		m = m.syncLayout(true)
+		return m, cmd, true
+	}
+	m = m.syncLayout(true)
+	return m, nil, true
+}
+
 func (m Model) trySubmitInput() (Model, tea.Cmd, bool) {
 	val := normalizeInputForSubmit(m.input.Value())
 	if val == "" {
@@ -376,6 +407,9 @@ func (m Model) trySubmitInput() (Model, tea.Cmd, bool) {
 	if val == ":q" || val == ":q!" {
 		m.quitting = true
 		return m, tea.Sequence(disableTerminalFeatures(), tea.Quit), true
+	}
+	if isSlashCommand(val) {
+		return m.handleSlashCommand(val)
 	}
 	val = stripTrigger(val)
 	m = m.addUserMessage(val)

@@ -11,7 +11,7 @@ var Tips = []string{
 	"Use Tab to switch focus between elements.",
 	"Type /model <name> to switch the active AI model.",
 	"Use /settings to open the configuration panel.",
-	"Send /debug for diagnostic information.",
+	"Send /diagnostic:debug for diagnostic information.",
 	"Questions about code? Try /plan first for architecture-aware answers.",
 	"Use Tab and Shift+Tab to switch between agent modes.",
 	"Use /diff to view uncommitted changes in your workspace.",

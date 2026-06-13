@@ -163,14 +163,17 @@ func wrapLine(width int, s string) string {
 }
 
 // footerRow renders a status line with a truncated left segment and a right segment
-// flush to the edge.
+// flush to the right edge. The left block is width-fixed so JoinHorizontal pads
+// the gap between the two sides.
 func footerRow(contentW int, left, right string) string {
 	rightW := lipgloss.Width(right)
 	if rightW >= contentW {
 		return clampLine(contentW, right)
 	}
-	leftW := contentW - rightW
-	return lipgloss.JoinHorizontal(lipgloss.Top, clampLine(leftW, left), right)
+	leftW := max(contentW-rightW, 0)
+	leftPart := lipgloss.NewStyle().Width(leftW).MaxHeight(1).Render(left)
+	row := lipgloss.JoinHorizontal(lipgloss.Top, leftPart, right)
+	return lipgloss.NewStyle().Width(contentW).MaxHeight(1).Render(row)
 }
 
 // ─── Sub-views ───────────────────────────────────────────────────────────────

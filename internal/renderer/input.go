@@ -382,9 +382,10 @@ func (m Model) handleSlashCommand(raw string) (Model, tea.Cmd, bool) {
 	m = m.resetInput()
 
 	result := command.Execute(raw, command.Context{
-		WorkDir:      m.workDir,
-		SystemPrompt: m.session.SystemPrompt,
-		LogPath:      m.session.LogPath,
+		WorkDir:         m.workDir,
+		SystemPrompt:    m.session.SystemPrompt,
+		LogPath:         m.session.LogPath,
+		RequestsLogPath: m.session.RequestsLogPath,
 	})
 	if result.Quit {
 		m.quitting = true

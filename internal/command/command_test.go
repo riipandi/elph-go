@@ -86,19 +86,38 @@ func TestDiagnosticSystemPromptEmpty(t *testing.T) {
 	require.Contains(t, result.Output, "not yet implemented")
 }
 
-func TestDiagnosticOpenLog(t *testing.T) {
+func TestDiagnosticOpenLogSystem(t *testing.T) {
 	dir := t.TempDir()
 	session := runtime.NewSession(dir)
 	require.NoError(t, runtime.AppendLog(session.LogPath, "user", "hello"))
+	require.NoError(t, runtime.AppendLog(session.LogPath, "system", "notice"))
 
-	result := Execute("/diagnostic:open-log", Context{LogPath: session.LogPath})
+	result := Execute("/diagnostic:open-log system", Context{LogPath: session.LogPath})
 	require.True(t, result.OK)
 	require.Contains(t, result.Output, session.LogPath)
-	require.Contains(t, result.Output, "[user] hello")
+	require.Contains(t, result.Output, "[system] notice")
+	require.NotContains(t, result.Output, "[user] hello")
 }
 
-func TestDiagnosticOpenLogMissingFile(t *testing.T) {
+func TestDiagnosticOpenLogRequests(t *testing.T) {
+	dir := t.TempDir()
+	session := runtime.NewSession(dir)
+	require.NoError(t, runtime.AppendLog(session.RequestsLogPath, "requests", "POST /v1/messages"))
+
+	result := Execute("/diagnostic:open-log requests", Context{RequestsLogPath: session.RequestsLogPath})
+	require.True(t, result.OK)
+	require.Contains(t, result.Output, session.RequestsLogPath)
+	require.Contains(t, result.Output, "POST /v1/messages")
+}
+
+func TestDiagnosticOpenLogUsage(t *testing.T) {
 	result := Execute("/diagnostic:open-log", Context{})
 	require.True(t, result.OK)
-	require.Contains(t, result.Output, "not available")
+	require.Contains(t, result.Output, "Usage: /diagnostic:open-log <requests | system>")
+}
+
+func TestDiagnosticOpenLogUnknownArg(t *testing.T) {
+	result := Execute("/diagnostic:open-log debug", Context{})
+	require.True(t, result.OK)
+	require.Contains(t, result.Output, "unknown log")
 }

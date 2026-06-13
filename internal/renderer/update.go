@@ -132,10 +132,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		if !m.busy && m.input.Focused() {
 			var consumed bool
-			m, consumed = m.handleCommandPaletteKey(msg)
+			m, consumed = m.handleSlashPaletteKey(msg)
 			if consumed {
 				prevChrome := m.chromeH
-				m = m.syncCommandSuggestions()
+				m = m.syncSlashSuggestions()
 				if m.chromeHeight() != prevChrome {
 					m = m.syncLayout(m.content.AtBottom())
 				}
@@ -240,7 +240,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	prevSuggest := len(m.cmdSuggestions)
-	m = m.syncCommandSuggestions()
+	m = m.syncSlashSuggestions()
 	if len(m.cmdSuggestions) != prevSuggest {
 		m = m.syncLayout(m.content.AtBottom())
 	}

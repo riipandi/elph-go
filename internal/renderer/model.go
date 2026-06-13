@@ -111,6 +111,8 @@ type Model struct {
 
 	cmdSuggestions  []command.SlashCommand
 	cmdSuggestIndex int
+	argSuggestions  []command.ArgChoice
+	argSuggestIndex int
 }
 
 // Shared "no background" style reused in textarea init to reduce allocations.
@@ -124,7 +126,9 @@ func noBgStyles() textarea.Styles {
 		CursorLineNumber: noBgStyle,
 		EndOfBuffer:      noBgStyle,
 		LineNumber:       noBgStyle,
-		Placeholder:      noBgStyle,
+		Placeholder: lipgloss.NewStyle().
+			Foreground(constants.DimText).
+			Background(lipgloss.NoColor{}),
 		Prompt:           noBgStyle,
 		Text:             noBgStyle,
 	}

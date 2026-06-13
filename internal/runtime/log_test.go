@@ -27,6 +27,28 @@ func TestOpenAppendAndReadLog(t *testing.T) {
 	require.Contains(t, content, "[system] world")
 }
 
+func TestFilterLogByKind(t *testing.T) {
+	dir := t.TempDir()
+	id := typeid.MustGenerate("sess")
+
+	path, err := OpenLog(dir, id)
+	require.NoError(t, err)
+	require.NoError(t, AppendLog(path, "user", "hello"))
+	require.NoError(t, AppendLog(path, "system", "notice"))
+
+	content, err := FilterLogByKind(path, "system", 4096)
+	require.NoError(t, err)
+	require.Contains(t, content, "[system] notice")
+	require.NotContains(t, content, "[user] hello")
+}
+
+func TestRequestsLogPath(t *testing.T) {
+	id := typeid.MustGenerate("sess")
+	got := RequestsLogPath("/tmp/project", id)
+	require.Contains(t, got, ".elph/logs/")
+	require.Contains(t, got, id.String()+".requests.log")
+}
+
 func TestReadLogTailTruncates(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "tail.log")

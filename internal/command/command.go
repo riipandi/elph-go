@@ -7,9 +7,10 @@ import (
 
 // Context carries session state needed by slash command handlers.
 type Context struct {
-	WorkDir      string
-	SystemPrompt string
-	LogPath      string
+	WorkDir         string
+	SystemPrompt    string
+	LogPath         string
+	RequestsLogPath string
 }
 
 // Result is the outcome of executing a slash command.
@@ -24,6 +25,7 @@ type SlashCommand struct {
 	Name        string
 	Aliases     []string
 	Description string
+	Args        []ArgChoice
 	Quits       bool
 	Handler     func(ctx Context, args string) string
 }

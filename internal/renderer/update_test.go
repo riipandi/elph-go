@@ -242,15 +242,28 @@ func TestSubmitSlashCommandExitExits(t *testing.T) {
 func TestSuggestFuzzyQuitInPalette(t *testing.T) {
 	m := testInputModel(t)
 	m.input.SetValue("/quit")
-	m = m.syncCommandSuggestions()
+	m = m.syncSlashSuggestions()
 
 	require.True(t, m.commandPaletteActive())
 	require.Equal(t, "exit", m.cmdSuggestions[0].Name)
 }
 
-func TestSubmitDiagnosticOpenLog(t *testing.T) {
+func TestSubmitDiagnosticOpenLogUsage(t *testing.T) {
 	m := testInputModel(t)
 	m.input.SetValue("/diagnostic:open-log")
+
+	updated, cmd := m.Update(keyEnter())
+	m = updated.(Model)
+
+	require.Nil(t, cmd)
+	require.False(t, m.busy)
+	require.Equal(t, constants.MessageSystem, m.messages[1].kind)
+	require.Contains(t, m.messages[1].text, "Usage: /diagnostic:open-log")
+}
+
+func TestSubmitDiagnosticOpenLogSystem(t *testing.T) {
+	m := testInputModel(t)
+	m.input.SetValue("/diagnostic:open-log system")
 
 	updated, cmd := m.Update(keyEnter())
 	m = updated.(Model)

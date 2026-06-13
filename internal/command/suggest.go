@@ -52,7 +52,11 @@ func Suggest(query string) []SlashCommand {
 
 // CompleteInput returns the full slash command input for the selected suggestion.
 func CompleteInput(selected SlashCommand) string {
-	return "/" + selected.Name
+	input := "/" + selected.Name
+	if len(selected.Args) > 0 {
+		input += " "
+	}
+	return input
 }
 
 func normalizeSuggestQuery(query string) string {

@@ -38,7 +38,8 @@ var builtin = []SlashCommand{
 	},
 	{
 		Name:        DiagnosticOpenLog,
-		Description: "Open or display the current session log",
+		Description: "Open a session log (requests or system)",
+		Args:        openLogArgs,
 		Handler:     diagnosticOpenLog,
 	},
 	{

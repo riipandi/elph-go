@@ -13,7 +13,7 @@ func TestCommandPaletteAppearsForSlashInput(t *testing.T) {
 	m := testInputModel(t)
 	m.input.SetValue("/diagnostic:")
 
-	m = m.syncCommandSuggestions()
+	m = m.syncSlashSuggestions()
 	require.True(t, m.commandPaletteActive())
 	require.NotEmpty(t, m.commandPaletteView())
 	for _, cmd := range m.cmdSuggestions {
@@ -25,14 +25,14 @@ func TestCommandPaletteHiddenForNormalInput(t *testing.T) {
 	m := testInputModel(t)
 	m.input.SetValue("hello")
 
-	m = m.syncCommandSuggestions()
+	m = m.syncSlashSuggestions()
 	require.False(t, m.commandPaletteActive())
 }
 
 func TestCommandPaletteTwoColumnLayout(t *testing.T) {
 	m := testInputModel(t)
 	m.input.SetValue("/")
-	m = m.syncCommandSuggestions()
+	m = m.syncSlashSuggestions()
 	require.GreaterOrEqual(t, len(m.cmdSuggestions), 2)
 
 	got := command.FormatList(m.cmdSuggestions)
@@ -51,9 +51,9 @@ func TestCommandPaletteTwoColumnLayout(t *testing.T) {
 func TestTabCompletesSelectedCommand(t *testing.T) {
 	m := testInputModel(t)
 	m.input.SetValue("/help")
-	m = m.syncCommandSuggestions()
+	m = m.syncSlashSuggestions()
 
-	updated, consumed := m.handleCommandPaletteKey(keyTab())
+	updated, consumed := m.handleSlashPaletteKey(keyTab())
 	require.True(t, consumed)
 	require.Equal(t, "/help", updated.input.Value())
 }
@@ -61,10 +61,10 @@ func TestTabCompletesSelectedCommand(t *testing.T) {
 func TestDownCyclesSuggestionSelection(t *testing.T) {
 	m := testInputModel(t)
 	m.input.SetValue("/")
-	m = m.syncCommandSuggestions()
+	m = m.syncSlashSuggestions()
 	require.GreaterOrEqual(t, len(m.cmdSuggestions), 2)
 
-	updated, consumed := m.handleCommandPaletteKey(keyDown())
+	updated, consumed := m.handleSlashPaletteKey(keyDown())
 	require.True(t, consumed)
 	require.Equal(t, 1, updated.cmdSuggestIndex)
 }
@@ -72,7 +72,7 @@ func TestDownCyclesSuggestionSelection(t *testing.T) {
 func TestPaletteSitsFlushAboveInput(t *testing.T) {
 	m := testInputModel(t)
 	m.input.SetValue("/help")
-	m = m.syncCommandSuggestions()
+	m = m.syncSlashSuggestions()
 
 	chromeH := lipgloss.Height(m.inputChromeView())
 	paletteH := lipgloss.Height(m.commandPaletteView())
@@ -84,4 +84,50 @@ func TestCompleteInputUsesCatalogName(t *testing.T) {
 	cmd, ok := command.Get(command.DiagnosticListTools)
 	require.True(t, ok)
 	require.Equal(t, "/diagnostic:list-tools", command.CompleteInput(cmd))
+}
+
+func TestArgPaletteAppearsForOpenLog(t *testing.T) {
+	m := testInputModel(t)
+	m.input.SetValue("/diagnostic:open-log")
+
+	m = m.syncSlashSuggestions()
+	require.True(t, m.argPaletteActive())
+	require.False(t, m.commandPaletteActive())
+	require.Len(t, m.argSuggestions, 2)
+}
+
+func TestOpenLogPlaceholderShowsArgHint(t *testing.T) {
+	m := testInputModel(t)
+	m.input.SetValue("/diagnostic:open-log ")
+
+	m = m.syncSlashSuggestions()
+	require.Equal(t, "requests | system", m.input.Placeholder)
+}
+
+func TestTabCyclesArgSelection(t *testing.T) {
+	m := testInputModel(t)
+	m.input.SetValue("/diagnostic:open-log ")
+	m = m.syncSlashSuggestions()
+
+	updated, consumed := m.handleSlashPaletteKey(keyTab())
+	require.True(t, consumed)
+	require.Equal(t, "/diagnostic:open-log requests", updated.input.Value())
+
+	updated, consumed = updated.handleSlashPaletteKey(keyTab())
+	require.True(t, consumed)
+	require.Equal(t, "/diagnostic:open-log system", updated.input.Value())
+
+	updated, consumed = updated.handleSlashPaletteKey(keyTab())
+	require.True(t, consumed)
+	require.Equal(t, "/diagnostic:open-log requests", updated.input.Value())
+}
+
+func TestShiftTabCyclesArgSelectionBackward(t *testing.T) {
+	m := testInputModel(t)
+	m.input.SetValue("/diagnostic:open-log requests")
+	m = m.syncSlashSuggestions()
+
+	updated, consumed := m.handleSlashPaletteKey(keyShiftTab())
+	require.True(t, consumed)
+	require.Equal(t, "/diagnostic:open-log system", updated.input.Value())
 }

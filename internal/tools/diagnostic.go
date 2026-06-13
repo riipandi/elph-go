@@ -24,7 +24,7 @@ var diagnostic = []Definition{
 		Name:            OpenLog,
 		Category:        CategoryDiagnostic,
 		DefaultApproval: ApprovalAutoAllow,
-		Description:     "Open or display the current session log",
+		Description:     "Open a session log (requests or system)",
 	},
 }
 

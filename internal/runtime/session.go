@@ -9,10 +9,11 @@ import (
 
 // Session binds a coding-agent runtime to a single interactive session.
 type Session struct {
-	ID           typeid.TypeID
-	WorkDir      string
-	SystemPrompt string
-	LogPath      string
+	ID              typeid.TypeID
+	WorkDir         string
+	SystemPrompt    string
+	LogPath         string
+	RequestsLogPath string
 }
 
 // NewSession creates a session with a generated typeid and assembled system prompt.
@@ -21,10 +22,11 @@ func NewSession(workDir string) Session {
 	logPath, _ := OpenLog(workDir, id)
 
 	return Session{
-		ID:           id,
-		WorkDir:      workDir,
-		SystemPrompt: prompt.Build(prompt.Options{WorkDir: workDir}),
-		LogPath:      logPath,
+		ID:              id,
+		WorkDir:         workDir,
+		SystemPrompt:    prompt.Build(prompt.Options{WorkDir: workDir}),
+		LogPath:         logPath,
+		RequestsLogPath: RequestsLogPath(workDir, id),
 	}
 }
 

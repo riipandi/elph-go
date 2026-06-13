@@ -47,6 +47,28 @@ func AppendLog(path, kind, text string) error {
 	return err
 }
 
+// RequestsLogPath returns the path for a session's provider/tool request log.
+func RequestsLogPath(workDir string, sessionID typeid.TypeID) string {
+	return filepath.Join(workDir, ".elph", "logs", sessionID.String()+".requests.log")
+}
+
+// FilterLogByKind returns log lines tagged with the given kind.
+func FilterLogByKind(path, kind string, maxBytes int) (string, error) {
+	content, err := ReadLogTail(path, maxBytes)
+	if err != nil {
+		return "", err
+	}
+
+	marker := fmt.Sprintf(" [%s] ", kind)
+	var lines []string
+	for _, line := range strings.Split(content, "\n") {
+		if strings.Contains(line, marker) {
+			lines = append(lines, line)
+		}
+	}
+	return strings.Join(lines, "\n"), nil
+}
+
 // ReadLogTail returns up to maxBytes from the end of the log file.
 func ReadLogTail(path string, maxBytes int) (string, error) {
 	if path == "" {

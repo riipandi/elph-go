@@ -45,11 +45,30 @@ func (m Model) View() string {
 		return "\n  Initializing..."
 	}
 
-	return lipgloss.JoinVertical(lipgloss.Top,
-		m.content.View(),
-		m.inputView(),
-		m.footerView(),
-	)
+	return lipgloss.JoinVertical(lipgloss.Top, m.viewParts()...)
+}
+
+// viewParts returns the stacked UI layers below the scrollable viewport.
+// Empty layers are omitted so JoinVertical does not insert blank lines.
+func (m Model) viewParts() []string {
+	parts := []string{m.content.View()}
+	if av := m.activityView(); av != "" {
+		parts = append(parts, av)
+	}
+	parts = append(parts, m.inputView(), m.footerView())
+	return parts
+}
+
+func (m Model) renderedViewHeight() int {
+	return lipgloss.Height(lipgloss.JoinVertical(lipgloss.Top, m.viewParts()...))
+}
+
+func (m Model) chromeHeight() int {
+	h := lipgloss.Height(m.inputView()) + lipgloss.Height(m.footerView())
+	if m.activity != constants.ActivityIdle {
+		h += lipgloss.Height(m.activityView())
+	}
+	return h
 }
 
 // syncLayout sizes chrome and viewport. Rebuilds scrollable content only when
@@ -62,21 +81,28 @@ func (m Model) syncLayout(follow bool) Model {
 	m = m.syncInputWidth()
 
 	atBottom := m.content.AtBottom()
-	chromeH := lipgloss.Height(m.inputView()) + lipgloss.Height(m.footerView())
-	vpH := max(m.height-chromeH, 1)
 
-	sizeChanged := m.content.Width != m.width || m.content.Height != vpH
+	prevW, prevH := m.content.Width, m.content.Height
 	m.content.Width = m.width
-	m.content.Height = vpH
-	m.chromeH = chromeH
+	m.content.Height = max(m.height-m.chromeHeight(), 1)
 
-	if m.contentDirty || sizeChanged {
+	if m.contentDirty || prevW != m.content.Width || prevH != m.content.Height {
 		m.content.SetContent(m.contentView())
 		m.contentDirty = false
 	}
 
+	// Bubble Tea drops lines from the top when output exceeds terminal height,
+	// which clips the banner border. Shrink the viewport until the frame fits.
+	for m.renderedViewHeight() > m.height && m.content.Height > 1 {
+		m.content.Height--
+	}
+
+	m.chromeH = m.chromeHeight()
+
 	if follow || atBottom {
 		m.content.GotoBottom()
+	} else if len(m.messages) == 0 {
+		m.content.GotoTop()
 	}
 
 	return m
@@ -217,6 +243,20 @@ func (m Model) bannerView() string {
 	content := lipgloss.JoinVertical(lipgloss.Left, topSection, meta, "", tip)
 
 	return cachedBannerBorder.Width(w - 2).Render(content)
+}
+
+func (m Model) activityView() string {
+	if m.activity == constants.ActivityIdle {
+		return ""
+	}
+	frame := spinnerFrames[m.spinnerFrame%len(spinnerFrames)]
+	spinner := lipgloss.NewStyle().Foreground(constants.Yellow).Render(frame)
+	label := dimStyle.Render(" " + string(m.activity) + "...")
+	return lipgloss.NewStyle().
+		MarginTop(1).
+		PaddingLeft(1).
+		Width(m.width).
+		Render(spinner + label)
 }
 
 func (m Model) inputView() string {

@@ -102,8 +102,12 @@ type Model struct {
 	chromeH          int    // cached input + footer height
 	contentDirty     bool   // viewport content needs rebuilding
 
-	mouseEnabled   bool // mouse capture for viewport wheel/scroll
-	selectingText  bool // shift held — mouse released for terminal selection
+	mouseEnabled  bool // mouse capture for viewport wheel/scroll
+	selectingText bool // shift held — mouse released for terminal selection
+
+	activity     constants.AgentActivity // shown above input while agent works
+	spinnerFrame int
+	busy         bool // agent turn in progress
 
 	quitting      bool
 	ctrlCPress    int // 0=none, 1=first, 2=second (input cleared)

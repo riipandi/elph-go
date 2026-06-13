@@ -8,7 +8,6 @@ import (
 
 	"github.com/atotto/clipboard"
 	"github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 	"github.com/riipandi/elph/internal/constants"
 )
 
@@ -59,6 +58,19 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m = m.cancelCtrlC()
 		m.contentDirty = true
 		m = m.syncLayout(false)
+
+	case ActivityMsg:
+		m.activity = msg.Activity
+		m = m.syncLayout(m.content.AtBottom())
+
+	case spinnerTickMsg:
+		if m.busy {
+			m.spinnerFrame++
+			cmds = append(cmds, m.spinnerTickCmd())
+		}
+
+	case AgentDoneMsg:
+		m = m.finishAgentTurn(msg.Response)
 
 	case tea.MouseMsg:
 		evt := tea.MouseEvent(msg)
@@ -145,6 +157,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, cmd
 
 		case constants.ActionSubmit:
+			if m.busy {
+				break
+			}
 			if !m.input.Focused() {
 				break
 			}
@@ -160,7 +175,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m = m.addUserMessage(val)
 			m.input.SetValue("")
 			m.promptChar = ">"
+			m = m.beginAgentTurn()
 			m = m.syncLayout(true)
+			return m, m.agentTurnCmds(val)
 
 		case constants.ActionCopy:
 			if len(m.messages) > 0 {
@@ -178,8 +195,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	m.content, cmd = m.content.Update(msg)
 	cmds = append(cmds, cmd)
 
-	m.input, cmd = m.input.Update(msg)
-	cmds = append(cmds, cmd)
+	if !m.busy {
+		m.input, cmd = m.input.Update(msg)
+		cmds = append(cmds, cmd)
+	}
 
 	prevPrefix := m.showPromptPrefix
 	m = m.syncPromptPrefix()
@@ -187,8 +206,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m = m.syncInputWidth()
 	}
 
-	// Re-layout when the input area grows or shrinks (multiline).
-	chromeH := lipgloss.Height(m.inputView()) + lipgloss.Height(m.footerView())
+	// Re-layout when chrome height changes (activity, multiline input, etc.).
+	chromeH := m.chromeHeight()
 	if chromeH != m.chromeH {
 		m = m.syncLayout(m.content.AtBottom())
 	}

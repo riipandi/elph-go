@@ -125,7 +125,7 @@ func (m Model) streamView() string {
 			b.WriteString(msg.text)
 		case msgSystem:
 			b.WriteString(lipgloss.NewStyle().Foreground(highlight).Render("> "))
-			b.WriteString(msg.text)
+			b.WriteString(lipgloss.NewStyle().Foreground(dimText).Render(msg.text))
 		}
 	}
 	return b.String()

@@ -71,7 +71,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.quitting = true
 			return m, tea.Quit
 
-		case "alt+m":
+		case "ctrl+m":
 			m.mode = nextMode(m.mode)
 			m = m.withMessage(fmt.Sprintf("Switched to %s mode", m.mode))
 

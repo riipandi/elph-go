@@ -7,6 +7,7 @@ import (
 
 	"github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/riipandi/elph/internal/constants"
 )
 
 func TestResizeUpdatesViewportDimensions(t *testing.T) {
@@ -34,7 +35,7 @@ func TestResizePreservesMessageHistory(t *testing.T) {
 	m.width = 80
 	m.height = 30
 	m.ready = true
-	m.messages = []message{{text: "hello from user", kind: msgUser}}
+	m.messages = []message{{text: "hello from user", kind: constants.MessageUser}}
 
 	updated, _ := m.Update(tea.WindowSizeMsg{Width: 60, Height: 24})
 	m = updated.(Model)
@@ -82,7 +83,7 @@ func TestManyMessagesContentFitsInViewport(t *testing.T) {
 	for i := range 25 {
 		m.messages = append(m.messages, message{
 			text: fmt.Sprintf("message number %d from user", i),
-			kind: msgUser,
+			kind: constants.MessageUser,
 		})
 	}
 
@@ -103,7 +104,7 @@ func TestLongPasteBannerAppearsOnce(t *testing.T) {
 	m.ready = true
 
 	readme := strings.Repeat("Elph - minimalist AI agent companion. ", 80)
-	m.messages = []message{{text: readme, kind: msgUser}}
+	m.messages = []message{{text: readme, kind: constants.MessageUser}}
 
 	content := m.contentView()
 	if strings.Count(content, "Welcome to") != 1 {

@@ -65,17 +65,9 @@ const doubleTapTimeout = 3 * time.Second
 
 type ctrlCResetMsg struct{}
 
-type msgKind int
-
-const (
-	msgUser   msgKind = iota // User input message
-	msgAI                    // AI response message
-	msgSystem                // System/status message
-)
-
 type message struct {
 	text string
-	kind msgKind
+	kind constants.MessageKind
 }
 
 type Model struct {

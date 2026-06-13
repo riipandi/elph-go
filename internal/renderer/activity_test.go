@@ -78,7 +78,7 @@ func TestActivityProgression(t *testing.T) {
 	if m.activity != constants.ActivityIdle {
 		t.Fatalf("activity %q, want idle", m.activity)
 	}
-	if len(m.messages) != 1 || m.messages[0].kind != msgAI {
+	if len(m.messages) != 1 || m.messages[0].kind != constants.MessageAI {
 		t.Fatal("expected AI response message")
 	}
 }

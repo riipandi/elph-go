@@ -51,7 +51,7 @@ func (m Model) View() string {
 // viewParts returns the stacked UI layers below the scrollable viewport.
 // Empty layers are omitted so JoinVertical does not insert blank lines.
 func (m Model) viewParts() []string {
-	parts := []string{m.content.View()}
+	parts := []string{m.contentAreaView()}
 	if av := m.activityView(); av != "" {
 		parts = append(parts, av)
 	}
@@ -82,11 +82,22 @@ func (m Model) syncLayout(follow bool) Model {
 
 	atBottom := m.content.AtBottom()
 
-	prevW, prevH := m.content.Width, m.content.Height
-	m.content.Width = m.width
+	prevH := m.content.Height
 	m.content.Height = max(m.height-m.chromeHeight(), 1)
+	m.content.Width = m.width
 
-	if m.contentDirty || prevW != m.content.Width || prevH != m.content.Height {
+	if m.contentDirty || prevH != m.content.Height {
+		m.content.SetContent(m.contentView())
+		m.contentDirty = false
+	}
+
+	// Reserve one column for the scrollbar when content overflows.
+	scrollW := m.width
+	if m.contentScrollable() {
+		scrollW = max(m.width-scrollBarWidth, 1)
+	}
+	if m.content.Width != scrollW {
+		m.content.Width = scrollW
 		m.content.SetContent(m.contentView())
 		m.contentDirty = false
 	}
@@ -133,8 +144,14 @@ func (m Model) contentView() string {
 		for i, msg := range m.messages {
 			if i > 0 {
 				b.WriteString("\n")
+				if msg.kind == constants.MessageUser {
+					b.WriteString("\n")
+				}
 			}
 			b.WriteString(m.renderMessage(msg))
+			if msg.kind == constants.MessageUser {
+				b.WriteString("\n")
+			}
 		}
 	}
 
@@ -142,19 +159,25 @@ func (m Model) contentView() string {
 }
 
 func (m Model) renderMessage(msg message) string {
-	w := max(m.width-2, 1)
-	switch msg.kind {
-	case msgUser, msgAI:
-		return padLine(w, msg.text)
-	case msgSystem:
-		return padLine(w, dimStyle.Render(msg.text))
-	}
-	return msg.text
+	w := m.chromeOuterWidth()
+	return renderStyledMessage(w, msg.kind, msg.text)
 }
 
-// padLine wraps content with padding.
-func padLine(width int, content string) string {
-	return lipgloss.NewStyle().Padding(0, 1).Width(width).Render(content)
+// renderStyledMessage paints each line using the palette for its message kind.
+func renderStyledMessage(width int, kind constants.MessageKind, text string) string {
+	if kind == constants.MessageUser {
+		return constants.MessageStyle(kind).
+			Padding(1, 2).
+			Width(width).
+			Render(text)
+	}
+	lineStyle := constants.MessageStyle(kind).Padding(0, 1).Width(width)
+	lines := strings.Split(text, "\n")
+	out := make([]string, len(lines))
+	for i, line := range lines {
+		out[i] = lineStyle.Render(line)
+	}
+	return strings.Join(out, "\n")
 }
 
 // bannerContentWidth is the usable text width inside the banner border and padding.
@@ -205,7 +228,7 @@ func footerRow(contentW int, left, right string) string {
 // ─── Sub-views ───────────────────────────────────────────────────────────────
 
 func (m Model) bannerView() string {
-	w := m.width
+	w := m.chromeOuterWidth()
 	innerW := bannerContentWidth(w)
 
 	// TODO: replace with actual value
@@ -242,7 +265,7 @@ func (m Model) bannerView() string {
 
 	content := lipgloss.JoinVertical(lipgloss.Left, topSection, meta, "", tip)
 
-	return cachedBannerBorder.Width(w - 2).Render(content)
+	return cachedBannerBorder.Width(borderedChromeWidth(w)).Render(content)
 }
 
 func (m Model) activityView() string {
@@ -260,13 +283,13 @@ func (m Model) activityView() string {
 }
 
 func (m Model) inputView() string {
-	w := m.width
 	border := cachedInputBorder(m.mode)
+	boxW := borderedChromeWidth(m.chromeOuterWidth())
 	if m.showPromptPrefix {
 		prefix := lipgloss.NewStyle().Foreground(constants.White).Bold(true).Render(m.promptChar + " ")
-		return border.Width(w - 2).Render(prefix + m.input.View())
+		return border.Width(boxW).Render(prefix + m.input.View())
 	}
-	return border.Width(w - 2).Render(m.input.View())
+	return border.Width(boxW).Render(m.input.View())
 }
 
 func (m Model) footerView() string {

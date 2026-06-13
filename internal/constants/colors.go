@@ -24,10 +24,9 @@ var (
 // ─── Adaptive Colors ─────────────────────────────────────────────────────────
 
 var (
-	DimText     = lipgloss.AdaptiveColor{Light: "#9B9B9B", Dark: "#5C5C5C"}
-	BrightText  = lipgloss.AdaptiveColor{Light: "#6B7280", Dark: "#D1D5DB"}
-	UserPipeCol = lipgloss.AdaptiveColor{Light: "#7C56DC", Dark: "#A78BFA"}
-	AIPipeCol   = lipgloss.AdaptiveColor{Light: "#6B7280", Dark: "#9CA3AF"}
+	DimText    = lipgloss.AdaptiveColor{Light: "#9B9B9B", Dark: "#5C5C5C"}
+	BrightText = lipgloss.AdaptiveColor{Light: "#6B7280", Dark: "#D1D5DB"}
+	Highlight  = lipgloss.AdaptiveColor{Light: "#874BFD", Dark: "#7C56DC"}
 )
 
 // ─── Thinking Level Colors ──────────────────────────────────────────────────

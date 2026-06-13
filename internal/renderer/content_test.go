@@ -6,12 +6,13 @@ import (
 	"testing"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/riipandi/elph/internal/constants"
 )
 
 func TestContentViewIncludesBannerAndMessages(t *testing.T) {
 	m := New()
 	m.width = 80
-	m.messages = []message{{text: "hello from user", kind: msgUser}}
+	m.messages = []message{{text: "hello from user", kind: constants.MessageUser}}
 
 	content := m.contentView()
 	if !strings.Contains(content, "Welcome to") || !strings.Contains(content, "hello from user") {
@@ -46,7 +47,7 @@ func TestContentViewLongPasteIncludesBannerOnce(t *testing.T) {
 	m.ready = true
 
 	readme := strings.Repeat("Elph minimalist AI agent companion. ", 80)
-	m.messages = []message{{text: readme, kind: msgUser}}
+	m.messages = []message{{text: readme, kind: constants.MessageUser}}
 
 	content := m.contentView()
 	if strings.Count(content, "Welcome to") != 1 {
@@ -74,7 +75,7 @@ func TestManyMessagesViewportContent(t *testing.T) {
 	for i := range 25 {
 		m.messages = append(m.messages, message{
 			text: fmt.Sprintf("message %d", i),
-			kind: msgUser,
+			kind: constants.MessageUser,
 		})
 	}
 

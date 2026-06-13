@@ -218,26 +218,38 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 func (m Model) addUserMessage(text string) Model {
-	m.messages = append(m.messages, message{text: text, kind: msgUser})
+	m.messages = append(m.messages, message{text: text, kind: constants.MessageUser})
 	m.contentDirty = true
 	return m
 }
 
 func (m Model) addAIMessage(text string) Model {
-	m.messages = append(m.messages, message{text: text, kind: msgAI})
+	m.messages = append(m.messages, message{text: text, kind: constants.MessageAI})
+	m.contentDirty = true
+	return m
+}
+
+func (m Model) addToolMessage(text string) Model {
+	m.messages = append(m.messages, message{text: text, kind: constants.MessageTool})
+	m.contentDirty = true
+	return m
+}
+
+func (m Model) addThinkingMessage(text string) Model {
+	m.messages = append(m.messages, message{text: text, kind: constants.MessageThinking})
 	m.contentDirty = true
 	return m
 }
 
 func (m Model) withMessage(text string) (Model, tea.Cmd) {
-	m.messages = append(m.messages, message{text: text, kind: msgSystem})
+	m.messages = append(m.messages, message{text: text, kind: constants.MessageSystem})
 	m.contentDirty = true
 	m = m.syncLayout(true)
 	return m, nil
 }
 
 func (m Model) replaceNotice(text string) (Model, tea.Cmd) {
-	newMsg := message{text: text, kind: msgSystem}
+	newMsg := message{text: text, kind: constants.MessageSystem}
 	if m.ctrlCNoticeID >= 0 && m.ctrlCNoticeID < len(m.messages) {
 		m.messages[m.ctrlCNoticeID] = newMsg
 	} else {

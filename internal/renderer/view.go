@@ -20,27 +20,19 @@ func (m Model) View() string {
 		return "\n  Initializing..."
 	}
 
-	bannerView := m.bannerView()
 	inputView := m.inputView()
 	footerView := m.footerView()
 
-	bannerH := lipgloss.Height(bannerView)
 	inputH := lipgloss.Height(inputView)
 	footerH := lipgloss.Height(footerView)
-	gaps := 2
 
-	vpHeight := m.height - bannerH - inputH - footerH - gaps
-	if vpHeight < 1 {
-		vpHeight = 1
-	}
+	vpHeight := max(m.height-inputH-footerH-2, 1)
 
 	m.vp.Width = m.width
 	m.vp.Height = vpHeight
 	m.vp.SetContent(m.streamView())
 
 	parts := []string{
-		bannerView,
-		"",
 		m.vp.View(),
 		"",
 		inputView,
@@ -48,6 +40,40 @@ func (m Model) View() string {
 	}
 
 	return lipgloss.JoinVertical(lipgloss.Top, parts...)
+}
+
+// ─── Stream View ─────────────────────────────────────────────────────────────
+
+func (m Model) streamView() string {
+	var b strings.Builder
+
+	// Banner (scrolls with content)
+	b.WriteString(m.bannerView())
+	b.WriteString("\n\n")
+
+	// Messages
+	for _, msg := range m.messages {
+		b.WriteString(m.renderMessage(msg))
+		b.WriteString("\n")
+	}
+
+	return b.String()
+}
+
+func (m Model) renderMessage(msg message) string {
+	w := max(m.width-2, 1)
+	switch msg.kind {
+	case msgUser, msgAI:
+		return padLine(w, msg.text)
+	case msgSystem:
+		return padLine(w, lipgloss.NewStyle().Foreground(dimText).Render(msg.text))
+	}
+	return msg.text
+}
+
+// padLine wraps content with padding.
+func padLine(width int, content string) string {
+	return lipgloss.NewStyle().Padding(0, 1).Width(width).Render(content)
 }
 
 // ─── Sub-views ───────────────────────────────────────────────────────────────
@@ -75,10 +101,7 @@ func (m Model) bannerView() string {
 	// Top section: logo + header/subtitle side by side.
 	topSection := lipgloss.JoinHorizontal(lipgloss.Top,
 		lipgloss.NewStyle().MarginRight(2).Render(logo),
-		lipgloss.JoinVertical(lipgloss.Left,
-			header,
-			subtitle,
-		),
+		lipgloss.JoinVertical(lipgloss.Left, header, subtitle),
 	)
 
 	dimStyle := lipgloss.NewStyle().Foreground(dimText)
@@ -98,37 +121,9 @@ func (m Model) bannerView() string {
 	tipBody := lipgloss.NewStyle().Foreground(dimText).Italic(true).Render(" " + m.tip)
 	tip := lipgloss.NewStyle().Width(tipW).Render(tipLabel + tipBody)
 
-	content := lipgloss.JoinVertical(lipgloss.Left,
-		topSection,
-		meta,
-		"",
-		tip,
-	)
+	content := lipgloss.JoinVertical(lipgloss.Left, topSection, meta, "", tip)
 
 	return bannerStyle(w).Render(content)
-}
-
-func (m Model) streamView() string {
-	var b strings.Builder
-	for i, msg := range m.messages {
-		if i > 0 {
-			b.WriteString("\n")
-		}
-		switch msg.kind {
-		case msgUser:
-			b.WriteString(lipgloss.NewStyle().Foreground(userPipeCol).Render("|"))
-			b.WriteString(" ")
-			b.WriteString(msg.text)
-		case msgAI:
-			b.WriteString(lipgloss.NewStyle().Foreground(aiPipeCol).Render("|"))
-			b.WriteString(" ")
-			b.WriteString(msg.text)
-		case msgSystem:
-			b.WriteString(lipgloss.NewStyle().Foreground(highlight).Render("> "))
-			b.WriteString(lipgloss.NewStyle().Foreground(dimText).Render(msg.text))
-		}
-	}
-	return b.String()
 }
 
 func (m Model) inputView() string {

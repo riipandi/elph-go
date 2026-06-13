@@ -5,6 +5,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/charmbracelet/bubbles/cursor"
 	"github.com/charmbracelet/bubbles/textarea"
 	"github.com/charmbracelet/bubbles/viewport"
 	"github.com/charmbracelet/bubbletea"
@@ -105,7 +106,7 @@ func New() Model {
 	sid := typeid.MustGenerate("sess")
 
 	ta := textarea.New()
-	ta.Placeholder = "Type a message or /command..."
+	ta.Placeholder = ""
 	ta.Prompt = ""
 	ta.CharLimit = 4096
 	ta.ShowLineNumbers = false
@@ -132,7 +133,8 @@ func New() Model {
 		Prompt:           lipgloss.NewStyle().Background(lipgloss.NoColor{}),
 		Text:             lipgloss.NewStyle().Background(lipgloss.NoColor{}),
 	}
-	ta.KeyMap.InsertNewline.SetKeys("ctrl+j", "shift+enter")
+	ta.KeyMap.InsertNewline.SetKeys(tea.KeyCtrlJ.String(), "shift+enter")
+	ta.Cursor.SetMode(cursor.CursorStatic)
 	ta.Focus()
 
 	return Model{

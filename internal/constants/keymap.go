@@ -4,10 +4,10 @@ package constants
 var DefaultKeyBindings = map[string]string{
 	"Ctrl+C":      "Cancel / Quit",
 	"Ctrl+D":      "Exit application",
+	"Alt+M":        "Switch agent mode",
 	"Enter":       "Send message",
 	"Ctrl+J":      "Insert newline in input",
 	"Shift+Enter": "Insert newline in input",
-	"Tab":         "Switch agent mode",
-	"Shift+Tab":   "Switch agent mode (reverse)",
+	"Shift+Tab":   "Cycle thinking level",
 	":q / :q!":    "Quit (vim-style)",
 }

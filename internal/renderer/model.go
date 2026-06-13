@@ -85,7 +85,7 @@ type Model struct {
 	provider         string
 	mode             constants.AgentMode
 	thinkingLevel    constants.ThinkingLevel
-	sessionID        string
+	sessionID        typeid.TypeID
 	workDir          string
 	branch           string
 	tip              string
@@ -102,7 +102,7 @@ type Model struct {
 
 func New() Model {
 	wd, _ := os.Getwd()
-	sid := typeid.MustGenerate("sess").String()
+	sid := typeid.MustGenerate("sess")
 
 	ta := textarea.New()
 	ta.Placeholder = "Type a message or /command..."
@@ -129,7 +129,7 @@ func New() Model {
 		tip:              randomTip(),
 		contextUsed:      0.0,
 		promptChar:       ">",
-		showPromptPrefix: true,
+		showPromptPrefix: false,
 		ctrlCNoticeID:    -1,
 	}
 }

@@ -194,6 +194,19 @@ project_dir [session_id] mode             turn: 0 | branch [+N -N]
 
 ---
 
+## Keybindings
+
+| Key           | Action                  |
+|---------------|-------------------------|
+| `Ctrl+C`      | Cancel / Quit           |
+| `Ctrl+D`      | Exit application        |
+| `Alt+M`        | Switch agent mode       |
+| `Enter`       | Send message            |
+| `Ctrl+J`      | Insert newline in input |
+| `Shift+Enter` | Insert newline in input |
+| `Shift+Tab`   | Cycle thinking level    |
+| `:q` / `:q!`  | Quit (vim-style)        |
+
 ## Stream Messages
 
 | Type   | Prefix | Color         |

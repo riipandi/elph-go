@@ -8,6 +8,7 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	"github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/riipandi/elph/internal/constants"
 )
 
 // ─── Update ──────────────────────────────────────────────────────────────────
@@ -71,14 +72,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.quitting = true
 			return m, tea.Quit
 
-		case "tab":
+		case "alt+m":
 			m.mode = nextMode(m.mode)
 			m = m.withMessage(fmt.Sprintf("Switched to %s mode", m.mode))
 
 		case "shift+tab":
-			m.mode = prevMode(m.mode)
-			m = m.withMessage(fmt.Sprintf("Switched to %s mode", m.mode))
-
+			m.thinkingLevel = constants.NextThinkingLevel(m.thinkingLevel)
+			m = m.withMessage(fmt.Sprintf("Thinking level: %s", m.thinkingLevel))
 		case "enter":
 			// Only submit if textarea is single-line or Ctrl is not held.
 			// Ctrl+J is handled by textarea's InsertNewline keymap.

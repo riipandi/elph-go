@@ -145,14 +145,10 @@ func (m Model) inputView() string {
 
 func (m Model) footerView() string {
 	wd := filepath.Base(m.workDir)
+	sid := m.sessionID.Suffix()
 
 	w := m.width
 	cw := w - 2 // account for PaddingLeft(1)
-
-	sid := m.sessionID
-	if len(sid) > 16 {
-		sid = sid[:16]
-	}
 
 	// --- Line 1 left: model (thinking color) | provider | T: level | IMG ---
 	modelSty := lipgloss.NewStyle().Foreground(constants.ThinkingColor(m.thinkingLevel))

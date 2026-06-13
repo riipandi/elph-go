@@ -116,11 +116,47 @@ func assertChromeWidthsMatch(t *testing.T, m Model) {
 	userW := lipgloss.Width(m.renderMessage(m.messages[len(m.messages)-1]))
 	bannerW := lipgloss.Width(m.bannerView())
 	inputW := lipgloss.Width(m.inputView())
-	if userW != bannerW {
-		t.Fatalf("user width %d != banner width %d", userW, bannerW)
+	msgW := m.messageAreaWidth()
+	if userW != msgW {
+		t.Fatalf("user message width %d != messageAreaWidth %d", userW, msgW)
+	}
+	if bannerW != m.chromeOuterWidth() {
+		t.Fatalf("banner width %d != chromeOuterWidth %d", bannerW, m.chromeOuterWidth())
 	}
 	if inputW != bannerW {
 		t.Fatalf("input width %d != banner width %d", inputW, bannerW)
+	}
+}
+
+func TestMessageWidthUsesContentAreaWidth(t *testing.T) {
+	m := testModel()
+	m.height = 12
+	m.ready = true
+	for i := range 30 {
+		m.messages = append(m.messages, message{
+			text: fmt.Sprintf("message %d", i),
+			kind: constants.MessageUser,
+		})
+	}
+	m = m.syncLayout(false)
+
+	areaW := m.contentAreaWidth()
+	msgW := m.messageAreaWidth()
+	if areaW != m.width-scrollBarWidth {
+		t.Fatalf("contentAreaWidth %d, want %d", areaW, m.width-scrollBarWidth)
+	}
+	if msgW != areaW-messageScrollInset {
+		t.Fatalf("messageAreaWidth %d, want %d", msgW, areaW-messageScrollInset)
+	}
+	for _, kind := range []constants.MessageKind{
+		constants.MessageUser,
+		constants.MessageAI,
+		constants.MessageSystem,
+	} {
+		renderedW := lipgloss.Width(m.renderMessage(message{text: "hello", kind: kind}))
+		if renderedW != msgW {
+			t.Fatalf("kind %d width %d != messageAreaWidth %d", kind, renderedW, msgW)
+		}
 	}
 }
 

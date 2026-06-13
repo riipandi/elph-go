@@ -84,20 +84,20 @@ func (m Model) syncLayout(follow bool) Model {
 
 	prevH := m.content.Height
 	m.content.Height = max(m.height-m.chromeHeight(), 1)
-	m.content.Width = m.width
 
-	if m.contentDirty || prevH != m.content.Height {
+	// When already scrollable, build at guttered width immediately so message
+	// backgrounds never span the scrollbar column.
+	prevContentW := m.content.Width
+	targetW := m.targetContentWidth()
+	m.content.Width = targetW
+	needsRebuild := m.contentDirty || prevH != m.content.Height || prevContentW != targetW
+	if needsRebuild {
 		m.content.SetContent(m.contentView())
 		m.contentDirty = false
 	}
-
-	// Reserve one column for the scrollbar when content overflows.
-	scrollW := m.width
-	if m.contentScrollable() {
-		scrollW = max(m.width-scrollBarWidth, 1)
-	}
-	if m.content.Width != scrollW {
-		m.content.Width = scrollW
+	// First transition into scrollable content at full width.
+	if m.contentScrollable() && targetW == m.width {
+		m.content.Width = max(m.width-scrollBarWidth, 1)
 		m.content.SetContent(m.contentView())
 		m.contentDirty = false
 	}
@@ -121,18 +121,20 @@ func (m Model) syncLayout(follow bool) Model {
 }
 
 func (m Model) syncInputWidth() Model {
-	inputW := inputContentWidth(m.chromeOuterWidth())
+	prefixW := 0
 	if m.showPromptPrefix {
 		prefix := lipgloss.NewStyle().Foreground(constants.White).Bold(true).Render(m.promptChar + " ")
-		inputW -= lipgloss.Width(prefix)
+		prefixW = lipgloss.Width(prefix)
 	}
+
+	inputW := inputContentWidth(m.chromeOuterWidth()) - prefixW
 	if inputW < 1 {
 		inputW = 1
 	}
 	m.inputWidth = inputW
 	m.input.SetWidth(inputW)
 	m = m.syncInputHeight()
-	return m
+	return m.syncInputScroll()
 }
 
 // contentView is the full scrollable region: banner + message history.
@@ -160,8 +162,7 @@ func (m Model) contentView() string {
 }
 
 func (m Model) renderMessage(msg message) string {
-	w := m.chromeOuterWidth()
-	return renderStyledMessage(w, msg.kind, msg.text)
+	return renderStyledMessage(m.messageAreaWidth(), msg.kind, msg.text)
 }
 
 // renderStyledMessage paints each line using the palette for its message kind.
@@ -283,14 +284,25 @@ func (m Model) activityView() string {
 		Render(spinner + label)
 }
 
+func (m Model) inputBodyView() string {
+	body := m.input.View()
+	if !m.inputScrollable() {
+		return body
+	}
+	// Draw the scrollbar in the last column of each line so we do not reserve a
+	// separate gutter column with visible trailing padding before the bar.
+	return overlayInputScrollBar(body, m.inputScrollBarView())
+}
+
 func (m Model) inputView() string {
 	border := cachedInputBorder(m.mode)
 	boxW := borderedChromeWidth(m.chromeOuterWidth())
+	inner := m.inputBodyView()
 	if m.showPromptPrefix {
 		prefix := lipgloss.NewStyle().Foreground(constants.White).Bold(true).Render(m.promptChar + " ")
-		return border.Width(boxW).Render(prefix + m.input.View())
+		inner = prefix + inner
 	}
-	return border.Width(boxW).Render(m.input.View())
+	return border.Width(boxW).Render(inner)
 }
 
 func (m Model) footerView() string {

@@ -20,12 +20,16 @@ const (
 	inputChromeSlack = 2
 
 	kittyModShift = 1
+	kittyModCtrl  = 4
 	xtermModShift = 2
+	xtermModCtrl  = 5
 )
 
 var (
 	kittyEnterModsRe   = regexp.MustCompile(`13;(\d+)u`)
 	xtermEnterModsRe   = regexp.MustCompile(`27;(\d+);13`)
+	kittyCtrlJRe       = regexp.MustCompile(`^(?:10|106);(\d+)u$`)
+	xtermCtrlJRe       = regexp.MustCompile(`^27;(\d+);(?:10|106)~?$`)
 	legacyShiftEnterRe = regexp.MustCompile(`13;2~`)
 	csiByteListRe      = regexp.MustCompile(`^\[([0-9]+(?: [0-9]+)*)\]$`)
 )
@@ -53,6 +57,34 @@ func disableTerminalFeatures() tea.Cmd {
 // inputContentWidth is the textarea width inside the input border and padding.
 func inputContentWidth(outer int) int {
 	return max(outer-4, 1)
+}
+
+// overlayInputScrollBar replaces the last column of each textarea line with the
+// scrollbar track/thumb so the bar sits flush against the right edge.
+func overlayInputScrollBar(body, bar string) string {
+	bodyLines := strings.Split(body, "\n")
+	barLines := strings.Split(bar, "\n")
+	if len(bodyLines) > 0 && bodyLines[len(bodyLines)-1] == "" {
+		bodyLines = bodyLines[:len(bodyLines)-1]
+	}
+	if len(barLines) > 0 && barLines[len(barLines)-1] == "" {
+		barLines = barLines[:len(barLines)-1]
+	}
+
+	out := make([]string, len(bodyLines))
+	for i, line := range bodyLines {
+		if i >= len(barLines) || barLines[i] == "" {
+			out[i] = line
+			continue
+		}
+		w := lipgloss.Width(line)
+		if w == 0 {
+			out[i] = barLines[i]
+			continue
+		}
+		out[i] = ansi.Truncate(line, w-1, "") + barLines[i]
+	}
+	return strings.Join(out, "\n")
 }
 
 func isInputNewlineKey(msg tea.KeyMsg) bool {
@@ -145,6 +177,32 @@ func isShiftEnterPayload(payload string) bool {
 	return legacyShiftEnterRe.MatchString(payload)
 }
 
+func isCtrlJPayload(payload string) bool {
+	if payload == "" {
+		return false
+	}
+	payload = strings.TrimSuffix(payload, "~")
+	// Kitty: ESC [ 10 ; <mods> u or ESC [ 106 ; <mods> u — ctrl bit is 4.
+	if m := kittyCtrlJRe.FindStringSubmatch(payload); len(m) == 2 {
+		mods, err := strconv.Atoi(m[1])
+		if err == nil && mods&kittyModCtrl != 0 {
+			return true
+		}
+	}
+	// xterm modifyOtherKeys: ESC [ 27 ; 5 ; 10 ~
+	if m := xtermCtrlJRe.FindStringSubmatch(payload); len(m) == 2 {
+		mod, err := strconv.Atoi(m[1])
+		if err == nil && mod == xtermModCtrl {
+			return true
+		}
+	}
+	return false
+}
+
+func isNewlineCSIPayload(payload string) bool {
+	return isShiftEnterPayload(payload) || isCtrlJPayload(payload)
+}
+
 // isShiftEnterMsg reports newline CSI sequences for Shift+Enter across xterm
 // modifyOtherKeys, Kitty keyboard protocol, and Ghostty keybind encodings.
 func isShiftEnterMsg(msg tea.Msg) bool {
@@ -158,7 +216,7 @@ func isNewlineInputMsg(msg tea.Msg) bool {
 	if k, ok := msg.(tea.KeyMsg); ok {
 		return isInputNewlineKey(k)
 	}
-	return isShiftEnterPayload(csiPayload(msg))
+	return isNewlineCSIPayload(csiPayload(msg))
 }
 
 func (m Model) maxInputHeight() int {
@@ -202,19 +260,51 @@ func (m Model) desiredInputHeight() int {
 	return min(m.inputDisplayRows(), m.maxInputHeight())
 }
 
-func (m Model) syncInputLimits() Model {
-	maxH := m.maxInputHeight()
-	if m.input.MaxHeight != maxH {
-		m.input.MaxHeight = maxH
+func (m Model) syncInputHeight() Model {
+	h := m.desiredInputHeight()
+	if m.input.Height() != h {
+		m.input.SetHeight(h)
 	}
 	return m
 }
 
-func (m Model) syncInputHeight() Model {
-	m = m.syncInputLimits()
-	h := m.desiredInputHeight()
-	if m.input.Height() != h {
-		m.input.SetHeight(h)
+func (m Model) inputCursorDisplayRow() int {
+	w := max(m.inputWidth, 1)
+	lines := strings.Split(m.input.Value(), "\n")
+	row := 0
+	cur := m.input.Line()
+	for i := 0; i < cur && i < len(lines); i++ {
+		row += wrappedInputRows(lines[i], w)
+	}
+	row += m.input.LineInfo().RowOffset
+	return row
+}
+
+// syncInputScroll mirrors bubbles textarea repositionView so the scrollbar
+// thumb tracks the hidden lines above the input viewport.
+func (m Model) syncInputScroll() Model {
+	total := m.inputDisplayRows()
+	visible := m.input.Height()
+	if total <= visible {
+		m.inputScrollTop = 0
+		return m
+	}
+
+	cursor := m.inputCursorDisplayRow()
+	min := m.inputScrollTop
+	max := min + visible - 1
+	if cursor < min {
+		m.inputScrollTop = cursor
+	} else if cursor > max {
+		m.inputScrollTop = cursor - visible + 1
+	}
+
+	maxTop := total - visible
+	if m.inputScrollTop > maxTop {
+		m.inputScrollTop = maxTop
+	}
+	if m.inputScrollTop < 0 {
+		m.inputScrollTop = 0
 	}
 	return m
 }
@@ -248,7 +338,7 @@ func (m Model) handleInputNewlineMsg(msg tea.Msg) (Model, tea.Cmd) {
 	default:
 		m.input, cmd = m.input.Update(tea.KeyMsg{Type: tea.KeyCtrlJ})
 	}
-	m = m.syncInputHeight()
+	m = m.syncInputWidth()
 	if chromeH := m.chromeHeight(); chromeH != m.chromeH {
 		m = m.syncLayout(m.content.AtBottom())
 	}
@@ -269,6 +359,7 @@ func normalizeInputForSubmit(s string) string {
 func (m Model) resetInput() Model {
 	m.input.SetValue("")
 	m.input.SetHeight(1)
+	m.inputScrollTop = 0
 	m.promptChar = ">"
 	return m
 }

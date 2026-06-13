@@ -127,6 +127,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, cmd
 		}
 
+		if isContentScrollKey(msg) {
+			var cmd tea.Cmd
+			m.content, cmd = m.content.Update(msg)
+			return m, cmd
+		}
+
 		action := resolveKeyAction(msg)
 
 		switch action {
@@ -206,13 +212,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	cmds = append(cmds, cmd)
 
 	if !m.busy {
-		prevInputH := m.input.Height()
 		m.input, cmd = m.input.Update(msg)
 		cmds = append(cmds, cmd)
-		m = m.syncInputHeight()
-		if m.input.Height() != prevInputH {
-			m = m.syncInputWidth()
-		}
+		m = m.syncInputWidth()
 	}
 
 	prevPrefix := m.showPromptPrefix

@@ -91,6 +91,7 @@ type Model struct {
 	promptChar       string // >, /, $, #
 	showPromptPrefix bool   // show prompt prefix in input
 	inputWidth       int    // textarea width, synced in syncLayout
+	inputScrollTop   int    // display rows scrolled above the input viewport
 	chromeH          int    // cached input + footer height
 	contentDirty     bool   // viewport content needs rebuilding
 
@@ -129,6 +130,7 @@ func New() Model {
 
 	vp := viewport.New(0, 0)
 	vp.MouseWheelEnabled = true
+	vp.KeyMap = contentViewportKeyMap()
 
 	ta := textarea.New()
 	ta.Placeholder = ""
@@ -136,7 +138,8 @@ func New() Model {
 	ta.CharLimit = 4096
 	ta.ShowLineNumbers = false
 	ta.SetHeight(1)
-	ta.MaxHeight = maxInputLines
+	// MaxHeight limits total line count in bubbles textarea; leave unset so
+	// content can grow past the viewport cap (syncInputHeight).
 	ta.FocusedStyle = noBgStyles()
 	ta.BlurredStyle = noBgStyles()
 	ta.KeyMap.InsertNewline.SetKeys(tea.KeyCtrlJ.String(), "shift+enter")

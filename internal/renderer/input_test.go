@@ -1,6 +1,7 @@
 package renderer
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -145,6 +146,40 @@ func TestShiftEnterCSIDetection(t *testing.T) {
 	}
 }
 
+func TestCtrlJCSIDetection(t *testing.T) {
+	cases := []struct {
+		payload string
+		want    bool
+	}{
+		{"27;5;10~", true},  // xterm modifyOtherKeys
+		{"27;5;106~", true}, // xterm, letter j
+		{"10;4u", true},     // kitty line-feed + ctrl
+		{"106;4u", true},    // kitty j + ctrl
+		{"106;5u", true},    // kitty ctrl+shift+j
+		{"27;2;13~", false}, // shift+enter, not ctrl+j
+		{"13;2u", false},    // shift+enter kitty
+	}
+	for _, tc := range cases {
+		if got := isCtrlJPayload(tc.payload); got != tc.want {
+			t.Fatalf("payload %q: got %v want %v", tc.payload, got, tc.want)
+		}
+	}
+}
+
+func TestCtrlJCSIInsertsNewline(t *testing.T) {
+	m := testInputModel(t)
+	m.input.SetValue("hello")
+
+	updated, cmd := m.Update(rawCSIMsg([]byte("\x1b[10;4u")))
+	m = updated.(Model)
+	if cmd != nil {
+		t.Fatal("ctrl+j CSI should not submit")
+	}
+	if m.input.LineCount() < 2 {
+		t.Fatalf("expected newline from ctrl+j CSI, value=%q", m.input.Value())
+	}
+}
+
 func TestShiftEnterRawCSIBytes(t *testing.T) {
 	raw := []byte("\x1b[27;2;13~")
 	if !isShiftEnterMsg(rawCSIMsg(raw)) {
@@ -215,6 +250,35 @@ func TestDesiredInputHeightWrapsLongLine(t *testing.T) {
 	}
 	if h > m.maxInputHeight() {
 		t.Fatalf("height %d exceeds max %d", h, m.maxInputHeight())
+	}
+}
+
+func TestNewlineWorksWhenViewportFull(t *testing.T) {
+	m := testInputModel(t)
+	lines := make([]string, maxInputLines)
+	for i := range lines {
+		lines[i] = fmt.Sprintf("line %d", i+1)
+	}
+	m.input.SetValue(strings.Join(lines, "\n"))
+	m = m.syncInputHeight()
+
+	if m.input.Height() != maxInputLines {
+		t.Fatalf("viewport height %d, want %d", m.input.Height(), maxInputLines)
+	}
+	if m.input.LineCount() != maxInputLines {
+		t.Fatalf("line count %d, want %d", m.input.LineCount(), maxInputLines)
+	}
+
+	updated, cmd := m.Update(tea.KeyMsg{Type: tea.KeyCtrlJ})
+	m = updated.(Model)
+	if cmd != nil {
+		t.Fatal("newline at cap should not submit")
+	}
+	if m.input.LineCount() != maxInputLines+1 {
+		t.Fatalf("line count %d, want %d; value=%q", m.input.LineCount(), maxInputLines+1, m.input.Value())
+	}
+	if m.input.Height() != maxInputLines {
+		t.Fatalf("viewport should stay at %d rows, got %d", maxInputLines, m.input.Height())
 	}
 }
 

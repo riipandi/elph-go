@@ -213,49 +213,90 @@ func (m Model) cycleArgSelection(delta int) Model {
 	return m.applyArgPreview()
 }
 
-func (m Model) handleInputPaletteKey(msg tea.KeyPressMsg) (Model, bool) {
+func (m Model) handleInputPaletteKey(msg tea.KeyPressMsg) (Model, tea.Cmd, bool) {
 	if m.mentionPaletteActive() {
-		return m.handleMentionPaletteKey(msg)
+		m, ok := m.handleMentionPaletteKey(msg)
+		return m, nil, ok
 	}
 	return m.handleSlashPaletteKey(msg)
 }
 
-func (m Model) handleSlashPaletteKey(msg tea.KeyPressMsg) (Model, bool) {
+func (m Model) confirmSlashCommand() (Model, tea.Cmd, bool) {
+	if len(m.suggest.CmdSuggestions) == 0 {
+		return m, nil, false
+	}
+
+	selected := m.suggest.CmdSuggestions[m.suggest.CmdSuggestIndex]
+	ctx := m.commandContext()
+	completed := command.CompleteInput(selected, ctx)
+
+	if command.RequiresArgs(selected, ctx) {
+		m.input.SetValue(completed)
+		m = m.syncPromptPrefix()
+		m = m.syncInputWidth()
+		m = m.syncSlashSuggestions()
+		return m, nil, true
+	}
+
+	return m.handleSlashCommand(completed)
+}
+
+func (m Model) confirmSlashArg() (Model, tea.Cmd, bool) {
+	if len(m.suggest.ArgSuggestions) == 0 {
+		return m, nil, false
+	}
+
+	ctx := m.commandContext()
+	cmd, _, ok := command.ResolveInput(m.input.Value(), ctx)
+	if !ok {
+		return m, nil, false
+	}
+
+	selected := m.suggest.ArgSuggestions[m.suggest.ArgSuggestIndex]
+	completed := command.CompleteArgInput(cmd, selected)
+	return m.handleSlashCommand(completed)
+}
+
+func (m Model) handleSlashPaletteKey(msg tea.KeyPressMsg) (Model, tea.Cmd, bool) {
 	if m.argPaletteActive() {
 		switch msg.String() {
+		case "enter":
+			return m.confirmSlashArg()
 		case "tab", "right":
-			return m.cycleArgSelection(1), true
+			return m.cycleArgSelection(1), nil, true
 		case "shift+tab":
-			return m.cycleArgSelection(-1), true
+			return m.cycleArgSelection(-1), nil, true
 		case "up":
-			return m.cycleArgSelection(-1), true
+			return m.cycleArgSelection(-1), nil, true
 		case "down":
-			return m.cycleArgSelection(1), true
+			return m.cycleArgSelection(1), nil, true
 		}
-		return m, false
+		return m, nil, false
 	}
 
 	if !m.commandPaletteActive() {
-		return m, false
+		return m, nil, false
 	}
 
 	switch msg.String() {
+	case "enter":
+		return m.confirmSlashCommand()
 	case "tab", "right":
-		return m.applyCommandCompletion(), true
+		return m.applyCommandCompletion(), nil, true
 	case "up":
 		if len(m.suggest.CmdSuggestions) == 0 {
-			return m, false
+			return m, nil, false
 		}
 		m.suggest.CmdSuggestIndex = (m.suggest.CmdSuggestIndex - 1 + len(m.suggest.CmdSuggestions)) % len(m.suggest.CmdSuggestions)
-		return m, true
+		return m, nil, true
 	case "down":
 		if len(m.suggest.CmdSuggestions) == 0 {
-			return m, false
+			return m, nil, false
 		}
 		m.suggest.CmdSuggestIndex = (m.suggest.CmdSuggestIndex + 1) % len(m.suggest.CmdSuggestions)
-		return m, true
+		return m, nil, true
 	}
-	return m, false
+	return m, nil, false
 }
 
 func (m Model) commandPaletteView() string {

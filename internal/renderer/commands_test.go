@@ -6,6 +6,7 @@ import (
 
 	"charm.land/lipgloss/v2"
 	"github.com/riipandi/elph/internal/command"
+	"github.com/riipandi/elph/internal/prompttemplate"
 	"github.com/stretchr/testify/require"
 )
 
@@ -53,7 +54,7 @@ func TestTabCompletesSelectedCommand(t *testing.T) {
 	m.input.SetValue("/hel")
 	m = m.syncSlashSuggestions()
 
-	updated, consumed := m.handleSlashPaletteKey(keyTab())
+	updated, _, consumed := m.handleSlashPaletteKey(keyTab())
 	require.True(t, consumed)
 	require.Equal(t, "/help", updated.input.Value())
 }
@@ -64,7 +65,7 @@ func TestDownCyclesSuggestionSelection(t *testing.T) {
 	m = m.syncSlashSuggestions()
 	require.GreaterOrEqual(t, len(m.suggest.CmdSuggestions), 2)
 
-	updated, consumed := m.handleSlashPaletteKey(keyDown())
+	updated, _, consumed := m.handleSlashPaletteKey(keyDown())
 	require.True(t, consumed)
 	require.Equal(t, 1, updated.suggest.CmdSuggestIndex)
 }
@@ -111,11 +112,11 @@ func TestTabCyclesArgSelection(t *testing.T) {
 	m.input.SetValue("/diagnostic:open-log ")
 	m = m.syncSlashSuggestions()
 
-	updated, consumed := m.handleSlashPaletteKey(keyTab())
+	updated, _, consumed := m.handleSlashPaletteKey(keyTab())
 	require.True(t, consumed)
 	require.Equal(t, "/diagnostic:open-log system", updated.input.Value())
 
-	updated, consumed = updated.handleSlashPaletteKey(keyTab())
+	updated, _, consumed = updated.handleSlashPaletteKey(keyTab())
 	require.True(t, consumed)
 	require.Equal(t, "/diagnostic:open-log thinking", updated.input.Value())
 }
@@ -135,7 +136,66 @@ func TestShiftTabCyclesArgSelectionBackward(t *testing.T) {
 	m.input.SetValue("/diagnostic:open-log requests")
 	m = m.syncSlashSuggestions()
 
-	updated, consumed := m.handleSlashPaletteKey(keyShiftTab())
+	updated, _, consumed := m.handleSlashPaletteKey(keyShiftTab())
 	require.True(t, consumed)
 	require.Equal(t, "/diagnostic:open-log ai", updated.input.Value())
+}
+
+func TestEnterExecutesSelectedCommandWithoutArgs(t *testing.T) {
+	m := testInputModel(t)
+	m.input.SetValue("/hel")
+	m = m.syncSlashSuggestions()
+
+	updated, cmd, consumed := m.handleSlashPaletteKey(keyEnter())
+	require.True(t, consumed)
+	require.Nil(t, cmd)
+	require.Empty(t, updated.input.Value())
+	require.Len(t, updated.messages, 2)
+	require.Equal(t, "/help", updated.messages[0].text)
+	require.Contains(t, updated.messages[1].text, "/changelog")
+}
+
+func TestEnterCompletesCommandWithRequiredArgs(t *testing.T) {
+	m := testInputModel(t)
+	m.input.SetValue("/diagnostic:open-lo")
+	m = m.syncSlashSuggestions()
+
+	updated, cmd, consumed := m.handleSlashPaletteKey(keyEnter())
+	require.True(t, consumed)
+	require.Nil(t, cmd)
+	require.Equal(t, "/diagnostic:open-log ", updated.input.Value())
+	require.True(t, updated.argPaletteActive())
+	require.Empty(t, updated.messages)
+}
+
+func TestEnterExecutesSelectedArg(t *testing.T) {
+	m := testInputModel(t)
+	m.input.SetValue("/diagnostic:open-log")
+	m = m.syncSlashSuggestions()
+
+	updated, cmd, consumed := m.handleSlashPaletteKey(keyEnter())
+	require.True(t, consumed)
+	require.Nil(t, cmd)
+	require.Empty(t, updated.input.Value())
+	require.Len(t, updated.messages, 2)
+	require.Equal(t, "/diagnostic:open-log system", updated.messages[0].text)
+	require.Contains(t, updated.messages[1].text, ".elph/logs/")
+}
+
+func TestEnterOnPromptTemplateCompletesWithoutExecuting(t *testing.T) {
+	m := testInputModel(t)
+	m.promptTemplates = []prompttemplate.Template{{
+		Name:         "identify",
+		Description:  "Identify the codebase",
+		ArgumentHint: "<focus-area>",
+	}}
+	m.input.SetValue("/ident")
+	m = m.syncSlashSuggestions()
+
+	updated, cmd, consumed := m.handleSlashPaletteKey(keyEnter())
+	require.True(t, consumed)
+	require.Nil(t, cmd)
+	require.Equal(t, "/identify ", updated.input.Value())
+	require.Equal(t, "<focus-area>", updated.input.Placeholder)
+	require.False(t, updated.agent.Busy)
 }

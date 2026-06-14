@@ -316,7 +316,8 @@ func (m Model) modelSelectorListBody() string {
 		return dimStyle.Render("No matching models")
 	}
 
-	lines := make([]string, 0, len(flat)+1)
+	showProvider := m.modelSelectorShowProviderPerRow()
+	lines := make([]string, 0, len(flat)+2)
 	if header := m.modelSelectorProviderHeader(); header != "" {
 		lines = append(lines, header)
 	}
@@ -325,7 +326,7 @@ func (m Model) modelSelectorListBody() string {
 	summaries := make([]string, len(flat))
 	for i, model := range flat {
 		names[i] = modelDisplayName(model)
-		summaries[i] = modelSelectorSummaryPlain(model, m.session.ProviderID, m.session.ModelID)
+		summaries[i] = modelSelectorSummaryPlain(model, m.session.ProviderID, m.session.ModelID, showProvider)
 	}
 	nameColW := align.ColumnWidth(names...)
 
@@ -334,11 +335,6 @@ func (m Model) modelSelectorListBody() string {
 		model := flat[i]
 		selected := i == m.modelSelector.Selected
 
-		summaryPlain := summaries[i]
-		if i == end-1 && end < len(flat) {
-			summaryPlain = fmt.Sprintf("%d more ↓", len(flat)-end)
-		}
-
 		var nameStyled string
 		if selected {
 			nameStyled = cmdPaletteSelected.Render(names[i])
@@ -346,27 +342,30 @@ func (m Model) modelSelectorListBody() string {
 			nameStyled = cmdPaletteName.Render(names[i])
 		}
 
-		_, gap, _ := align.Row(names[i], nameColW, summaryPlain)
-		var summaryStyled string
-		if i == end-1 && end < len(flat) {
-			if selected {
-				summaryStyled = cmdPaletteSummarySelected.Render(summaryPlain)
-			} else {
-				summaryStyled = dimStyle.Render(summaryPlain)
-			}
-		} else {
-			summaryStyled = modelSelectorSummaryStyled(model, m.session.ProviderID, m.session.ModelID, selected)
-		}
+		_, gap, _ := align.Row(names[i], nameColW, summaries[i])
+		summaryStyled := modelSelectorSummaryStyled(model, m.session.ProviderID, m.session.ModelID, selected, showProvider)
 		lines = append(lines, modelSelectorLine(nameStyled, gap, summaryStyled))
+	}
+	if end < len(flat) {
+		lines = append(lines, dimStyle.Render(fmt.Sprintf("%d more ↓", len(flat)-end)))
 	}
 	return strings.Join(lines, "\n")
 }
 
-func (m Model) modelSelectorProviderHeader() string {
+func (m Model) modelSelectorShowProviderPerRow() bool {
 	if len(m.modelSelector.Groups) <= 1 {
-		return ""
+		return false
 	}
-	if m.modelSelector.ProviderFilterID == "" {
+	return m.modelSelector.ProviderFilterID == ""
+}
+
+func (m Model) modelSelectorProviderHeader() string {
+	switch {
+	case len(m.modelSelector.Groups) == 0:
+		return ""
+	case len(m.modelSelector.Groups) == 1:
+		return dimStyle.Render(m.modelSelector.Groups[0].ProviderName)
+	case m.modelSelector.ProviderFilterID == "":
 		return dimStyle.Render("All providers  ← →")
 	}
 	for _, group := range m.modelSelector.Groups {
@@ -395,31 +394,34 @@ func modelProviderName(model provider.ResolvedModel) string {
 	return model.ProviderID
 }
 
-func modelSelectorSummaryPlain(model provider.ResolvedModel, activeProviderID, activeModelID string) string {
-	summary := modelProviderName(model)
-	if model.ProviderID == activeProviderID && model.ID == activeModelID {
-		return summary + "  " + modelSelectorCurrentMark + modelSelectorCurrentLabel
+func modelSelectorSummaryPlain(model provider.ResolvedModel, activeProviderID, activeModelID string, showProvider bool) string {
+	isCurrent := model.ProviderID == activeProviderID && model.ID == activeModelID
+	var parts []string
+	if showProvider {
+		parts = append(parts, modelProviderName(model))
 	}
-	return summary
+	if isCurrent {
+		parts = append(parts, modelSelectorCurrentMark+modelSelectorCurrentLabel)
+	}
+	return strings.Join(parts, "  ")
 }
 
-func modelSelectorSummaryStyled(model provider.ResolvedModel, activeProviderID, activeModelID string, selected bool) string {
-	providerName := modelProviderName(model)
+func modelSelectorSummaryStyled(model provider.ResolvedModel, activeProviderID, activeModelID string, selected bool, showProvider bool) string {
 	isCurrent := model.ProviderID == activeProviderID && model.ID == activeModelID
 
-	var providerStyled string
-	if selected {
-		providerStyled = cmdPaletteSummarySelected.Render(providerName)
-	} else {
-		providerStyled = dimStyle.Render(providerName)
+	var styled []string
+	if showProvider {
+		providerName := modelProviderName(model)
+		if selected {
+			styled = append(styled, cmdPaletteSummarySelected.Render(providerName))
+		} else {
+			styled = append(styled, dimStyle.Render(providerName))
+		}
 	}
-
-	if !isCurrent {
-		return providerStyled
+	if isCurrent {
+		styled = append(styled, modelSelectorCurrentMarker.Render(modelSelectorCurrentMark+modelSelectorCurrentLabel))
 	}
-
-	marker := modelSelectorCurrentMarker.Render(modelSelectorCurrentMark + modelSelectorCurrentLabel)
-	return providerStyled + "  " + marker
+	return strings.Join(styled, "  ")
 }
 
 func (m Model) modelSelectorListHeight() int {

@@ -231,17 +231,18 @@ func TestSuggestFuzzyQuitInPalette(t *testing.T) {
 	require.Equal(t, "exit", m.suggest.CmdSuggestions[0].Name)
 }
 
-func TestSubmitDiagnosticOpenLogUsage(t *testing.T) {
+func TestSubmitDiagnosticOpenLogWithoutArgExecutesSelectedArg(t *testing.T) {
 	m := testInputModel(t)
 	m.input.SetValue("/diagnostic:open-log")
+	m = m.syncSlashSuggestions()
 
 	updated, cmd := m.Update(keyEnter())
 	m = updated.(Model)
 
 	require.Nil(t, cmd)
 	require.False(t, m.agent.Busy)
-	require.Equal(t, constants.MessageSystem, m.messages[1].kind)
-	require.Contains(t, m.messages[1].text, "Usage: /diagnostic:open-log")
+	require.Equal(t, "/diagnostic:open-log system", m.messages[0].text)
+	require.Contains(t, m.messages[1].text, ".elph/logs/")
 }
 
 func TestSubmitDiagnosticOpenLogSystem(t *testing.T) {

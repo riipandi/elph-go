@@ -106,7 +106,10 @@ templates. Each template entry shows:
 /identify <focus-area>    Identify the codebase architecture
 ```
 
-Use `Tab`, `Up`, or `Down` to select a suggestion, then continue typing arguments before pressing `Enter`.
+Use `Tab`, `Up`, or `Down` to move the selection.
+
+- Commands **without** arguments (for example `/help`) — `Enter` runs the highlighted command immediately.
+- Commands **with** `argument-hint` or fixed `Args` — `Enter` completes the command name (and selected arg when the arg palette is active) but does not run until required input is present. Template commands complete to `/name ` so you can type positional args before a second `Enter`.
 
 ## Display
 

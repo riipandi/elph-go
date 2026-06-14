@@ -13,10 +13,15 @@ How a user message becomes a provider completion, tool execution, and TUI update
 
 `Session.StartTurn` (`internal/runtime/session.go`) injects:
 
-- `SystemPrompt` from `prompt.Build`
+- `SystemPrompt` from `prompt.Build` (see [configuration.md § Project context](./configuration.md#project-context-and-system-prompt))
 - `Provider`, `Model` from session / settings
 - `Messages` from `Session.History` when non-empty
 - `ToolsEnabled = true` and `ExecuteTool` → `runtime.ExecuteTool` when provider is set
+
+`prompt.Build` reads `preferedResponseLanguage` from settings (default `inherit`), discovers
+`AGENTS.md` and `SKILL.md` entries, and injects current date, work dir, and `session.agentMode`
+into the prompt. Response language follows the user’s message when set to `inherit`; a fixed value
+or an explicit user request overrides it.
 
 ## Turn modes
 

@@ -2,6 +2,7 @@ package runtime
 
 import (
 	"context"
+	"time"
 
 	"github.com/riipandi/elph/internal/prompt"
 	"github.com/riipandi/elph/internal/settings"
@@ -55,9 +56,14 @@ func NewSession(workDir string) Session {
 	}
 
 	return Session{
-		ID:                id,
-		WorkDir:           workDir,
-		SystemPrompt:      prompt.Build(prompt.Options{WorkDir: workDir}),
+		ID:      id,
+		WorkDir: workDir,
+		SystemPrompt: prompt.Build(prompt.Options{
+			WorkDir:                  workDir,
+			PreferedResponseLanguage: prefs.ResponseLanguage(),
+			CurrentDate:              time.Now().Format("2006-01-02"),
+			AgentMode:                string(prefs.AgentMode()),
+		}),
 		LogPath:           logPath,
 		RequestsLogPath:   requestsLogPath,
 		Provider:          cfg.Provider,

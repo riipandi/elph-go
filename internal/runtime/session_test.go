@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/riipandi/elph/internal/settings"
 	"github.com/riipandi/elph/pkg/ai/provider"
 	"github.com/riipandi/elph/pkg/core/agent"
 	"github.com/stretchr/testify/require"
@@ -24,6 +25,21 @@ func TestNewSessionBuildsSystemPrompt(t *testing.T) {
 	s := NewSession(t.TempDir())
 	require.Contains(t, s.SystemPrompt, "You are an expert AI coding assistant, operate in Elph CLI.")
 	require.Contains(t, s.SystemPrompt, "## Available Tools")
+	require.Contains(t, s.SystemPrompt, "## Response Language")
+	require.Contains(t, s.SystemPrompt, "Detect the language of each user message and write your replies in that same language.")
+	require.Contains(t, s.SystemPrompt, "Current date:")
+	require.Contains(t, s.SystemPrompt, "<session_mode>build</session_mode>")
+}
+
+func TestNewSessionUsesPreferedResponseLanguageFromSettings(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	require.NoError(t, settings.Save(settings.Settings{
+		PreferedResponseLanguage: "Indonesian",
+	}))
+
+	s := NewSession(t.TempDir())
+	require.Contains(t, s.SystemPrompt, "Write user-facing replies in Indonesian by default.")
 }
 
 type stubProvider struct{}

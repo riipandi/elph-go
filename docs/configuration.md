@@ -17,8 +17,12 @@ Default home: `~/.elph/` (override individual dirs with env vars below).
 ~/.elph/prompts/
 └── *.md                     # global prompt templates → /name commands
 
+~/.elph/skills/
+└── <name>/SKILL.md          # global agent skills (listed in system prompt)
+
 <workDir>/.elph/
 ├── prompts/*.md             # project templates (override global by filename)
+├── skills/<name>/SKILL.md   # project skills (override global by name)
 └── logs/
     ├── sess_<id>.log        # session event log (written)
     └── sess_<id>.requests.log  # reserved; not written in production yet
@@ -30,6 +34,7 @@ Default home: `~/.elph/` (override individual dirs with env vars below).
 |----------------------|-----------------------------------------------------------------|
 | `ELPH_PROVIDERS_DIR` | Replace `~/.elph/providers` (`pkg/ai/provider/paths.go`)        |
 | `ELPH_PROMPTS_DIR`   | Replace `~/.elph/prompts` (`internal/prompttemplate/paths.go`)  |
+| `ELPH_SKILLS_DIR`    | Replace `~/.elph/skills` (`internal/prompt/skills.go`)          |
 | `ELPH_PROVIDER`      | Force active provider id                                        |
 | `ELPH_MODEL`         | Force active model id (can override model on fallback provider) |
 
@@ -53,18 +58,19 @@ Loads variables with `gotenv.OverLoad` before any subcommand (`cmd/coding-agent/
 
 Path: `~/.elph/settings.json` (`internal/settings/settings.go`).
 
-| Field                   | Default | Description                                                             |
-|-------------------------|---------|-------------------------------------------------------------------------|
-| `theme`                 | `auto`  | `auto`, `dark`, or `light`                                              |
-| `showThinking`          | `true`  | Stream reasoning blocks in TUI                                          |
-| `autoExpandThinking`    | `false` | Thinking blocks start expanded                                          |
-| `thinkingBudgets`       | —       | Per-level token budget overrides                                        |
-| `session.providerId`    | —       | Last selected provider                                                  |
-| `session.modelId`       | —       | Last selected model                                                     |
-| `session.agentMode`     | `build` | `build`, `plan`, `ask`, `brave` — **brave** skips tool approval prompts |
-| `session.thinkingLevel` | `high`  | `off` … `xhigh`                                                         |
-| `models.lastSync`       | —       | RFC3339 timestamp of last models.dev sync                               |
-| `models.syncInterval`   | `24h`   | Minimum interval before the TUI checks models.dev again at startup      |
+| Field                      | Default   | Description                                                                                                                                                                                          |
+|----------------------------|-----------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `theme`                    | `auto`    | `auto`, `dark`, or `light`                                                                                                                                                                           |
+| `showThinking`             | `true`    | Stream reasoning blocks in TUI                                                                                                                                                                       |
+| `autoExpandThinking`       | `false`   | Thinking blocks start expanded                                                                                                                                                                       |
+| `preferedResponseLanguage` | `inherit` | Reply language: `inherit` matches the user's message language; set a fixed language (for example `English`) to always default to that; overridden when the user explicitly asks for another language |
+| `thinkingBudgets`          | —         | Per-level token budget overrides                                                                                                                                                                     |
+| `session.providerId`       | —         | Last selected provider                                                                                                                                                                               |
+| `session.modelId`          | —         | Last selected model                                                                                                                                                                                  |
+| `session.agentMode`        | `build`   | `build`, `plan`, `ask`, `brave` — **brave** skips tool approval prompts                                                                                                                              |
+| `session.thinkingLevel`    | `high`    | `off` … `xhigh`                                                                                                                                                                                      |
+| `models.lastSync`          | —         | RFC3339 timestamp of last models.dev sync                                                                                                                                                            |
+| `models.syncInterval`      | `24h`     | Minimum interval before the TUI checks models.dev again at startup                                                                                                                                   |
 
 Model selection priority (`pkg/ai/provider/registry.go`):
 
@@ -88,12 +94,28 @@ Bootstrap templates (`elph provider connect`): OpenAI, Anthropic, OpenCode Zen, 
 
 Per-model fields include `reasoning`, `thinkingLevelMap`, and `compat` (Pi-style overrides for thinking format, developer role, streaming usage, etc.). See [cli.md](./cli.md) for connect/update/enable commands.
 
-## Project context
+## Project context and system prompt
 
-| Source                    | Discovery                                            |
-|---------------------------|------------------------------------------------------|
-| `AGENTS.md`               | Walk up from `workDir` (`internal/prompt/agents.go`) |
-| `AGENTS.md` / `CLAUDE.md` | Guardrails block disclosure in system prompt         |
+`runtime.Session` builds the provider system prompt once per session via `prompt.Build`
+(`internal/prompt/builder.go`). Assembly order:
+
+1. Built-in template (`internal/prompt/template/system.md`) with dynamic tool list
+2. `<project_context>` — nearest `AGENTS.md` in `<project_instructions path="…">`
+3. `<available_skills>` — skills from `~/.elph/skills` and `<workDir>/.elph/skills` (project overrides global by name)
+4. Current date and working directory
+5. `<session_state>` — `<session_mode>` from `session.agentMode`
+6. Guardrails, thinking instructions, and response language (`preferedResponseLanguage`)
+7. Optional additional instructions
+
+Each skill is a directory containing `SKILL.md` with YAML frontmatter (`name`, `description`). The model is instructed to `Read` the skill file when a task matches.
+
+| Source                    | Discovery                                                     |
+|---------------------------|---------------------------------------------------------------|
+| `AGENTS.md`               | Walk up from `workDir` (`internal/prompt/agents.go`)          |
+| `SKILL.md`                | `~/.elph/skills/<name>/` and `<workDir>/.elph/skills/<name>/` |
+| `AGENTS.md` / `CLAUDE.md` | Guardrails block disclosure in system prompt                  |
+
+Inspect the live prompt in the TUI with `/diagnostic:system-prompt` (collapsible detail box).
 
 ## Session persistence
 

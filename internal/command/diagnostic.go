@@ -45,10 +45,9 @@ func diagnosticSystemPrompt(ctx *Context, _ string) string {
 		return fmt.Sprintf("/%s: not yet implemented", DiagnosticSystemPrompt)
 	}
 
-	var b strings.Builder
-	b.WriteString("System prompt:\n\n")
-	b.WriteString(ctx.SystemPrompt)
-	return b.String()
+	ctx.pendingDetailLabel = "System prompt"
+	ctx.pendingDetailBody = ctx.SystemPrompt
+	return ""
 }
 
 func diagnosticOpenLog(ctx *Context, args string) string {

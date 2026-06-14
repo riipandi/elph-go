@@ -1,6 +1,7 @@
 package renderer
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -240,6 +241,65 @@ func TestCtrlLTogglesModelSelector(t *testing.T) {
 	updated, _ = m.Update(keyCtrl('l'))
 	m = updated.(Model)
 	require.False(t, m.modelSelectorActive())
+}
+
+func TestModelSelectorSingleProviderHidesRepeatedProviderColumn(t *testing.T) {
+	m := testInputModel(t)
+	dir := t.TempDir()
+	writeProviderFile(t, dir, "opencode.json", `{
+		"name": "OpenCode Go",
+		"baseUrl": "https://example.com/v1",
+		"api": "openai-completions",
+		"apiKey": "secret",
+		"models": [
+			{"id": "qwen", "name": "Qwen3.5 Plus", "contextWindow": 128000, "maxTokens": 8192},
+			{"id": "mimo", "name": "MiMo V2 Pro", "contextWindow": 128000, "maxTokens": 8192},
+			{"id": "hy3", "name": "hy3-preview", "contextWindow": 128000, "maxTokens": 8192}
+		]
+	}`)
+	catalog, err := provider.LoadCatalog(dir)
+	require.NoError(t, err)
+
+	m.session.ProviderID = "opencode"
+	m.session.ModelID = "mimo"
+	m = m.openModelSelector(catalog, "")
+
+	view := stripANSI(m.modelSelectorView())
+	require.Contains(t, view, "OpenCode Go")
+	require.Contains(t, view, "Qwen3.5 Plus")
+	require.Contains(t, view, "MiMo V2 Pro")
+	require.Contains(t, view, "‹ current")
+	require.NotContains(t, view, "Qwen3.5 Plus     OpenCode Go")
+	require.NotContains(t, view, "hy3-preview     OpenCode Go")
+}
+
+func TestModelSelectorOverflowOnSeparateLine(t *testing.T) {
+	m := testInputModel(t)
+	dir := t.TempDir()
+	modelsJSON := strings.Builder{}
+	modelsJSON.WriteString("[")
+	for i := 0; i < 10; i++ {
+		if i > 0 {
+			modelsJSON.WriteString(",")
+		}
+		fmt.Fprintf(&modelsJSON, `{"id": "m%d", "name": "Model %d", "contextWindow": 128000, "maxTokens": 8192}`, i, i)
+	}
+	modelsJSON.WriteString("]")
+	writeProviderFile(t, dir, "solo.json", fmt.Sprintf(`{
+		"name": "Solo",
+		"baseUrl": "https://example.com/v1",
+		"api": "openai-completions",
+		"apiKey": "secret",
+		"models": %s
+	}`, modelsJSON.String()))
+	catalog, err := provider.LoadCatalog(dir)
+	require.NoError(t, err)
+
+	m = m.openModelSelector(catalog, "")
+	view := stripANSI(m.modelSelectorView())
+	require.Contains(t, view, "4 more ↓")
+	require.Contains(t, view, "Model 5")
+	require.NotContains(t, view, "Model 5     4 more")
 }
 
 func TestSlashModelOpensSelector(t *testing.T) {

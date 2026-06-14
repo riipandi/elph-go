@@ -48,7 +48,7 @@ func TestTabConfirmsFirstMentionPreview(t *testing.T) {
 	m.input.SetValue("see @")
 	m = m.syncSlashSuggestions()
 
-	updated, consumed := m.handleInputPaletteKey(keyTab())
+	updated, _, consumed := m.handleInputPaletteKey(keyTab())
 	require.True(t, consumed)
 	require.Equal(t, "see @internal/renderer/input.go ", updated.input.Value())
 	require.False(t, updated.mentionPaletteActive())
@@ -63,11 +63,11 @@ func TestTabConfirmsCursorSelectedMention(t *testing.T) {
 	m.input.SetValue("see @")
 	m = m.syncSlashSuggestions()
 
-	updated, consumed := m.handleInputPaletteKey(keyDown())
+	updated, _, consumed := m.handleInputPaletteKey(keyDown())
 	require.True(t, consumed)
 	require.True(t, updated.suggest.MentionUserSelected)
 
-	updated, consumed = updated.handleInputPaletteKey(keyTab())
+	updated, _, consumed = updated.handleInputPaletteKey(keyTab())
 	require.True(t, consumed)
 	require.Equal(t, "see @internal/command/args.go ", updated.input.Value())
 	require.False(t, updated.mentionPaletteActive())
@@ -82,7 +82,7 @@ func TestShiftTabCyclesMentionPreview(t *testing.T) {
 	m.input.SetValue("see @internal/renderer/input.go")
 	m = m.syncSlashSuggestions()
 
-	updated, consumed := m.handleInputPaletteKey(keyShiftTab())
+	updated, _, consumed := m.handleInputPaletteKey(keyShiftTab())
 	require.True(t, consumed)
 	require.Equal(t, "see @internal/command/args.go", updated.input.Value())
 	require.True(t, updated.mentionPaletteActive())
@@ -117,7 +117,7 @@ func TestTabAppliesFirstMatchForPartialQuery(t *testing.T) {
 	m.input.SetValue("see @input")
 	m = m.syncSlashSuggestions()
 
-	updated, consumed := m.handleInputPaletteKey(keyTab())
+	updated, _, consumed := m.handleInputPaletteKey(keyTab())
 	require.True(t, consumed)
 	require.Equal(t, "see @internal/renderer/input.go ", updated.input.Value())
 	require.False(t, updated.mentionPaletteActive())
@@ -151,7 +151,7 @@ func TestEnterConfirmsHighlightedMention(t *testing.T) {
 	m.input.SetValue("see @")
 	m = m.syncSlashSuggestions()
 
-	updated, _ := m.handleInputPaletteKey(keyDown())
+	updated, _, _ := m.handleInputPaletteKey(keyDown())
 	finished, cmd := updated.Update(keyEnter())
 	m = finished.(Model)
 

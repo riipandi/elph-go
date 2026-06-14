@@ -2,6 +2,14 @@ package command
 
 import "strings"
 
+// RequiresArgs reports whether a slash command expects user-provided arguments.
+func RequiresArgs(cmd SlashCommand, ctx Context) bool {
+	if len(EffectiveArgs(cmd, ctx)) > 0 {
+		return true
+	}
+	return strings.TrimSpace(cmd.ArgumentHint) != ""
+}
+
 // CommandExactMatch reports whether input is an exact /command with no arguments.
 func CommandExactMatch(input string, ctx Context) bool {
 	trimmed := strings.TrimLeft(input, " \t")

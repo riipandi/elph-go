@@ -447,6 +447,13 @@ func (m Model) handleSlashCommand(raw string) (Model, tea.Cmd, bool) {
 		m.quitting = true
 		return m, tea.Sequence(disableTerminalFeatures(), tea.Quit), true
 	}
+	if label := strings.TrimSpace(result.DetailLabel); label != "" && strings.TrimSpace(result.DetailBody) != "" {
+		at := time.Now()
+		m = m.addDetailMessageAt(label, result.DetailBody, at)
+		m.session.AppendLog("detail", label)
+		m = m.syncLayout(true)
+		return m, nil, true
+	}
 	if output := strings.TrimSpace(result.Output); output != "" {
 		m, cmd := m.withMessage(output)
 		m = m.syncLayout(true)

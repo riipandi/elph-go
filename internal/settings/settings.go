@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/riipandi/elph/internal/theme"
@@ -15,16 +16,19 @@ const (
 	defaultElphHomeDir        = ".elph"
 	settingsFileName          = "settings.json"
 	DefaultModelsSyncInterval = 24 * time.Hour
+	// ResponseLanguageInherit matches the user's message language automatically.
+	ResponseLanguageInherit = "inherit"
 )
 
 // Settings is persisted at ~/.elph/settings.json.
 type Settings struct {
-	Models             ModelsSettings  `json:"models"`
-	Theme              string          `json:"theme,omitempty"`
-	ShowThinking       *bool           `json:"showThinking,omitempty"`
-	AutoExpandThinking *bool           `json:"autoExpandThinking,omitempty"`
-	ThinkingBudgets    map[string]int  `json:"thinkingBudgets,omitempty"`
-	Session            SessionSettings `json:"session,omitempty"`
+	Models                   ModelsSettings  `json:"models"`
+	Theme                    string          `json:"theme,omitempty"`
+	ShowThinking             *bool           `json:"showThinking,omitempty"`
+	AutoExpandThinking       *bool           `json:"autoExpandThinking,omitempty"`
+	PreferedResponseLanguage string          `json:"preferedResponseLanguage,omitempty"`
+	ThinkingBudgets          map[string]int  `json:"thinkingBudgets,omitempty"`
+	Session                  SessionSettings `json:"session,omitempty"`
 }
 
 // ModelsSettings controls periodic models.dev metadata sync.
@@ -93,8 +97,9 @@ func defaultSettings() Settings {
 		Models: ModelsSettings{
 			SyncInterval: "24h",
 		},
-		Theme:        string(theme.Auto),
-		ShowThinking: &showThinking,
+		Theme:                    string(theme.Auto),
+		ShowThinking:             &showThinking,
+		PreferedResponseLanguage: ResponseLanguageInherit,
 	}
 }
 
@@ -108,6 +113,9 @@ func (s Settings) withDefaults() Settings {
 		v := false
 		s.AutoExpandThinking = &v
 	}
+	if strings.TrimSpace(s.PreferedResponseLanguage) == "" {
+		s.PreferedResponseLanguage = ResponseLanguageInherit
+	}
 	return s
 }
 
@@ -119,6 +127,11 @@ func (s Settings) ShowThinkingEnabled() bool {
 // AutoExpandThinkingEnabled reports whether thinking blocks start expanded.
 func (s Settings) AutoExpandThinkingEnabled() bool {
 	return *s.withDefaults().AutoExpandThinking
+}
+
+// ResponseLanguage returns the default language for assistant replies.
+func (s Settings) ResponseLanguage() string {
+	return s.withDefaults().PreferedResponseLanguage
 }
 
 // ThinkingBudgetOverrides returns custom token budgets per thinking level.

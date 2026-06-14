@@ -81,12 +81,64 @@ func TestBuildCustomSystemPrompt(t *testing.T) {
 
 func TestBuildIncludesAgentsMD(t *testing.T) {
 	dir := t.TempDir()
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "AGENTS.md"), []byte("Use Go 1.26.\n"), 0o644))
+	agentsPath := filepath.Join(dir, "AGENTS.md")
+	require.NoError(t, os.WriteFile(agentsPath, []byte("Use Go 1.26.\n"), 0o644))
 
-	got := Build(Options{WorkDir: dir})
-	require.Contains(t, got, "## Project Instructions")
-	require.Contains(t, got, "AGENTS.md")
+	got := Build(Options{WorkDir: dir, CurrentDate: "2026-06-15", AgentMode: "build"})
+	require.Contains(t, got, "<project_context>")
+	require.Contains(t, got, "Project-specific instructions and guidelines:")
+	require.Contains(t, got, `<project_instructions path="`+agentsPath+`">`)
 	require.Contains(t, got, "Use Go 1.26.")
+	require.Contains(t, got, "</project_context>")
+}
+
+func TestBuildIncludesResponseLanguageInheritDefault(t *testing.T) {
+	got := Build(Options{})
+	require.Contains(t, got, "## Response Language")
+	require.Contains(t, got, "Detect the language of each user message and write your replies in that same language.")
+	require.Contains(t, got, "If the user explicitly asks you to respond in a different language")
+	require.NotContains(t, got, "Write user-facing replies in English by default.")
+}
+
+func TestBuildIncludesResponseLanguageInheritExplicit(t *testing.T) {
+	got := Build(Options{PreferedResponseLanguage: "inherit"})
+	require.Contains(t, got, "Detect the language of each user message and write your replies in that same language.")
+}
+
+func TestBuildIncludesResponseLanguageFixed(t *testing.T) {
+	got := Build(Options{PreferedResponseLanguage: "Indonesian"})
+	require.Contains(t, got, "Write user-facing replies in Indonesian by default.")
+	require.NotContains(t, got, "Detect the language of each user message")
+}
+
+func TestBuildIncludesSkillsSection(t *testing.T) {
+	got := Build(Options{
+		Skills: []Skill{{
+			Name:        "review",
+			Description: "Review local changes",
+			Location:    "/tmp/review/SKILL.md",
+		}},
+	})
+	require.Contains(t, got, "<available_skills>")
+	require.Contains(t, got, "<name>review</name>")
+	require.Contains(t, got, "<description>Review local changes</description>")
+	require.Contains(t, got, "<location>/tmp/review/SKILL.md</location>")
+}
+
+func TestBuildIncludesRuntimeAndSessionState(t *testing.T) {
+	dir := t.TempDir()
+	got := Build(Options{
+		WorkDir:     dir,
+		CurrentDate: "2026-06-15",
+		AgentMode:   "plan",
+	})
+
+	absDir, err := filepath.Abs(dir)
+	require.NoError(t, err)
+
+	require.Contains(t, got, "Current date: 2026-06-15")
+	require.Contains(t, got, "Current working directory: "+absDir)
+	require.Contains(t, got, "<session_mode>plan</session_mode>")
 }
 
 func TestBuildIncludesAdditionalInstructions(t *testing.T) {
@@ -120,16 +172,24 @@ func TestBuildSectionOrder(t *testing.T) {
 	got := Build(Options{
 		WorkDir:                dir,
 		AdditionalInstructions: "user rule",
+		CurrentDate:            "2026-06-15",
+		AgentMode:              "build",
 	})
 
 	base := strings.Index(got, "You are an expert AI coding assistant, operate in Elph CLI.")
 	tools := strings.Index(got, "## Available Tools")
+	project := strings.Index(got, "<project_context>")
+	runtime := strings.Index(got, "Current date: 2026-06-15")
+	session := strings.Index(got, "<session_state>")
 	guardrails := strings.Index(got, "## Guardrails")
-	agents := strings.Index(got, "## Project Instructions")
+	responseLang := strings.Index(got, "## Response Language")
 	extra := strings.Index(got, "## Additional Instructions")
 
 	require.Less(t, base, tools)
-	require.Less(t, tools, guardrails)
-	require.Less(t, guardrails, agents)
-	require.Less(t, agents, extra)
+	require.Less(t, tools, project)
+	require.Less(t, project, runtime)
+	require.Less(t, runtime, session)
+	require.Less(t, session, guardrails)
+	require.Less(t, guardrails, responseLang)
+	require.Less(t, responseLang, extra)
 }

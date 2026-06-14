@@ -95,7 +95,9 @@ func TestDiagnosticSystemPrompt(t *testing.T) {
 		SystemPrompt: "You are an expert coding assistant.",
 	})
 	require.True(t, result.OK)
-	require.Contains(t, result.Output, "You are an expert coding assistant.")
+	require.Empty(t, result.Output)
+	require.Equal(t, "System prompt", result.DetailLabel)
+	require.Contains(t, result.DetailBody, "You are an expert coding assistant.")
 }
 
 func TestDiagnosticSystemPromptEmpty(t *testing.T) {

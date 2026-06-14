@@ -20,6 +20,7 @@ func TestLoadMissingReturnsDefaults(t *testing.T) {
 	require.True(t, cfg.ShowThinkingEnabled())
 	require.False(t, cfg.AutoExpandThinkingEnabled())
 	require.Equal(t, "auto", cfg.Theme)
+	require.Equal(t, ResponseLanguageInherit, cfg.ResponseLanguage())
 }
 
 func TestAutoExpandThinkingDefaultsFalseAndCanEnable(t *testing.T) {
@@ -40,6 +41,25 @@ func TestAutoExpandThinkingDefaultsFalseAndCanEnable(t *testing.T) {
 	cfg, err = Load()
 	require.NoError(t, err)
 	require.True(t, cfg.AutoExpandThinkingEnabled())
+}
+
+func TestPreferedResponseLanguageDefaultsInheritAndCanOverride(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+
+	cfg, err := Load()
+	require.NoError(t, err)
+	require.Equal(t, ResponseLanguageInherit, cfg.ResponseLanguage())
+
+	require.NoError(t, Save(Settings{
+		Models:                   cfg.Models,
+		ShowThinking:             cfg.ShowThinking,
+		PreferedResponseLanguage: "Indonesian",
+	}))
+
+	cfg, err = Load()
+	require.NoError(t, err)
+	require.Equal(t, "Indonesian", cfg.ResponseLanguage())
 }
 
 func TestShowThinkingDefaultsTrueAndCanDisable(t *testing.T) {

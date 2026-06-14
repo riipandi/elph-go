@@ -126,13 +126,21 @@ Inputs starting with `/` invoke slash commands. Built-in commands (for example `
 `/exit`) are always available. Custom prompt templates are loaded from `~/.elph/prompts/*.md` and
 `<workDir>/.elph/prompts/*.md` — each file becomes a slash command named after the filename.
 
-Detail blocks (prompt templates, shell output, native tool results) and thinking blocks are shown
-separately from user input. They are dimmed and collapsible. **Thinking** respects
-`autoExpandThinking` in settings (default collapsed). **Native tool** detail boxes start
-**expanded** so streamed output is visible immediately. Click a header or hint row to expand or
-collapse that block. Detail titles are plain text (no background); the hint row is clickable for
-detail blocks. `Ctrl+O` toggles the most recent collapsible block in the session. Detail box colors
-reflect status: neutral, running, success, warning, or error.
+Detail blocks (prompt templates, `/diagnostic:system-prompt`, shell output, native tool results) and
+thinking blocks are shown separately from user input. They are dimmed and collapsible. **Thinking**
+respects `autoExpandThinking` in settings (default collapsed). **Native tool** detail boxes start
+**expanded** so streamed output is visible immediately. Diagnostic and prompt detail blocks start
+**collapsed** with a one-line preview. Click a header or hint row to expand or collapse that block.
+Detail titles are plain text (no background); the hint row is clickable for detail blocks. `Ctrl+O`
+toggles the most recent collapsible block in the session. Detail box colors reflect status: neutral,
+running, success, warning, or error.
+
+### Slash command palette
+
+Typing `/` opens a fuzzy command list above the input. `Tab` or `→` completes the highlighted
+entry; `↑`/`↓` change selection. `Enter` runs commands that need no arguments; for commands with
+`Args` or an `argument-hint`, `Enter` completes the name (or runs with the highlighted arg when the
+arg palette is active). See [slash-commands.md](./slash-commands.md#command-palette-keys).
 
 See [prompt-templates.md](./prompt-templates.md) for format, argument placeholders, and examples.
 
@@ -246,7 +254,7 @@ Source of truth: `internal/constants/keymap.go`.
 | `Ctrl+D`            | Exit application                         |
 | `Ctrl+A`            | Switch agent mode                        |
 | `Shift+Tab`         | Cycle thinking level                     |
-| `Enter`             | Send message                             |
+| `Enter`             | Send message; in slash palette, run or complete selected command |
 | `Ctrl+J`            | Insert newline in input                  |
 | `Shift+Enter`       | Insert newline in input                  |
 | `Ctrl+L`            | Open model selector                      |

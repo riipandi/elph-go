@@ -8,18 +8,18 @@ See [prompt-templates.md](./prompt-templates.md) for template format and argumen
 
 ## Built-in commands
 
-| Command                     | Aliases       | Status              | Description                                   |
-|-----------------------------|---------------|---------------------|-----------------------------------------------|
-| `/help`                     | —             | **Implemented**     | List all slash commands                       |
-| `/model`                    | —             | **Implemented**     | Open model selector (or filter by args)       |
-| `/exit`                     | `/quit`, `/q` | **Implemented**     | Quit the application                          |
-| `/diagnostic:list-tools`    | —             | **Implemented**     | List agent and diagnostic tools               |
-| `/diagnostic:system-prompt` | —             | **Implemented**     | Show assembled system prompt                  |
-| `/diagnostic:open-log`      | —             | **Implemented**     | Tail session log (`requests` or `system` arg) |
-| `/changelog`                | —             | **Not implemented** | Shows placeholder message                     |
-| `/settings`                 | `/config`     | **Not implemented** | Shows placeholder message                     |
-| `/diff`                     | —             | **Not implemented** | Shows placeholder message                     |
-| `/diagnostic:debug`         | —             | **Not implemented** | Shows placeholder message                     |
+| Command                     | Aliases       | Status              | Description                                              |
+|-----------------------------|---------------|---------------------|----------------------------------------------------------|
+| `/help`                     | —             | **Implemented**     | List all slash commands                                  |
+| `/model`                    | —             | **Implemented**     | Open model selector (or filter by args)                  |
+| `/exit`                     | `/quit`, `/q` | **Implemented**     | Quit the application                                     |
+| `/diagnostic:list-tools`    | —             | **Implemented**     | List agent and diagnostic tools                          |
+| `/diagnostic:system-prompt` | —             | **Implemented**     | Show assembled system prompt in a collapsible detail box |
+| `/diagnostic:open-log`      | —             | **Implemented**     | Tail session log (`requests` or `system` arg)            |
+| `/changelog`                | —             | **Not implemented** | Shows placeholder message                                |
+| `/settings`                 | `/config`     | **Not implemented** | Shows placeholder message                                |
+| `/diff`                     | —             | **Not implemented** | Shows placeholder message                                |
+| `/diagnostic:debug`         | —             | **Not implemented** | Shows placeholder message                                |
 
 ## Prompt templates
 
@@ -60,6 +60,27 @@ If the model emits them as text-markup tool calls, the UI shows a message pointi
 - Slash commands: fuzzy match on name and description (`internal/command/suggest.go`)
 - Template args: positional hints from frontmatter `argument-hint`
 - `@` mentions: file paths under workspace (`internal/mention`)
+
+### Command palette keys
+
+When the slash palette is open:
+
+| Key         | Command list                                                     | Arg list (commands with `Args` or `argument-hint`) |
+|-------------|------------------------------------------------------------------|----------------------------------------------------|
+| `Tab` / `→` | Complete selected command name                                   | Cycle argument preview                             |
+| `↑` / `↓`   | Move selection                                                   | Cycle argument preview                             |
+| `Enter`     | Run if the command needs no args; otherwise complete to `/name ` | Run with the highlighted argument                  |
+
+Examples: `/hel` + `Enter` runs `/help`; `/diagnostic:open-log` + `Enter` runs with the highlighted log target (default `system`); `/identify` + `Enter` completes to `/identify ` and waits for template arguments.
+
+## `/diagnostic:system-prompt` display
+
+On success the TUI shows:
+
+1. **User message** — `/diagnostic:system-prompt`
+2. **Detail block** — collapsed by default, labeled `System prompt`, containing the full assembled prompt
+
+Expand with `Ctrl+O` or by clicking the block header. Errors (empty prompt) still appear as a normal system notice.
 
 ## Related docs
 

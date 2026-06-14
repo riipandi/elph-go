@@ -36,7 +36,7 @@ elph/
 | `datastore`      | **Stub** — empty package, reserved                                                             |
 | `git`            | Git footer: lightweight `ReadBranch` (`.git/HEAD`) + full `Read` (go-git line stats on demand) |
 | `mention`        | `@` file/path autocomplete in input                                                            |
-| `prompt`         | System prompt assembly, `AGENTS.md`, tool list formatting                                      |
+| `prompt`         | System prompt assembly (`AGENTS.md`, skills, session state, response language, tools)          |
 | `prompttemplate` | Load `*.md` templates with frontmatter and `$1` args                                           |
 | `renderer`       | Bubble Tea v2 TUI (viewport, input, agent bridge, markdown, huh dialogs)                       |
 | `runtime`        | Session, tool execution, shell, session logs                                                   |

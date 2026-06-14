@@ -37,6 +37,11 @@
       "description": "Start thinking blocks expanded in the chat.",
       "default": false
     },
+    "preferedResponseLanguage": {
+      "type": "string",
+      "default": "inherit",
+      "description": "Reply language. inherit matches the user's message language; any other value fixes the default (for example English, Indonesian). The model still switches when the user explicitly requests another language."
+    },
     "thinkingBudgets": {
       "type": "object",
       "description": "Custom token budgets per thinking level for budget-based reasoning models.",

@@ -269,11 +269,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		if m.input.Focused() {
+			var paletteCmd tea.Cmd
 			var consumed bool
-			m, consumed = m.handleInputPaletteKey(msg)
+			m, paletteCmd, consumed = m.handleInputPaletteKey(msg)
 			if consumed {
 				m, finCmd := m.finalizeInputEdit()
-				return m, finCmd
+				return m, tea.Batch(paletteCmd, finCmd)
 			}
 		}
 

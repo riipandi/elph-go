@@ -34,7 +34,9 @@ Prefer code when they disagree until docs or behavior are updated.
 - Native tool loop and API filter (Read/Grep/Glob only) — `tools.md`, `progress.md`, `agent-runtime.md`
 - Prompt template paths and placeholders — `prompt-templates.md`
 - Provider CLI (`connect`, `update`, `list`, enable/disable) — `cli.md`, `configuration.md`
-- Git line stats in footer — `tui.md`, `internal/git`
+- Git footer (lazy branch refresh + on-demand line stats) — `tui.md`, `architecture.md`, `internal/git`
+- Memory limits and idle RSS — `architecture.md`, `agent-runtime.md`, `progress.md`
+- models.dev startup check + huh confirm — `configuration.md`, `tui.md`, `cli.md`
 
 ### Fixed in this audit
 

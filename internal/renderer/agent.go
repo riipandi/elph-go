@@ -140,7 +140,7 @@ func (m Model) finishAgentTurn(thinking, response string) (Model, tea.Cmd) {
 			responseIdx = -1
 			break
 		}
-		m.messages[responseIdx].text = response
+		m.messages[responseIdx].text = agent.TruncateWithNotice(response, agent.MaxUIMessageBytes)
 		m.messages[responseIdx].renderCache = messageRenderCache{}
 		m.messages[responseIdx].glamourPending = true
 		m.session.AppendLog("ai", response)
@@ -153,7 +153,7 @@ func (m Model) finishAgentTurn(thinking, response string) (Model, tea.Cmd) {
 		if strings.TrimSpace(response) == "" {
 			break
 		}
-		m = m.addAIMessage(response)
+		m = m.addAIMessage(agent.TruncateWithNotice(response, agent.MaxUIMessageBytes))
 		responseIdx = len(m.messages) - 1
 	}
 
@@ -161,6 +161,7 @@ func (m Model) finishAgentTurn(thinking, response string) (Model, tea.Cmd) {
 	m.agent.ResponseMsgID = -1
 	m.layout.StreamFlushPending = false
 	m = m.clearStreamPrefixCache()
+	resetMarkdownCache()
 	m.layout.ContentDirty = true
 	m = m.syncLayout(true)
 

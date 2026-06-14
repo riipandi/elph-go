@@ -63,7 +63,7 @@ func ExternalEntry(name, section, approval, description string) Entry {
 
 func catalogEntries(explicit []Entry) []Entry {
 	if explicit == nil {
-		explicit = entriesFromBuiltins(tool.All())
+		explicit = entriesFromExposedBuiltins()
 	}
 
 	entries := make([]Entry, 0, len(explicit)+len(tools.Diagnostic()))
@@ -77,6 +77,16 @@ func catalogEntries(explicit []Entry) []Entry {
 	}
 
 	return entries
+}
+
+func entriesFromExposedBuiltins() []Entry {
+	defs := make([]tool.Definition, 0, 4)
+	for _, def := range tool.All() {
+		if tool.IsProviderExposed(def.Name) {
+			defs = append(defs, def)
+		}
+	}
+	return entriesFromBuiltins(defs)
 }
 
 func entriesFromBuiltins(defs []tool.Definition) []Entry {

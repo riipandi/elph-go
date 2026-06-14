@@ -241,6 +241,8 @@ func (m Model) maxInputHeight() int {
 	}
 	overlayH := 0
 	switch {
+	case m.modelsSyncDialogActive():
+		overlayH = m.modelsSyncDialogHeight()
 	case m.commandPaletteActive():
 		overlayH = m.commandPaletteHeight()
 	case m.modelSelectorActive():
@@ -419,6 +421,7 @@ func isSlashCommand(s string) bool {
 
 func (m Model) handleSlashCommand(raw string) (Model, tea.Cmd, bool) {
 	trimmed := strings.TrimSpace(raw)
+	m = m.ensurePromptTemplates()
 	result := command.Execute(raw, m.commandContext())
 	if result.OpenModelSelector {
 		m = m.openModelSelector(result.SelectorCatalog, result.SelectorQuery)

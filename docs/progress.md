@@ -326,9 +326,15 @@ flowchart TB
 
 - `builder.go` — native-tool instructions in system prompt
 
+### `internal/git`
+
+- `branch.go` — lightweight `ReadBranch` for idle footer refresh
+- `status.go` — full `Read` with line-stat path cap
+
 ### `docs`
 
 - `tools.md` — Provider API exposure section
+- `architecture.md` — performance and memory table
 - `progress.md` — this document
 
 ---
@@ -362,15 +368,54 @@ When adding an API-exposed tool, follow the checklist in
 
 ## 10. Session timeline (summary)
 
-| Phase | Focus               | Outcome                                                                |
-|-------|---------------------|------------------------------------------------------------------------|
-| 1     | TUI feedback        | Message timestamps; activity stopwatch                                 |
-| 2     | Error presentation  | Distinct unavailable/unknown/failed states in detail boxes             |
-| 3     | Markup leakage      | Multi-stage parser + `StripExtractedPayloads`; renderer sanitization   |
-| 4     | Native tool calling | OpenAI/Anthropic tools, agent loop, session history, TUI events        |
-| 5     | API tool filter     | `IsProviderExposed` — only Read, Grep, Glob sent to providers          |
-| 6     | Documentation       | `docs/tools.md` exposure section; this progress log                    |
-| 7     | Doc audit           | Full doc set in `docs/README.md`; fixed `tui.md`, tips, stale messages |
+| Phase | Focus               | Outcome                                                                       |
+|-------|---------------------|-------------------------------------------------------------------------------|
+| 1     | TUI feedback        | Message timestamps; activity stopwatch                                        |
+| 2     | Error presentation  | Distinct unavailable/unknown/failed states in detail boxes                    |
+| 3     | Markup leakage      | Multi-stage parser + `StripExtractedPayloads`; renderer sanitization          |
+| 4     | Native tool calling | OpenAI/Anthropic tools, agent loop, session history, TUI events               |
+| 5     | API tool filter     | `IsProviderExposed` — only Read, Grep, Glob sent to providers                 |
+| 6     | Documentation       | `docs/tools.md` exposure section; this progress log                           |
+| 7     | Doc audit           | Full doc set in `docs/README.md`; fixed `tui.md`, tips, stale messages        |
+| 8     | Memory & startup    | Idle RSS ~30 MB; lazy git, catalog trim, history caps, huh models.dev confirm |
+
+---
+
+## 12. Memory and startup performance (June 2026)
+
+Idle RSS had grown to ~120 MB from synchronous go-git at startup, periodic full repo scans, and retained catalog/history blobs. After optimization, idle usage is back to **~30 MB** on a typical session.
+
+### Git footer
+
+| Change                                          | Location                 |
+|-------------------------------------------------|--------------------------|
+| Removed blocking `git.Read` from `renderer.New` | `model.go`               |
+| `ReadBranch` — `.git/HEAD` only, no go-git      | `internal/git/branch.go` |
+| Idle tick: branch-only refresh every 2 min      | `footer.go`, `update.go` |
+| Full `Read` on footer git click and after shell | `footer.go`, `shell.go`  |
+| Line-diff cap: 32 changed paths                 | `internal/git/status.go` |
+
+### Session and agent limits
+
+| Change                                        | Location                                 |
+|-----------------------------------------------|------------------------------------------|
+| `CompactMessages` — 32 msgs / ~512 KB history | `pkg/core/agent/limits.go`, `loop.go`    |
+| Tool/assistant/TUI truncation                 | `pkg/core/agent/truncate.go`             |
+| `TrimCatalogForRuntime` / `SlimModel`         | `pkg/ai/provider/catalog_trim.go`        |
+| Grep/Glob/Read execution caps                 | `internal/runtime/execute.go`            |
+| Glamour cache reset per turn                  | `renderer/markdown.go`, `agent.go`       |
+| Lazy prompt templates + toolcall regex        | `renderer/model.go`, `toolcall_regex.go` |
+
+### models.dev in the TUI
+
+| Change                                 | Location                           |
+|----------------------------------------|------------------------------------|
+| One startup check when `SyncDue`       | `checkModelsSyncAtStartupCmd`      |
+| Dry-run preview before prompting       | `provider.PreviewModelsDevUpdates` |
+| huh confirm dialog (`Update` / `Skip`) | `renderer/models_sync.go`          |
+| No background re-check timer           | removed deferred periodic sync     |
+
+Dependency: `charm.land/huh/v2`.
 
 ---
 
@@ -381,3 +426,5 @@ See [docs/README.md § Documentation gaps](./README.md#documentation-gaps-audit-
 Added: `architecture.md`, `configuration.md`, `cli.md`, `slash-commands.md`, `agent-runtime.md`, `docs/README.md` index.
 
 Corrected: `tui.md` keybindings and defaults; root `README.md` requirements; `notExecutableToolMessage`; banner tips.
+
+Updated (memory pass): `architecture.md` performance table; `configuration.md` / `cli.md` models.dev huh confirm; `tui.md` git refresh and update dialog; `agent-runtime.md` memory cross-links.

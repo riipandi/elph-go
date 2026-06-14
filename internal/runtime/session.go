@@ -13,20 +13,21 @@ import (
 
 // Session binds a coding-agent runtime to a single interactive session.
 type Session struct {
-	ID              typeid.TypeID
-	WorkDir         string
-	SystemPrompt    string
-	LogPath         string
-	RequestsLogPath string
-	Provider        provider.Provider
-	ModelID         string
-	ModelName       string
-	ContextWindow   int
-	MaxTokens       int
-	ProviderID      string
-	ProviderName    string
-	Catalog         provider.Catalog
-	History         []provider.ChatMessage
+	ID                typeid.TypeID
+	WorkDir           string
+	SystemPrompt      string
+	LogPath           string
+	RequestsLogPath   string
+	Provider          provider.Provider
+	ModelID           string
+	ModelName         string
+	ContextWindow     int
+	MaxTokens         int
+	ProviderID        string
+	ProviderName      string
+	Catalog           provider.Catalog
+	EnabledModelCount int
+	History           []provider.ChatMessage
 }
 
 // NewSession creates a session with a generated typeid and assembled system prompt.
@@ -53,19 +54,20 @@ func NewSession(workDir string) Session {
 	}
 
 	return Session{
-		ID:              id,
-		WorkDir:         workDir,
-		SystemPrompt:    prompt.Build(prompt.Options{WorkDir: workDir}),
-		LogPath:         logPath,
-		RequestsLogPath: RequestsLogPath(workDir, id),
-		Provider:        cfg.Provider,
-		ModelID:         cfg.ModelID,
-		ModelName:       modelName,
-		ContextWindow:   cfg.ContextWindow,
-		MaxTokens:       cfg.MaxTokens,
-		ProviderID:      providerID,
-		ProviderName:    providerName,
-		Catalog:         cfg.Catalog,
+		ID:                id,
+		WorkDir:           workDir,
+		SystemPrompt:      prompt.Build(prompt.Options{WorkDir: workDir}),
+		LogPath:           logPath,
+		RequestsLogPath:   RequestsLogPath(workDir, id),
+		Provider:          cfg.Provider,
+		ModelID:           cfg.ModelID,
+		ModelName:         modelName,
+		ContextWindow:     cfg.ContextWindow,
+		MaxTokens:         cfg.MaxTokens,
+		ProviderID:        providerID,
+		ProviderName:      providerName,
+		Catalog:           cfg.Catalog,
+		EnabledModelCount: cfg.Catalog.TotalEnabledModels(),
 	}
 }
 
@@ -109,5 +111,5 @@ func (s *Session) ApplyHistory(history []provider.ChatMessage) {
 		s.History = nil
 		return
 	}
-	s.History = append([]provider.ChatMessage(nil), history...)
+	s.History = agent.CompactMessages(history)
 }

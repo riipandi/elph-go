@@ -207,6 +207,31 @@ project_dir [session_id] mode             turn: 0 | branch [+N -N]
 | deletions only | `[+0 -2]` | red    | `#EF4444` |
 | mixed          | `[+3 -2]` | yellow | `#EAB308` |
 
+### Git refresh behavior
+
+To avoid loading the full repository via go-git while idle:
+
+| When                            | What updates                                                    |
+|---------------------------------|-----------------------------------------------------------------|
+| TUI startup (async)             | Branch name only (`git.ReadBranch` — reads `.git/HEAD`)         |
+| Every 2 minutes (idle tick)     | Branch name only; `+N -N` stats are **not** refreshed           |
+| Footer click on branch/git area | Full stats (`git.Read` — go-git, line diffs capped at 32 paths) |
+| After shell command completes   | Full stats (async)                                              |
+
+Until a full refresh runs, `[+N -N]` may show stale values while the branch name stays current.
+
+---
+
+## Models.dev update dialog
+
+When model metadata may be outdated (`models.syncInterval` elapsed), the TUI checks models.dev **once at startup**. If updates are available, a **[huh](https://github.com/charmbracelet/huh) confirm** replaces the input area:
+
+- **Title:** Model metadata update available
+- **Description:** provider files that would change (e.g. `openai.json`, `anthropic.json`)
+- **Actions:** `Update` (full sync) or `Skip` (record sync time, no download)
+
+Implementation: `internal/renderer/models_sync.go`. Settings: [configuration.md § Models.dev sync in the TUI](./configuration.md#modelsdev-sync-in-the-tui).
+
 ---
 
 ## Keybindings

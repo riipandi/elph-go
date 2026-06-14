@@ -431,6 +431,9 @@ func (m Model) inputBodyView() string {
 }
 
 func (m Model) inputChromeView() string {
+	if m.modelsSyncDialogActive() {
+		return m.modelsSyncDialogView()
+	}
 	if m.modelSelectorActive() {
 		return m.modelSelectorChromeView()
 	}

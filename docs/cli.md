@@ -47,7 +47,7 @@ Set API keys via env vars referenced in the JSON (see [configuration.md](./confi
 2. Refreshes model metadata from [models.dev](https://models.dev) and live `/models` endpoints (OpenCode, DeepSeek, Kimi when keys are set)
 3. Records `models.lastSync` in `~/.elph/settings.json`
 
-The TUI auto-runs this sync on startup when `models.syncInterval` has elapsed (default 24h).
+When `models.syncInterval` has elapsed (default 24h), the TUI **checks once at startup** whether models.dev has updates. If changes are detected, it shows a **huh confirm dialog** (`Update` / `Skip`) before writing provider files. The TUI does not re-check on a background timer. Use `elph provider update` for an immediate CLI sync.
 
 ### `list`
 

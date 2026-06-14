@@ -130,6 +130,6 @@ func SelectModel(catalog Catalog, provider RegisteredProvider, model ResolvedMod
 		MaxTokens:     model.MaxTokens,
 		Input:         model.Input,
 		Cost:          model.Cost,
-		Catalog:       catalog,
+		Catalog:       TrimCatalogForRuntime(catalog, provider.ID, model.ID),
 	}, nil
 }

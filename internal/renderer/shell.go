@@ -8,7 +8,6 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/riipandi/elph/internal/constants"
-	"github.com/riipandi/elph/internal/git"
 	"github.com/riipandi/elph/internal/runtime"
 )
 
@@ -234,7 +233,6 @@ func (m Model) finishShellDone(msg shellDoneMsg) (Model, tea.Cmd) {
 	}
 
 	m = m.clearActivity()
-	m = m.applyGitStatus(git.Read(m.workDir))
 	m = m.syncLayout(true)
 	return m, refreshGitStatusCmd(m.workDir)
 }

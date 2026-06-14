@@ -13,10 +13,17 @@ import (
 	"github.com/riipandi/elph/pkg/ai/provider"
 )
 
-const gitRefreshInterval = 5 * time.Second
+const gitRefreshInterval = 2 * time.Minute
 
 type gitStatusMsg struct {
 	status git.Status
+	light  bool // branch only; preserve cached line stats
+}
+
+func refreshGitBranchCmd(workDir string) tea.Cmd {
+	return func() tea.Msg {
+		return gitStatusMsg{status: git.ReadBranch(workDir), light: true}
+	}
 }
 
 func refreshGitStatusCmd(workDir string) tea.Cmd {
@@ -33,13 +40,25 @@ func gitRefreshTickCmd() tea.Cmd {
 
 type gitRefreshTickMsg struct{}
 
-func (m Model) applyGitStatus(st git.Status) Model {
+func (m Model) applyGitBranch(st git.Status) Model {
 	if st.Branch != "" {
 		m.branch = st.Branch
 	}
+	return m
+}
+
+func (m Model) applyGitStatus(st git.Status) Model {
+	m = m.applyGitBranch(st)
 	m.gitAdded = st.Added
 	m.gitDeleted = st.Deleted
 	return m
+}
+
+func (m Model) handleGitStatus(msg gitStatusMsg) Model {
+	if msg.light {
+		return m.applyGitBranch(msg.status)
+	}
+	return m.applyGitStatus(msg.status)
 }
 
 func (m Model) syncActiveModelMetadata() Model {

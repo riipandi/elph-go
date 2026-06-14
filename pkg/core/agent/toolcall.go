@@ -1,7 +1,6 @@
 package agent
 
 import (
-	"regexp"
 	"strings"
 )
 
@@ -11,25 +10,12 @@ type ParsedToolCall struct {
 	Parameters map[string]string
 }
 
-var (
-	toolCallBlockRe        = regexp.MustCompile(`(?is)<tool[_-]?call\s*>\s*(.*?)\s*</tool[_-]?call\s*>`)
-	toolFunctionRe         = regexp.MustCompile(`(?is)<function=([^>\s]+)>\s*(.*?)\s*</function>`)
-	toolParameterRe        = regexp.MustCompile(`(?is)<parameter=([^>\s]+)>\s*(.*?)\s*</parameter>`)
-	toolCallOpenRe         = regexp.MustCompile(`(?i)<tool[_-]?call\s*>`)
-	toolCallCloseRe        = regexp.MustCompile(`(?i)</tool[_-]?call\s*>`)
-	toolFunctionOpenRe     = regexp.MustCompile(`(?is)<function=([^>\s]+)>\s*(.*)$`)
-	toolParameterOpenRe    = regexp.MustCompile(`(?is)<parameter=([^>\s]+)>\s*(.*)$`)
-	toolFunctionNameFragRe = regexp.MustCompile(`(?is)=([A-Za-z][\w.-]*)>\s*((?:<parameter=[^>]+>.*?</parameter>\s*)+)`)
-	toolOrphanCloseRe      = regexp.MustCompile(`(?i)</(?:tool[_-]?call|function|parameter)\s*>`)
-	toolMarkupLineRe       = regexp.MustCompile(`(?i)^\s*</?(?:tool[_-]?call|function|parameter)(?:\s[^>]*)?>\s*$`)
-	partialFunctionTailRe  = regexp.MustCompile(`(?i)(?:<function=?|=)[A-Za-z][\w.-]*$`)
-)
-
 // StripToolCalls removes embedded toolcall markup and returns parsed invocations.
 func StripToolCalls(text string) (string, []ParsedToolCall) {
 	if text == "" {
 		return "", nil
 	}
+	ensureToolCallRegex()
 
 	var calls []ParsedToolCall
 	if shouldSmartStripFirst(text) {

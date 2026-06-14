@@ -56,6 +56,15 @@ func initRepoWithChanges(t *testing.T, dir string) {
 	require.NoError(t, err)
 }
 
+func TestChangedPathCount(t *testing.T) {
+	status := git.Status{
+		"a.txt": {Staging: git.Modified},
+		"b.txt": {Worktree: git.Modified},
+		"c.txt": {Staging: git.Unmodified, Worktree: git.Unmodified},
+	}
+	require.Equal(t, 2, changedPathCount(status))
+}
+
 func TestCountTextDiff(t *testing.T) {
 	added, deleted := countTextDiff("one\n", "one\ntwo\n")
 	require.Equal(t, 1, added)

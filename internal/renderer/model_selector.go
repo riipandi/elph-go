@@ -271,7 +271,8 @@ func (m Model) applyModelSwitch(sw *command.ModelSwitch) Model {
 	m.session.ModelName = sw.ModelName
 	m.session.ContextWindow = sw.ContextWindow
 	m.session.MaxTokens = sw.MaxTokens
-	m.session.Catalog = sw.Catalog
+	m.session.EnabledModelCount = sw.Catalog.TotalEnabledModels()
+	m.session.Catalog = provider.TrimCatalogForRuntime(sw.Catalog, sw.ProviderID, sw.ModelID)
 	m.modelName = sw.ModelName
 	m.provider = sw.ProviderName
 	m.contextWindow = sw.ContextWindow

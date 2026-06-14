@@ -21,6 +21,7 @@ func shouldSmartStripFirst(text string) bool {
 	if !containsToolMarkupSignals(text) {
 		return false
 	}
+	ensureToolCallRegex()
 	if toolCallBlockRe.MatchString(text) || toolFunctionRe.MatchString(text) {
 		return false
 	}

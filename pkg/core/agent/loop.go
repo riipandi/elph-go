@@ -12,7 +12,7 @@ import (
 const maxToolIterations = 8
 
 func runProviderLoop(ctx context.Context, opts TurnOptions, ch chan<- Event) {
-	messages := append([]provider.ChatMessage(nil), opts.Messages...)
+	messages := CompactMessages(append([]provider.ChatMessage(nil), opts.Messages...))
 	if len(messages) == 0 && strings.TrimSpace(opts.UserPrompt) != "" {
 		messages = append(messages, provider.ChatMessage{Role: "user", Content: opts.UserPrompt})
 	}
@@ -62,7 +62,7 @@ func runProviderLoop(ctx context.Context, opts TurnOptions, ch chan<- Event) {
 		if err != nil {
 			sendEvent(ctx, ch, TurnDoneWithHistoryEvent(provider.TurnResult{
 				Content: fmt.Sprintf("Provider error: %v", err),
-			}, messages))
+			}, CompactMessages(messages)))
 			return
 		}
 
@@ -79,7 +79,7 @@ func runProviderLoop(ctx context.Context, opts TurnOptions, ch chan<- Event) {
 					Content: result.Content,
 				})
 			}
-			sendEvent(ctx, ch, TurnDoneWithHistoryEvent(finalResult, messages))
+			sendEvent(ctx, ch, TurnDoneWithHistoryEvent(finalResult, CompactMessages(messages)))
 			return
 		}
 
@@ -98,7 +98,8 @@ func runProviderLoop(ctx context.Context, opts TurnOptions, ch chan<- Event) {
 			}
 
 			runResult := runToolCall(ctx, opts, call)
-			if !sendEvent(ctx, ch, ToolCallDoneEvent(call, runResult)) {
+			displayResult := LimitToolRunResult(runResult, MaxDisplayToolBytes)
+			if !sendEvent(ctx, ch, ToolCallDoneEvent(call, displayResult)) {
 				return
 			}
 
@@ -108,12 +109,13 @@ func runProviderLoop(ctx context.Context, opts TurnOptions, ch chan<- Event) {
 				Content:    ToolResultMessage(runResult),
 			})
 		}
+		messages = CompactMessages(messages)
 	}
 
 	sendEvent(ctx, ch, TurnDoneWithHistoryEvent(provider.TurnResult{
 		Content: fmt.Sprintf("Stopped after %d tool rounds.", maxToolIterations),
 		Usage:   usage,
-	}, messages))
+	}, CompactMessages(messages)))
 }
 
 func runToolCall(ctx context.Context, opts TurnOptions, call provider.ToolCall) ToolRunResult {

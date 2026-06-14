@@ -31,7 +31,10 @@ func (m Model) finishNativeToolCall(call provider.ToolCall, result agent.ToolRun
 		Cancelled: result.Cancelled,
 	}
 	name, _ := tool.ResolveName(call.Name)
-	body := runtime.FormatToolDetailBodyFromResult(runtimeResult)
+	body := agent.TruncateWithNotice(
+		runtime.FormatToolDetailBodyFromResult(runtimeResult),
+		agent.MaxDisplayToolBytes,
+	)
 	status := toolDetailStatus(runtimeResult)
 
 	if idx, ok := m.agent.NativeToolMsgIDs[call.ID]; ok && idx >= 0 && idx < len(m.messages) {

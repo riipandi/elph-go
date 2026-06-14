@@ -76,6 +76,7 @@ func (m Model) syncInputSuggestions() (Model, tea.Cmd) {
 	}
 
 	if m.slashQueryActive() {
+		m = m.ensurePromptTemplates()
 		m.suggest.MentionSuggestions = nil
 		m.suggest.MentionSuggestIndex = 0
 		m.suggest.MentionFilterQuery = ""

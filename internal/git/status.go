@@ -12,6 +12,10 @@ import (
 	dmp "github.com/sergi/go-diff/diffmatchpatch"
 )
 
+// maxLineStatPaths caps how many changed paths get full blob reads and textual
+// diffs. Beyond this, branch is still returned but line stats stay at zero.
+const maxLineStatPaths = 32
+
 // Status summarizes the current git branch and unstaged/staged line changes.
 type Status struct {
 	Branch  string
@@ -62,6 +66,9 @@ func lineStats(repo *git.Repository, wt *git.Worktree) (added, deleted int) {
 	if err != nil {
 		return 0, 0
 	}
+	if changedPathCount(status) > maxLineStatPaths {
+		return 0, 0
+	}
 
 	for path, fs := range status {
 		if fs.Staging != git.Unmodified && fs.Staging != git.Untracked {
@@ -76,6 +83,21 @@ func lineStats(repo *git.Repository, wt *git.Worktree) (added, deleted int) {
 		}
 	}
 	return added, deleted
+}
+
+func changedPathCount(status git.Status) int {
+	n := 0
+	for _, fs := range status {
+		if pathHasChanges(fs) {
+			n++
+		}
+	}
+	return n
+}
+
+func pathHasChanges(fs *git.FileStatus) bool {
+	return (fs.Staging != git.Unmodified && fs.Staging != git.Untracked) ||
+		(fs.Worktree != git.Unmodified && fs.Worktree != git.Untracked)
 }
 
 func stagedPathStats(repo *git.Repository, path string, code git.StatusCode) (added, deleted int) {

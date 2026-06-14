@@ -23,10 +23,20 @@ type UpdateModelsResult struct {
 
 // UpdateModelsOptions configures a models.dev metadata sync.
 type UpdateModelsOptions struct {
-	Dir        string
-	HTTPClient *http.Client
-	Data       ModelsDevData
-	Reporter   ProviderProgressReporter
+	Dir         string
+	HTTPClient  *http.Client
+	Data        ModelsDevData
+	Reporter    ProviderProgressReporter
+	DryRun      bool // compare only; populate Updated without writing files
+	SkipLiveAPI bool // use models.dev catalog instead of live /models APIs
+}
+
+// PreviewModelsDevUpdates fetches models.dev and reports provider files that
+// would change without writing or calling live provider APIs.
+func PreviewModelsDevUpdates(opts UpdateModelsOptions) (UpdateModelsResult, error) {
+	opts.DryRun = true
+	opts.SkipLiveAPI = true
+	return UpdateModelsFromModelsDev(opts)
 }
 
 // UpdateModelsFromModelsDev refreshes model metadata in ~/.elph/providers
@@ -119,12 +129,13 @@ func UpdateModelsFromModelsDev(opts UpdateModelsOptions) (UpdateModelsResult, er
 		}
 
 		var changed bool
-		if isLiveModelsProvider(providerID) {
+		switch {
+		case isLiveModelsProvider(providerID) && !opts.SkipLiveAPI:
 			cfg, changed, err = syncLiveProviderModels(ctx, client, providerID, catalogID, cfg, data, catalogProvider, &result, entryName)
 			if err != nil {
 				return result, fmt.Errorf("provider %q: %w", providerID, err)
 			}
-		} else {
+		default:
 			cfg, changed = syncCatalogProviderModels(providerID, catalogID, cfg, data, catalogProvider, &result, entryName)
 		}
 
@@ -140,6 +151,19 @@ func UpdateModelsFromModelsDev(opts UpdateModelsOptions) (UpdateModelsResult, er
 				Index:      i + 1,
 				Total:      total,
 				Action:     ProviderProgressUnchanged,
+			})
+			continue
+		}
+
+		if opts.DryRun {
+			result.Updated = append(result.Updated, entryName)
+			reportProviderProgress(opts.Reporter, ProviderProgressEvent{
+				Phase:      ProviderProgressSync,
+				ProviderID: providerID,
+				Label:      label,
+				Index:      i + 1,
+				Total:      total,
+				Action:     ProviderProgressSynced,
 			})
 			continue
 		}

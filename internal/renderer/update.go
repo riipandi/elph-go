@@ -45,6 +45,10 @@ func resolveKeyAction(msg tea.KeyPressMsg) constants.KeyAction {
 // ─── Update ──────────────────────────────────────────────────────────────────
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	if m.modelsSyncDialogActive() {
+		return m.updateModelsSyncForm(msg)
+	}
+
 	var cmds []tea.Cmd
 
 	if key, ok := msg.(tea.KeyPressMsg); ok {
@@ -179,10 +183,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tea.Batch(cmds...)
 
 	case gitStatusMsg:
-		m = m.applyGitStatus(msg.status)
+		m = m.handleGitStatus(msg)
 
 	case gitRefreshTickMsg:
-		cmds = append(cmds, refreshGitStatusCmd(m.workDir), gitRefreshTickCmd())
+		cmds = append(cmds, refreshGitBranchCmd(m.workDir), gitRefreshTickCmd())
 
 	case mentionIndexMsg:
 		m.suggest.MentionIndexLoading = false
@@ -199,11 +203,20 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case termFeaturesMsg:
 		// Terminal feature setup complete.
 
-	case modelsSyncDueMsg:
+	case modelsSyncOfferMsg:
 		var cmd tea.Cmd
-		m, cmd = m.startModelsSync()
+		m, cmd = m.offerModelsSync(msg.providers)
 		if cmd != nil {
 			cmds = append(cmds, cmd)
+		}
+
+	case modelsSyncCheckDoneMsg:
+		if msg.err != nil {
+			var cmd tea.Cmd
+			m, cmd = m.withMessage(fmt.Sprintf("Model metadata check failed: %v", msg.err))
+			if cmd != nil {
+				cmds = append(cmds, cmd)
+			}
 		}
 
 	case modelsSyncDoneMsg:

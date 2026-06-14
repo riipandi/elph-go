@@ -53,18 +53,18 @@ Loads variables with `gotenv.OverLoad` before any subcommand (`cmd/coding-agent/
 
 Path: `~/.elph/settings.json` (`internal/settings/settings.go`).
 
-| Field                   | Default | Description                                     |
-|-------------------------|---------|-------------------------------------------------|
-| `theme`                 | `auto`  | `auto`, `dark`, or `light`                      |
-| `showThinking`          | `true`  | Stream reasoning blocks in TUI                  |
-| `autoExpandThinking`    | `false` | Thinking blocks start expanded                  |
-| `thinkingBudgets`       | —       | Per-level token budget overrides                |
-| `session.providerId`    | —       | Last selected provider                          |
-| `session.modelId`       | —       | Last selected model                             |
-| `session.agentMode`     | `build` | `build`, `plan`, `ask`, `brave` (UI only today) |
-| `session.thinkingLevel` | `high`  | `off` … `xhigh`                                 |
-| `models.lastSync`       | —       | RFC3339 timestamp of last models.dev sync       |
-| `models.syncInterval`   | `24h`   | Auto-sync interval in TUI                       |
+| Field                   | Default | Description                                                        |
+|-------------------------|---------|--------------------------------------------------------------------|
+| `theme`                 | `auto`  | `auto`, `dark`, or `light`                                         |
+| `showThinking`          | `true`  | Stream reasoning blocks in TUI                                     |
+| `autoExpandThinking`    | `false` | Thinking blocks start expanded                                     |
+| `thinkingBudgets`       | —       | Per-level token budget overrides                                   |
+| `session.providerId`    | —       | Last selected provider                                             |
+| `session.modelId`       | —       | Last selected model                                                |
+| `session.agentMode`     | `build` | `build`, `plan`, `ask`, `brave` (UI only today)                    |
+| `session.thinkingLevel` | `high`  | `off` … `xhigh`                                                    |
+| `models.lastSync`       | —       | RFC3339 timestamp of last models.dev sync                          |
+| `models.syncInterval`   | `24h`   | Minimum interval before the TUI checks models.dev again at startup |
 
 Model selection priority (`pkg/ai/provider/registry.go`):
 
@@ -107,6 +107,17 @@ Per-model fields include `reasoning`, `thinkingLevelMap`, and `compat` (Pi-style
 ### `--no-session`
 
 Referenced in banner tips but **not implemented** — no CLI flag or ephemeral mode exists yet.
+
+## Models.dev sync in the TUI
+
+When `models.syncInterval` has elapsed since `models.lastSync`, the TUI performs **one check at startup** (not on a background timer):
+
+1. Fetches models.dev and runs a **dry-run preview** (`PreviewModelsDevUpdates`) — no provider files are written.
+2. If provider files would change, a **[huh](https://github.com/charmbracelet/huh) confirm dialog** asks whether to update (`Update` / `Skip`).
+3. If the user chooses **Update**, a full sync runs (`settings.RunModelsSync`), including live `/models` endpoints where configured.
+4. If the user chooses **Skip**, or preview finds nothing to change, `models.lastSync` is updated so the prompt does not repeat until the next interval.
+
+To refresh metadata immediately without waiting for the interval, run `elph provider update` from the CLI.
 
 ## Related docs
 

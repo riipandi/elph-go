@@ -8,11 +8,19 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/riipandi/elph/pkg/tool"
 )
 
 var ErrToolNotImplemented = errors.New("tool not implemented")
+
+const (
+	maxReadBytes = 256 << 10
+	maxGrepBytes = 128 << 10
+	maxGlobPaths = 500
+	maxGlobBytes = 128 << 10
+)
 
 // ExecuteTool runs a built-in agent tool and returns its result.
 func ExecuteTool(ctx context.Context, workDir, name string, args map[string]any) ToolResult {
@@ -49,9 +57,8 @@ func executeRead(workDir string, args map[string]any) ToolResult {
 	if err != nil {
 		return ToolResult{Err: err}
 	}
-	const maxRead = 256 << 10
-	if len(data) > maxRead {
-		data = data[:maxRead]
+	if len(data) > maxReadBytes {
+		data = data[:maxReadBytes]
 		return ToolResult{Output: string(data) + "\n\n(output truncated)"}
 	}
 	return ToolResult{Output: string(data)}
@@ -83,9 +90,9 @@ func executeGrep(ctx context.Context, workDir string, args map[string]any) ToolR
 		if exit, ok := err.(*exec.ExitError); ok && exit.ExitCode() == 1 {
 			return ToolResult{Output: "(no matches)"}
 		}
-		return ToolResult{Output: string(out), Err: err}
+		return ToolResult{Output: truncateToolOutput(string(out), maxGrepBytes), Err: err}
 	}
-	return ToolResult{Output: strings.TrimRight(string(out), "\n")}
+	return ToolResult{Output: truncateToolOutput(strings.TrimRight(string(out), "\n"), maxGrepBytes)}
 }
 
 func executeGlob(workDir string, args map[string]any) ToolResult {
@@ -111,7 +118,40 @@ func executeGlob(workDir string, args map[string]any) ToolResult {
 	if len(matches) == 0 {
 		return ToolResult{Output: "(no matches)"}
 	}
-	return ToolResult{Output: strings.Join(matches, "\n")}
+	if len(matches) > maxGlobPaths {
+		matches = matches[:maxGlobPaths]
+	}
+	out := strings.Join(matches, "\n")
+	if len(matches) == maxGlobPaths {
+		out += "\n\n(output truncated: path list capped)"
+	}
+	return ToolResult{Output: truncateToolOutput(out, maxGlobBytes)}
+}
+
+func truncateToolOutput(s string, maxBytes int) string {
+	if maxBytes <= 0 || len(s) <= maxBytes {
+		return s
+	}
+	notice := "\n\n(output truncated)"
+	budget := maxBytes - len(notice)
+	if budget <= 0 {
+		return truncateUTF8(s, maxBytes)
+	}
+	return truncateUTF8(s, budget) + notice
+}
+
+func truncateUTF8(s string, maxBytes int) string {
+	if maxBytes <= 0 || len(s) <= maxBytes {
+		return s
+	}
+	cut := maxBytes
+	for cut > 0 && !utf8.ValidString(s[:cut]) {
+		cut--
+	}
+	if cut <= 0 {
+		return ""
+	}
+	return s[:cut]
 }
 
 func stringArg(args map[string]any, key string) (string, bool) {

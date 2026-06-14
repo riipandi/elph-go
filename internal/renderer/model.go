@@ -8,9 +8,9 @@ import (
 	"charm.land/bubbles/v2/textarea"
 	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
+	"charm.land/huh/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/riipandi/elph/internal/constants"
-	"github.com/riipandi/elph/internal/git"
 	"github.com/riipandi/elph/internal/prompttemplate"
 	"github.com/riipandi/elph/internal/runtime"
 	"github.com/riipandi/elph/internal/settings"
@@ -118,6 +118,7 @@ type Model struct {
 	ctrlCNoticeID int // index in messages of the notice (-1 = none)
 
 	modelsSyncing   bool
+	modelsSyncForm  *huh.Form
 	modelsSyncMsgID int // index in messages of models.dev sync status (-1 = none)
 
 	inputPendingEsc bool // macOS ESC+backspace Option+Delete pair
@@ -175,17 +176,17 @@ func New() Model {
 	ta.Focus()
 
 	m := Model{
-		content:          vp,
-		input:            ta,
-		modelName:        session.ModelName,
-		provider:         session.ProviderName,
-		contextWindow:    session.ContextWindow,
-		mode:             prefs.AgentMode(),
-		thinkingLevel:    prefs.ThinkingLevel(),
-		themePreference:  prefs.ThemeMode(),
-		sessionID:        session.ID,
-		session:          session,
-		promptTemplates:  prompttemplate.Load(wd),
+		content:         vp,
+		input:           ta,
+		modelName:       session.ModelName,
+		provider:        session.ProviderName,
+		contextWindow:   session.ContextWindow,
+		mode:            prefs.AgentMode(),
+		thinkingLevel:   prefs.ThinkingLevel(),
+		themePreference: prefs.ThemeMode(),
+		sessionID:       session.ID,
+		session:         session,
+		// prompt templates load lazily on first slash command
 		workDir:          wd,
 		messages:         []message{},
 		tip:              randomTip(),
@@ -197,8 +198,8 @@ func New() Model {
 		shell:            ShellState{DetailMsgID: -1},
 		ctrlCNoticeID:    -1,
 		agent:            AgentState{Stopwatch: newActivityStopwatch()},
+		branch:           "—", // refreshed asynchronously in Init (avoids blocking startup on go-git)
 	}
-	m = m.applyGitStatus(git.Read(wd))
 	m = m.syncActiveModelMetadata()
 	if model, ok := m.session.Catalog.Model(m.session.ProviderID, m.session.ModelID); ok {
 		m.thinkingLevel = provider.ClampThinkingLevel(m.thinkingLevel, model)
@@ -211,8 +212,8 @@ func New() Model {
 func (m Model) Init() tea.Cmd {
 	cmds := []tea.Cmd{
 		enableTerminalFeatures(),
-		checkModelsSyncDueCmd(),
-		refreshGitStatusCmd(m.workDir),
+		checkModelsSyncAtStartupCmd(),
+		refreshGitBranchCmd(m.workDir),
 		gitRefreshTickCmd(),
 	}
 	if m.themePreference == theme.Auto {
@@ -222,5 +223,13 @@ func (m Model) Init() tea.Cmd {
 }
 
 func (m Model) availableModelCount() int {
-	return len(m.session.Catalog.AllModels())
+	return m.session.EnabledModelCount
+}
+
+func (m Model) ensurePromptTemplates() Model {
+	if m.promptTemplates != nil {
+		return m
+	}
+	m.promptTemplates = prompttemplate.Load(m.workDir)
+	return m
 }

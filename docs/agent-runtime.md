@@ -123,6 +123,23 @@ TypeID with prefix `sess` (`runtime.NewSession`). Shown in footer as `[sess_…]
 
 `Session.History []provider.ChatMessage` stores provider-native conversation including tool calls and results. Updated after each native-tool turn via `ApplyHistory`.
 
+These limits keep idle and long-session RSS stable (~30 MB at rest after startup optimizations). See [architecture.md § Performance and memory](./architecture.md#performance-and-memory) for git, catalog, and models.dev behavior.
+
+History is compacted automatically (`agent.CompactMessages`):
+
+| Limit                         | Value   |
+|-------------------------------|---------|
+| Max messages                  | 32      |
+| Max total size                | ~512 KB |
+| Max tool result (API/history) | 32 KB   |
+| Max tool result (TUI detail)  | 40 KB   |
+| Max assistant message         | 64 KB   |
+| Max AI bubble text (TUI)      | 48 KB   |
+
+Provider catalogs kept in session are trimmed: inactive models drop compat/thinking/headers metadata. Prompt templates load on first `/` use. System prompt lists only API-exposed built-in tools.
+
+Tool execution also caps raw output: Read 256 KB, Grep/Glob 128 KB, Glob 500 paths.
+
 ### Session log
 
 Path: `<workDir>/.elph/logs/<sess_id>.log`

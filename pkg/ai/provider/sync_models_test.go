@@ -112,6 +112,48 @@ func TestUpdateModelsFromModelsDev(t *testing.T) {
 	require.Equal(t, 3.0, model.Cost.Input)
 }
 
+func TestPreviewModelsDevUpdatesDryRun(t *testing.T) {
+	catalog := ModelsDevCatalog{
+		Providers: map[string]ModelsDevProvider{
+			"anthropic": {
+				ID:   "anthropic",
+				Name: "Anthropic",
+				Models: map[string]ModelsDevModel{
+					"claude-sonnet-4-20250514": {
+						ID:    "claude-sonnet-4-20250514",
+						Name:  "Claude Sonnet 4",
+						Limit: ModelsDevLimit{Context: 200000, Output: 64000},
+					},
+				},
+			},
+		},
+	}
+	dir := t.TempDir()
+	initial := FileConfig{
+		Name: "Anthropic",
+		Models: []ModelConfig{{
+			ID:            "claude-sonnet-4-20250514",
+			Name:          "Old Name",
+			ContextWindow: 128000,
+		}},
+	}
+	raw, err := json.MarshalIndent(initial, "", "  ")
+	require.NoError(t, err)
+	path := filepath.Join(dir, "anthropic.json")
+	require.NoError(t, os.WriteFile(path, append(raw, '\n'), 0o644))
+
+	result, err := PreviewModelsDevUpdates(UpdateModelsOptions{
+		Dir:  dir,
+		Data: ModelsDevData{Catalog: catalog},
+	})
+	require.NoError(t, err)
+	require.Equal(t, []string{"anthropic.json"}, result.Updated)
+
+	after, err := os.ReadFile(path)
+	require.NoError(t, err)
+	require.Equal(t, append(raw, '\n'), after)
+}
+
 func TestUpdateModelsFromModelsDevSyncsDeepSeekFromLiveAPI(t *testing.T) {
 	catalog := ModelsDevCatalog{
 		Providers: map[string]ModelsDevProvider{

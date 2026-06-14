@@ -1,10 +1,12 @@
 package renderer
 
 import (
+	"strings"
+
 	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/riipandi/elph/internal/constants"
-	"github.com/riipandi/elph/pkg/memz"
+	"github.com/riipandi/elph/pkg/tools/todolist"
 )
 
 var (
@@ -19,7 +21,27 @@ var (
 )
 
 func (m Model) showsTodoPanel() bool {
-	return len(m.session.Todos) > 0
+	return todolist.HasActive(m.session.Todos())
+}
+
+func formatTodosCompletedMessage(todos []todolist.Todo) string {
+	if len(todos) == 0 {
+		return "All tasks completed."
+	}
+	var b strings.Builder
+	b.WriteString("All tasks completed.")
+	for _, item := range todos {
+		b.WriteString("\n✓ ")
+		b.WriteString(item.Title)
+	}
+	return b.String()
+}
+
+func (m Model) addTodoCompletionMessage(text string) Model {
+	m.messages = append(m.messages, message{text: text, kind: constants.MessageSystem})
+	m.session.AppendLog("system", text)
+	m.layout.ContentDirty = true
+	return m
 }
 
 func (m Model) todoPanelHeight() int {
@@ -34,8 +56,8 @@ func (m Model) todoPanelView() string {
 		return ""
 	}
 
-	width := max(m.width, 1)
-	innerW := max(width-4, 1)
+	boxW := borderedChromeWidth(m.chromeOuterWidth())
+	innerW := inputContentWidth(m.chromeOuterWidth())
 
 	var lines []string
 	title := "Tasks"
@@ -45,18 +67,15 @@ func (m Model) todoPanelView() string {
 	}
 	lines = append(lines, todoPanelTitleStyle.Render(title))
 
-	for _, item := range m.session.Todos {
+	for _, item := range m.session.Todos() {
 		lines = append(lines, m.todoPanelLine(item, innerW))
 	}
 
 	body := lipgloss.JoinVertical(lipgloss.Left, lines...)
-	return lipgloss.NewStyle().
-		MarginTop(1).
-		Width(width).
-		Render(todoPanelBorder.Width(width).Render(body))
+	return todoPanelBorder.Width(boxW).Render(body)
 }
 
-func (m Model) todoPanelLine(item memz.Todo, maxWidth int) string {
+func (m Model) todoPanelLine(item todolist.Todo, maxWidth int) string {
 	marker, textStyle := m.todoPanelMarker(item.Status)
 	line := marker + " " + item.Title
 	if maxWidth > 0 {
@@ -65,11 +84,11 @@ func (m Model) todoPanelLine(item memz.Todo, maxWidth int) string {
 	return textStyle.Render(line)
 }
 
-func (m Model) todoPanelMarker(status memz.Status) (string, lipgloss.Style) {
+func (m Model) todoPanelMarker(status todolist.Status) (string, lipgloss.Style) {
 	switch status {
-	case memz.StatusDone:
+	case todolist.StatusDone:
 		return "✓", todoDoneStyle
-	case memz.StatusInProgress:
+	case todolist.StatusInProgress:
 		if m.agent.Busy || m.agent.TodoListUpdating {
 			frame := spinnerFrames[m.agent.SpinnerFrame%len(spinnerFrames)]
 			return frame, todoActiveStyle

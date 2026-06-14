@@ -53,7 +53,7 @@ func RunShellContext(ctx context.Context, workDir, command string, onChunk func(
 	}
 
 	pgid := shellProcessGroupID(cmd.Process.Pid)
-	killOnCancel(ctx, pgid)
+	configureShellCancel(cmd, pgid)
 
 	var (
 		mu     sync.Mutex
@@ -90,8 +90,8 @@ func RunShellContext(ctx context.Context, workDir, command string, onChunk func(
 	go copyOut(stdout, &wg)
 	go copyOut(stderr, &wg)
 
-	waitErr := cmd.Wait()
 	wg.Wait()
+	waitErr := cmd.Wait()
 
 	cancelled := ctx.Err() != nil
 	raw := strings.TrimRight(output.String(), "\n")
@@ -292,17 +292,25 @@ func shellProcessGroupID(pid int) int {
 	return pgid
 }
 
-// killOnCancel terminates the captured process group when ctx is canceled.
-// pgid must be recorded immediately after cmd.Start to avoid PID reuse races
-// when parallel tests run shell commands.
-func killOnCancel(ctx context.Context, pgid int) {
-	if pgid <= 0 {
-		return
+// configureShellCancel kills the captured process group when CommandContext
+// cancels ctx. Unlike a detached goroutine, cmd.Cancel runs only while the
+// process is still live, avoiding PID/PGID reuse races in parallel tests.
+func configureShellCancel(cmd *exec.Cmd, pgid int) {
+	cmd.Cancel = func() error {
+		if pgid > 0 {
+			if err := syscall.Kill(-pgid, syscall.SIGKILL); err != nil {
+				if errors.Is(err, syscall.ESRCH) {
+					return nil
+				}
+				return err
+			}
+			return nil
+		}
+		if cmd.Process != nil {
+			return cmd.Process.Kill()
+		}
+		return nil
 	}
-	go func() {
-		<-ctx.Done()
-		_ = syscall.Kill(-pgid, syscall.SIGKILL)
-	}()
 }
 
 // SanitizeStreamChunk normalizes streamed shell bytes for display.

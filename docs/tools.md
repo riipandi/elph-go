@@ -81,7 +81,7 @@ Three layers decide what the model can see and what the runtime can run:
 
 | Layer            | Purpose                                       | Source                         |
 |------------------|-----------------------------------------------|--------------------------------|
-| **Catalog**      | Shown in prompts and UI; full built-in list   | `pkg/tool/catalog`             |
+| **Catalog**      | Shown in prompts and UI; full built-in list   | `pkg/tools/catalog`            |
 | **Provider API** | JSON schemas sent to OpenAI / Anthropic       | `ProviderDefinitions()`        |
 | **Runtime**      | Actually executed when the model calls a tool | `internal/runtime.ExecuteTool` |
 
@@ -161,7 +161,7 @@ Up to **4** images per message; each is downscaled (max dimension 1568) and re-e
 the model does not support vision, pasted paths are appended to the text prompt instead so the agent
 can call **ReadMediaFile**. See [tui.md § Image attachments](./tui.md#image-attachments).
 
-**WebSearch** queries the web via `pkg/tool/websearch` (ranking aligned with
+**WebSearch** queries the web via `pkg/tools/websearch` (ranking aligned with
 [pi-extended/websearch](https://github.com/riipandi/pi-extended/tree/main/packages/websearch)). Engines:
 **duckduckgo** (always available fallback), **jina** (optional `JINA_API_KEY`), **brave**
 (`BRAVE_SEARCH_API_KEY`), **serpapi** (`SERPAPI_KEY`), **tavily** (`TAVILY_API_KEY`), **firecrawl**
@@ -203,7 +203,7 @@ tools.
 | `FilterProviderTools()` | `pkg/tool`         | Filters any `[]provider.ToolDefinition`                              |
 | `IsProviderExposed()`   | `pkg/tool`         | Single-tool API exposure check                                       |
 | `IsExecutable()`        | `pkg/tool`         | Whether runtime can run the tool                                     |
-| `ProviderSchema()`      | `pkg/tool/schema`  | JSON Schema per built-in                                             |
+| `ProviderSchema()`      | `pkg/tools/schema` | JSON Schema per built-in                                             |
 | `runProviderLoop()`     | `pkg/core/agent`   | Native tool loop                                                     |
 | `InteractTool()`        | `pkg/core/agent`   | AskUser + approval via huh (renderer)                                |
 | `ExecuteTool()`         | `internal/runtime` | Read / Write / Edit / Grep / Glob / ReadMediaFile / WebSearch / Bash |
@@ -218,14 +218,14 @@ Provider adapters map definitions to API formats:
 
 To expose a built-in to the model API end-to-end:
 
-1. **Schema** — Add or extend `ProviderSchema()` in `pkg/tool/schema/schema.go`.
+1. **Schema** — Add or extend `ProviderSchema()` in `pkg/tools/schema/schema.go`.
 2. **Execution** — Implement the handler in `internal/runtime/execute.go` and add the name to
-   `IsExecutable()` in `pkg/tool/exposure/exposure.go`.
+   `IsExecutable()` in `pkg/tools/exposure/exposure.go`.
 3. **Approval** — If the tool should require user approval, keep
-   `DefaultApproval: ApprovalRequiresApproval` in `pkg/tool/catalog/catalog.go`; it will not be API-exposed
+   `DefaultApproval: ApprovalRequiresApproval` in `pkg/tools/catalog/catalog.go`; it will not be API-exposed
    until approval is wired. Use `auto-allow` only for safe, read-only (or otherwise pre-approved)
    operations.
-4. **Tests** — Update `pkg/tool/schema/schema_test.go`, `pkg/tool/exposure/exposure_test.go`, and runtime tests for the new executable.
+4. **Tests** — Update `pkg/tools/schema/schema_test.go`, `pkg/tools/exposure/exposure_test.go`, and runtime tests for the new executable.
 
 No change to `ProviderDefinitions()` is required: filtering is driven by `IsProviderExposed`.
 

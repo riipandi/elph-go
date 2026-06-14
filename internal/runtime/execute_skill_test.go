@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/riipandi/elph/pkg/skill"
-	"github.com/riipandi/elph/pkg/tool"
+	"github.com/riipandi/elph/pkg/tools"
 	"github.com/stretchr/testify/require"
 )
 
@@ -31,7 +31,7 @@ type: inline
 1. Read diff`)
 
 	ctx := skill.WithDepthHolder(context.Background())
-	result := ExecuteTool(ctx, workDir, tool.Skill, map[string]any{
+	result := ExecuteTool(ctx, workDir, tools.Skill, map[string]any{
 		"skill": "review",
 		"args":  "focus on security",
 	})
@@ -42,7 +42,7 @@ type: inline
 }
 
 func TestExecuteSkillRejectsUnknown(t *testing.T) {
-	result := ExecuteTool(context.Background(), t.TempDir(), tool.Skill, map[string]any{
+	result := ExecuteTool(context.Background(), t.TempDir(), tools.Skill, map[string]any{
 		"skill": "missing",
 	})
 	require.Error(t, result.Err)
@@ -64,7 +64,7 @@ A`)
 	for range skill.MaxNestingDepth {
 		require.NoError(t, skill.Enter(ctx))
 	}
-	result := ExecuteTool(ctx, workDir, tool.Skill, map[string]any{"skill": "a"})
+	result := ExecuteTool(ctx, workDir, tools.Skill, map[string]any{"skill": "a"})
 	require.Error(t, result.Err)
 	require.Contains(t, result.Err.Error(), "nesting depth")
 }

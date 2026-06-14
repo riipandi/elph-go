@@ -6,15 +6,16 @@
 //	exposure/  — name resolution and runtime executability
 //	schema/    — provider API JSON schemas and exposure filter
 //	websearch/ — reusable multi-engine web search
+//	todolist/  — TodoList tool state and argument handling
 //
 // Tool execution and approval UI live in internal/ (coding-agent).
-package tool
+package tools
 
 import (
 	"github.com/riipandi/elph/pkg/ai/provider"
-	"github.com/riipandi/elph/pkg/tool/catalog"
-	"github.com/riipandi/elph/pkg/tool/exposure"
-	"github.com/riipandi/elph/pkg/tool/schema"
+	"github.com/riipandi/elph/pkg/tools/catalog"
+	"github.com/riipandi/elph/pkg/tools/exposure"
+	"github.com/riipandi/elph/pkg/tools/schema"
 )
 
 type (

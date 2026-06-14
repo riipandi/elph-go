@@ -6,9 +6,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/riipandi/elph/pkg/tool"
-	"github.com/riipandi/elph/pkg/tool/codesearch"
-	"github.com/riipandi/elph/pkg/tool/fetchurl"
+	"github.com/riipandi/elph/pkg/tools"
+	"github.com/riipandi/elph/pkg/tools/codesearch"
+	"github.com/riipandi/elph/pkg/tools/fetchurl"
 	"github.com/stretchr/testify/require"
 )
 
@@ -27,7 +27,7 @@ func TestExecuteFetchURL(t *testing.T) {
 	t.Cleanup(func() { fetchurl.HTTPClient = orig })
 	fetchurl.HTTPClient = srv.Client()
 
-	result := ExecuteTool(context.Background(), t.TempDir(), tool.FetchURL, map[string]any{
+	result := ExecuteTool(context.Background(), t.TempDir(), tools.FetchURL, map[string]any{
 		"url": srv.URL,
 	})
 	require.NoError(t, result.Err)
@@ -50,7 +50,7 @@ func TestExecuteCodeSearch(t *testing.T) {
 		nil,
 	))
 
-	result := ExecuteTool(context.Background(), t.TempDir(), tool.CodeSearch, map[string]any{
+	result := ExecuteTool(context.Background(), t.TempDir(), tools.CodeSearch, map[string]any{
 		"query": "fmt.Println",
 	})
 	require.NoError(t, result.Err)

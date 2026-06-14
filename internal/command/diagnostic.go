@@ -6,8 +6,8 @@ import (
 	"strings"
 
 	"github.com/riipandi/elph/internal/runtime"
-	"github.com/riipandi/elph/internal/tools"
-	"github.com/riipandi/elph/pkg/tool"
+	inttools "github.com/riipandi/elph/internal/tools"
+	"github.com/riipandi/elph/pkg/tools"
 )
 
 const (
@@ -27,11 +27,11 @@ var openLogArgs = []ArgChoice{
 
 func diagnosticListTools(ctx *Context, _ string) string {
 	var b strings.Builder
-	for _, def := range tool.All() {
+	for _, def := range tools.All() {
 		fmt.Fprintf(&b, "  %s (%s) — %s\n", def.Name, def.DefaultApproval, def.Description)
 	}
 
-	for _, def := range tools.Diagnostic() {
+	for _, def := range inttools.Diagnostic() {
 		fmt.Fprintf(&b, "  %s (%s) — %s\n", def.Name, def.DefaultApproval, def.Description)
 	}
 

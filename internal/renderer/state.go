@@ -8,6 +8,7 @@ import (
 	"github.com/riipandi/elph/internal/mention"
 	"github.com/riipandi/elph/internal/runtime"
 	"github.com/riipandi/elph/pkg/core/agent"
+	"github.com/riipandi/elph/pkg/tools/todolist"
 )
 
 // ShellState tracks an in-flight shell command.
@@ -72,5 +73,6 @@ type AgentState struct {
 	ThinkingMsgID      int
 	ResponseMsgID      int
 	TodoListUpdating   bool
+	TodoListBefore     []todolist.Todo
 	SessionAllowTools  bool // skip approval dialogs until the TUI session ends
 }

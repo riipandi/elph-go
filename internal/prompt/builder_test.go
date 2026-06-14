@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/riipandi/elph/pkg/tool"
+	"github.com/riipandi/elph/pkg/tools"
 	"github.com/stretchr/testify/require"
 )
 
@@ -41,7 +41,7 @@ func TestBuildIncludesDynamicTools(t *testing.T) {
 }
 
 func TestBuildRespectsToolFilter(t *testing.T) {
-	read, ok := tool.Get(tool.Read)
+	read, ok := tools.Get(tools.Read)
 	require.True(t, ok)
 
 	got := Build(Options{Tools: []Entry{EntryFromBuiltin(read)}})

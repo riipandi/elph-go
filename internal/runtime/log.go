@@ -15,19 +15,15 @@ import (
 
 const (
 	defaultLogTailBytes = 24 * 1024
-	eventsLogName       = "events.jsonl"
-	requestsLogName     = "requests.jsonl"
+	eventsLogName       = "log_events.json"
+	requestsLogName     = "log_requests.json"
 )
 
 func ensureSessionLogDir(workDir string, sessionID typeid.TypeID) (string, error) {
-	if err := projectdir.EnsureRoot(workDir); err != nil {
+	if err := projectdir.EnsureSessionMetadataDir(workDir, sessionID.String()); err != nil {
 		return "", err
 	}
-	dir := projectdir.SessionDir(workDir, sessionID.String())
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return "", err
-	}
-	return dir, nil
+	return projectdir.SessionMetadataDir(workDir, sessionID.String()), nil
 }
 
 func openSessionLogFile(workDir, filename string, sessionID typeid.TypeID) (string, error) {
@@ -75,7 +71,7 @@ func AppendLog(path, kind, text string) error {
 
 // RequestsLogPath returns the path for a session's provider/tool request log.
 func RequestsLogPath(workDir string, sessionID typeid.TypeID) string {
-	return filepath.Join(projectdir.SessionDir(workDir, sessionID.String()), requestsLogName)
+	return filepath.Join(projectdir.SessionMetadataDir(workDir, sessionID.String()), requestsLogName)
 }
 
 type logRecord struct {

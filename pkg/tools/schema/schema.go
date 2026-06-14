@@ -2,8 +2,8 @@ package schema
 
 import (
 	"github.com/riipandi/elph/pkg/ai/provider"
-	"github.com/riipandi/elph/pkg/tool/catalog"
-	"github.com/riipandi/elph/pkg/tool/exposure"
+	"github.com/riipandi/elph/pkg/tools/catalog"
+	"github.com/riipandi/elph/pkg/tools/exposure"
 )
 
 // ProviderDefinitions returns built-in tools as provider-native schemas for the model API.

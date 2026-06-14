@@ -5,7 +5,7 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/riipandi/elph/pkg/tool"
+	"github.com/riipandi/elph/pkg/tools"
 )
 
 var (
@@ -268,11 +268,11 @@ func resolveKnownTool(raw string) string {
 	if raw == "" {
 		return ""
 	}
-	if name, ok := tool.ResolveName(raw); ok {
+	if name, ok := tools.ResolveName(raw); ok {
 		return name
 	}
 	compact := strings.NewReplacer("_", "", "-", "").Replace(strings.ToLower(raw))
-	for _, def := range tool.All() {
+	for _, def := range tools.All() {
 		alias := strings.NewReplacer("_", "", "-", "").Replace(strings.ToLower(def.Name))
 		if alias == compact {
 			return def.Name

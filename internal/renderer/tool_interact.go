@@ -10,9 +10,10 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/huh/v2"
 	"charm.land/lipgloss/v2"
+	"github.com/charmbracelet/x/ansi"
 	"github.com/riipandi/elph/internal/constants"
 	"github.com/riipandi/elph/pkg/core/agent"
-	"github.com/riipandi/elph/pkg/tool"
+	"github.com/riipandi/elph/pkg/tools"
 )
 
 type toolInteractOffer struct {
@@ -34,6 +35,9 @@ const (
 	approvalChoiceOnce    = "once"
 	approvalChoiceSession = "session"
 	approvalChoiceDeny    = "deny"
+
+	// Cap description lines so huh does not wrap unbounded text and blow past the terminal.
+	maxApprovalDescriptionLines = 6
 )
 
 func newToolInteractBridge() *toolInteractBridge {
@@ -184,14 +188,14 @@ func newAskUserForm(req agent.ToolInteractRequest, width int) *huh.Form {
 }
 
 func newToolApprovalForm(req agent.ToolInteractRequest, width int) *huh.Form {
-	name, _ := tool.ResolveName(req.Name)
+	name, _ := tools.ResolveName(req.Name)
 	choice := approvalChoiceOnce
 	return huh.NewForm(
 		huh.NewGroup(
 			huh.NewSelect[string]().
 				Key("approval").
 				Title(fmt.Sprintf("Allow %s?", name)).
-				Description(formatApprovalDescription(name, req.Args)).
+				Description(formatApprovalDescription(name, req.Args, width)).
 				Options(
 					huh.NewOption("Allow once", approvalChoiceOnce),
 					huh.NewOption("Allow for session", approvalChoiceSession),
@@ -205,10 +209,10 @@ func newToolApprovalForm(req agent.ToolInteractRequest, width int) *huh.Form {
 		WithTheme(toolInteractFormTheme())
 }
 
-func formatApprovalDescription(name string, args map[string]any) string {
+func formatApprovalDescription(name string, args map[string]any, width int) string {
 	var b strings.Builder
 	switch name {
-	case tool.Bash:
+	case tools.Bash:
 		if cmd, ok := stringArgAny(args, "command"); ok {
 			b.WriteString(cmd)
 		}
@@ -230,7 +234,60 @@ func formatApprovalDescription(name string, args map[string]any) string {
 			}
 		}
 	}
-	return strings.TrimSpace(b.String())
+	return clampMultilineText(strings.TrimSpace(b.String()), width, maxApprovalDescriptionLines)
+}
+
+func clampMultilineText(text string, width, maxLines int) string {
+	text = strings.TrimSpace(text)
+	if text == "" {
+		return ""
+	}
+	if maxLines <= 0 {
+		maxLines = 1
+	}
+
+	paragraphs := strings.Split(text, "\n")
+	var lines []string
+	for pi, para := range paragraphs {
+		para = strings.TrimSpace(para)
+		if para == "" {
+			if len(lines) > 0 && lines[len(lines)-1] != "" {
+				lines = append(lines, "")
+			}
+			continue
+		}
+		wrapped := para
+		if width > 0 {
+			wrapped = ansi.Hardwrap(ansi.Wordwrap(para, width, ""), width, false)
+		}
+		wrappedLines := strings.Split(wrapped, "\n")
+		for i, line := range wrappedLines {
+			lines = append(lines, line)
+			if len(lines) >= maxLines {
+				more := i < len(wrappedLines)-1 || pi < len(paragraphs)-1
+				return truncateApprovalLines(lines, maxLines, width, more)
+			}
+		}
+	}
+	return strings.Join(lines, "\n")
+}
+
+func truncateApprovalLines(lines []string, maxLines, width int, more bool) string {
+	if len(lines) > maxLines {
+		lines = lines[:maxLines]
+		more = true
+	}
+	if !more {
+		return strings.Join(lines, "\n")
+	}
+	last := lines[maxLines-1]
+	if width > 0 {
+		last = ansi.Truncate(last, max(1, width-1), "…")
+	} else if !strings.HasSuffix(last, "…") {
+		last += "…"
+	}
+	lines[maxLines-1] = last
+	return strings.Join(lines, "\n")
 }
 
 func (m Model) updateToolInteractForm(msg tea.Msg) (Model, tea.Cmd) {
@@ -416,13 +473,13 @@ func parseApprovalChoice(form *huh.Form) string {
 }
 
 func toolApprovalSignature(req agent.ToolInteractRequest) string {
-	name, ok := tool.ResolveName(req.Name)
+	name, ok := tools.ResolveName(req.Name)
 	if !ok {
 		name = req.Name
 	}
 	var b strings.Builder
 	b.WriteString(name)
-	if name == tool.Bash {
+	if name == tools.Bash {
 		if cmd, ok := bashCommandArg(req.Args); ok {
 			b.WriteByte(0)
 			b.WriteString(cmd)
@@ -512,7 +569,7 @@ func toolInteractDialogAccent(req agent.ToolInteractRequest) (string, color.Colo
 	case agent.ToolInteractAskUser:
 		return "Question", constants.Yellow
 	case agent.ToolInteractApproval:
-		name, _ := tool.ResolveName(req.Name)
+		name, _ := tools.ResolveName(req.Name)
 		return fmt.Sprintf("Approve %s", name), constants.Blue
 	default:
 		return "Input required", constants.Blue

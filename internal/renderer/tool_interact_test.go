@@ -1,10 +1,12 @@
 package renderer
 
 import (
+	"strings"
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/huh/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/riipandi/elph/pkg/core/agent"
 	"github.com/stretchr/testify/require"
 )
@@ -56,9 +58,47 @@ func TestFormatApprovalDescriptionBash(t *testing.T) {
 	desc := formatApprovalDescription("Bash", map[string]any{
 		"command":     "go test ./...",
 		"description": "Run tests",
-	})
+	}, 80)
 	require.Contains(t, desc, "go test ./...")
 	require.Contains(t, desc, "Run tests")
+}
+
+func TestFormatApprovalDescriptionTruncatesLongContent(t *testing.T) {
+	longCmd := strings.Repeat("curl https://example.com/api/v1/ ", 20)
+	desc := formatApprovalDescription("Bash", map[string]any{
+		"command":     longCmd,
+		"description": strings.Repeat("Run something important. ", 20),
+	}, 60)
+
+	lines := strings.Split(desc, "\n")
+	require.LessOrEqual(t, len(lines), maxApprovalDescriptionLines)
+	require.True(t, strings.HasSuffix(lines[len(lines)-1], "…"))
+}
+
+func TestToolInteractApprovalLongContentFitsTerminal(t *testing.T) {
+	longCmd := strings.Repeat("curl -X POST https://example.com/api/v1/very/long/path ", 8)
+	longDesc := strings.Repeat("Run something important that needs approval. ", 12)
+
+	form := newToolApprovalForm(agent.ToolInteractRequest{
+		Kind: agent.ToolInteractApproval,
+		Name: "Bash",
+		Args: map[string]any{"command": longCmd, "description": longDesc},
+	}, 70)
+	if updated, _ := form.Update(tea.WindowSizeMsg{Width: 80, Height: 24}); updated != nil {
+		if f, ok := updated.(*huh.Form); ok {
+			form = f
+		}
+	}
+
+	m := testInputModel(t)
+	m.toolInteractForm = form
+	m.toolInteractPending = toolInteractOffer{
+		Req: agent.ToolInteractRequest{Kind: agent.ToolInteractApproval, Name: "Bash"},
+	}
+	m = m.syncLayout(false)
+
+	require.LessOrEqual(t, m.renderedViewHeight(), m.height, "full view should fit terminal")
+	require.LessOrEqual(t, lipgloss.Height(form.View()), 14, "form should stay compact")
 }
 
 func TestToolInteractBridgeDeliverResponse(t *testing.T) {

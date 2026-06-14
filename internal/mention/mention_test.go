@@ -59,7 +59,7 @@ func TestIndexSkipsHiddenAndVendorDirs(t *testing.T) {
 func TestSuggestPrefersPathMatch(t *testing.T) {
 	entries := []Entry{
 		{Path: "internal/renderer/input.go"},
-		{Path: "pkg/tool/tool.go"},
+		{Path: "pkg/tools/tool.go"},
 	}
 	got := Suggest("input", entries)
 	require.NotEmpty(t, got)

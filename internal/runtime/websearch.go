@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/riipandi/elph/pkg/tool/websearch"
+	"github.com/riipandi/elph/pkg/tools/websearch"
 )
 
 const maxWebSearchBytes = 128 << 10

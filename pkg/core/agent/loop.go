@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/riipandi/elph/pkg/ai/provider"
-	"github.com/riipandi/elph/pkg/tool"
+	"github.com/riipandi/elph/pkg/tools"
 )
 
 const maxToolIterations = 8
@@ -14,9 +14,9 @@ const maxToolIterations = 8
 func runProviderLoop(ctx context.Context, opts TurnOptions, ch chan<- Event) {
 	messages := prepareTurnMessages(opts)
 
-	tools := tool.FilterProviderTools(opts.Tools)
-	if len(tools) == 0 && opts.ToolsEnabled {
-		tools = tool.ProviderDefinitions()
+	providerTools := tools.FilterProviderTools(opts.Tools)
+	if len(providerTools) == 0 && opts.ToolsEnabled {
+		providerTools = tools.ProviderDefinitions()
 	}
 
 	if !sendEvent(ctx, ch, ActivityEvent(ActivityConnecting)) {
@@ -55,7 +55,7 @@ func runProviderLoop(ctx context.Context, opts TurnOptions, ch chan<- Event) {
 			})
 		}
 
-		logProviderRequest(opts.LogProvider, step, opts.Model, len(tools), len(messages), thinking)
+		logProviderRequest(opts.LogProvider, step, opts.Model, len(providerTools), len(messages), thinking)
 
 		result, err := opts.Provider.Complete(ctx, provider.TurnRequest{
 			SystemPrompt: opts.SystemPrompt,
@@ -65,7 +65,7 @@ func runProviderLoop(ctx context.Context, opts TurnOptions, ch chan<- Event) {
 			Compat:       opts.Compat,
 			Stream:       stream,
 			Messages:     messages,
-			Tools:        tools,
+			Tools:        providerTools,
 		})
 		if ctx.Err() != nil {
 			logProviderCancel(opts.LogProvider, step, ctx.Err())

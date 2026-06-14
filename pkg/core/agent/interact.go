@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/riipandi/elph/pkg/ai/provider"
-	"github.com/riipandi/elph/pkg/tool"
+	"github.com/riipandi/elph/pkg/tools"
 )
 
 // ToolInteractKind classifies UI needed before a tool runs.
@@ -36,15 +36,15 @@ type ToolInteractFunc func(ctx context.Context, req ToolInteractRequest) (ToolIn
 
 // ToolInteractKindFor reports whether and how a built-in tool needs host interaction.
 func ToolInteractKindFor(name string, skipApproval bool) (ToolInteractKind, bool) {
-	canonical, ok := tool.ResolveName(name)
+	canonical, ok := tools.ResolveName(name)
 	if !ok {
 		return 0, false
 	}
 	switch canonical {
-	case tool.AskUser:
+	case tools.AskUser:
 		return ToolInteractAskUser, true
 	default:
-		if !skipApproval && tool.RequiresApproval(canonical) && tool.IsExecutable(canonical) {
+		if !skipApproval && tools.RequiresApproval(canonical) && tools.IsExecutable(canonical) {
 			return ToolInteractApproval, true
 		}
 		return 0, false

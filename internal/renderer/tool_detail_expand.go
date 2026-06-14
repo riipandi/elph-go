@@ -3,7 +3,7 @@ package renderer
 import (
 	"strings"
 
-	"github.com/riipandi/elph/pkg/tool"
+	"github.com/riipandi/elph/pkg/tools"
 )
 
 const toolDetailLongLineBytes = 120
@@ -22,7 +22,7 @@ func toolDetailExpandedByDefault(label, body string) bool {
 
 func isShellDetailLabel(label string) bool {
 	label = strings.TrimSpace(label)
-	if label == tool.Bash {
+	if label == tools.Bash {
 		return true
 	}
 	return strings.HasPrefix(label, "$ ")

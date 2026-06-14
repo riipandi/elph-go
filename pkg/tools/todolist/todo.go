@@ -1,4 +1,5 @@
-package memz
+// Package todolist implements TodoList tool state and argument handling.
+package todolist
 
 import (
 	"context"
@@ -17,8 +18,8 @@ const (
 
 // Todo is a single tracked subtask.
 type Todo struct {
-	Title  string
-	Status Status
+	Title  string `json:"title"`
+	Status Status `json:"status"`
 }
 
 type storeKey struct{}
@@ -120,6 +121,21 @@ func ParseStatus(raw string) (Status, error) {
 	default:
 		return "", fmt.Errorf("invalid status %q (want pending, in_progress, or done)", raw)
 	}
+}
+
+// HasActive reports whether any todo is pending or in progress.
+func HasActive(todos []Todo) bool {
+	for _, item := range todos {
+		if item.Status != StatusDone {
+			return true
+		}
+	}
+	return false
+}
+
+// AllDone reports whether todos is non-empty and every item is done.
+func AllDone(todos []Todo) bool {
+	return len(todos) > 0 && !HasActive(todos)
 }
 
 // FormatList renders todos for tool output.

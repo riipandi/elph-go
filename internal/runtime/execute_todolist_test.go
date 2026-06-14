@@ -4,14 +4,14 @@ import (
 	"context"
 	"testing"
 
-	"github.com/riipandi/elph/pkg/memz"
+	"github.com/riipandi/elph/pkg/tools/todolist"
 	"github.com/stretchr/testify/require"
 )
 
 func TestExecuteTodoListPersistsAcrossCalls(t *testing.T) {
 	ctx := context.Background()
-	todos := []memz.Todo{}
-	ctx = memz.WithStore(ctx, &todos)
+	todos := []todolist.Todo{}
+	ctx = todolist.WithStore(ctx, &todos)
 
 	set := ExecuteTool(ctx, "", "TodoList", map[string]any{
 		"todos": []any{
@@ -35,14 +35,15 @@ func TestExecuteTodoListPersistsAcrossCalls(t *testing.T) {
 
 func TestSessionTodosMutateInPlace(t *testing.T) {
 	s := NewSession(t.TempDir())
-	ctx := memz.WithStore(context.Background(), &s.Todos)
+	ctx := todolist.WithStore(context.Background(), s.todoStore)
 
-	result := executeTodoList(ctx, map[string]any{
+	result := executeTodoList(ctx, s.WorkDir, map[string]any{
 		"todos": []any{
 			map[string]any{"title": "updated", "status": "done"},
 		},
 	})
 	require.NoError(t, result.Err)
-	require.Len(t, s.Todos, 1)
-	require.Equal(t, memz.StatusDone, s.Todos[0].Status)
+	todos := s.Todos()
+	require.Len(t, todos, 1)
+	require.Equal(t, todolist.StatusDone, todos[0].Status)
 }

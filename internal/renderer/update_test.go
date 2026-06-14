@@ -245,7 +245,7 @@ func TestSubmitDiagnosticOpenLogWithoutArgExecutesSelectedArg(t *testing.T) {
 	require.Equal(t, constants.MessageDetail, m.messages[1].kind)
 	require.Equal(t, "Session log (system)", m.messages[1].detailLabel)
 	require.True(t, m.messages[1].detailExpanded)
-	require.Contains(t, m.messages[1].text, ".agents/elph/logs/")
+	require.Contains(t, m.messages[1].text, ".agents/elph/metadata/")
 }
 
 func TestSubmitDiagnosticOpenLogSystem(t *testing.T) {
@@ -260,7 +260,7 @@ func TestSubmitDiagnosticOpenLogSystem(t *testing.T) {
 	require.Equal(t, constants.MessageDetail, m.messages[1].kind)
 	require.Equal(t, "Session log (system)", m.messages[1].detailLabel)
 	require.True(t, m.messages[1].detailExpanded)
-	require.Contains(t, m.messages[1].text, ".agents/elph/logs/")
+	require.Contains(t, m.messages[1].text, ".agents/elph/metadata/")
 }
 
 func TestSubmitDiagnosticListTools(t *testing.T) {

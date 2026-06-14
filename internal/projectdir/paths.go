@@ -14,19 +14,17 @@ const (
 	gitignoreBody = "" +
 		"# Elph agent runtime (logs, local settings, MCP config)\n" +
 		".gitignore\n" +
-		"logs/\n" +
+		"metadata/\n" +
 		"settings.json\n" +
-		"settings/\n" +
-		"mcp/\n" +
+		"mcp.json\n" +
 		"attachments/\n"
 )
 
 var gitignoreRequiredEntries = []string{
 	".gitignore",
-	"logs/",
+	"metadata/",
 	"settings.json",
-	"settings/",
-	"mcp/",
+	"mcp.json",
 	"attachments/",
 }
 
@@ -45,14 +43,19 @@ func SkillsDir(workDir string) string {
 	return filepath.Join(Root(workDir), "skills")
 }
 
-// LogsDir returns <workDir>/.agents/elph/logs.
-func LogsDir(workDir string) string {
-	return filepath.Join(Root(workDir), "logs")
+// MetadataDir returns <workDir>/.agents/elph/metadata.
+func MetadataDir(workDir string) string {
+	return filepath.Join(Root(workDir), "metadata")
 }
 
-// SessionDir returns <workDir>/.agents/elph/logs/<sessionID>.
-func SessionDir(workDir, sessionID string) string {
-	return filepath.Join(LogsDir(workDir), sessionID)
+// SessionMetadataDir returns <workDir>/.agents/elph/metadata/<sessionID>.
+func SessionMetadataDir(workDir, sessionID string) string {
+	return filepath.Join(MetadataDir(workDir), sessionID)
+}
+
+// SessionTodosPath returns <workDir>/.agents/elph/metadata/<sessionID>/todos.jsonl.
+func SessionTodosPath(workDir, sessionID string) string {
+	return filepath.Join(SessionMetadataDir(workDir, sessionID), "todos.jsonl")
 }
 
 // AttachmentsDir returns <workDir>/.agents/elph/attachments.
@@ -67,6 +70,17 @@ func EnsureRoot(workDir string) error {
 		return err
 	}
 	return ensureGitignore(root)
+}
+
+// EnsureSessionMetadataDir creates metadata/<sessionID>/ under the Elph root.
+func EnsureSessionMetadataDir(workDir, sessionID string) error {
+	if workDir == "" || sessionID == "" {
+		return nil
+	}
+	if err := EnsureRoot(workDir); err != nil {
+		return err
+	}
+	return os.MkdirAll(SessionMetadataDir(workDir, sessionID), 0o755)
 }
 
 func ensureGitignore(root string) error {

@@ -8,14 +8,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/riipandi/elph/pkg/tool"
+	"github.com/riipandi/elph/pkg/tools"
 	"github.com/stretchr/testify/require"
 )
 
 func TestExecuteBashEcho(t *testing.T) {
 	t.Parallel()
 	wd := t.TempDir()
-	result := ExecuteTool(context.Background(), wd, tool.Bash, map[string]any{
+	result := ExecuteTool(context.Background(), wd, tools.Bash, map[string]any{
 		"command": "echo hello",
 	})
 	require.NoError(t, result.Err)
@@ -26,7 +26,7 @@ func TestExecuteBashEcho(t *testing.T) {
 func TestExecuteBashNonZeroExit(t *testing.T) {
 	t.Parallel()
 	wd := t.TempDir()
-	result := ExecuteTool(context.Background(), wd, tool.Bash, map[string]any{
+	result := ExecuteTool(context.Background(), wd, tools.Bash, map[string]any{
 		"command": "exit 3",
 	})
 	require.NoError(t, result.Err)
@@ -39,7 +39,7 @@ func TestExecuteBashUsesWorkDir(t *testing.T) {
 	sub := filepath.Join(root, "nested")
 	require.NoError(t, os.MkdirAll(sub, 0o755))
 
-	result := ExecuteTool(context.Background(), sub, tool.Bash, map[string]any{
+	result := ExecuteTool(context.Background(), sub, tools.Bash, map[string]any{
 		"command": "pwd",
 	})
 	require.NoError(t, result.Err)
@@ -53,14 +53,14 @@ func TestExecuteBashUsesWorkDir(t *testing.T) {
 
 func TestExecuteBashMissingCommand(t *testing.T) {
 	t.Parallel()
-	result := ExecuteTool(context.Background(), t.TempDir(), tool.Bash, map[string]any{})
+	result := ExecuteTool(context.Background(), t.TempDir(), tools.Bash, map[string]any{})
 	require.Error(t, result.Err)
 	require.Contains(t, result.Err.Error(), "command")
 }
 
 func TestExecuteBashInvalidSyntax(t *testing.T) {
 	t.Parallel()
-	result := ExecuteTool(context.Background(), t.TempDir(), tool.Bash, map[string]any{
+	result := ExecuteTool(context.Background(), t.TempDir(), tools.Bash, map[string]any{
 		"command": "if then",
 	})
 	require.Error(t, result.Err)
@@ -76,7 +76,7 @@ func TestExecuteBashStreamsOutputChunks(t *testing.T) {
 	t.Parallel()
 	wd := t.TempDir()
 	var chunks []string
-	result := ExecuteToolWithOutput(context.Background(), wd, tool.Bash, map[string]any{
+	result := ExecuteToolWithOutput(context.Background(), wd, tools.Bash, map[string]any{
 		"command": "printf 'ab'; printf 'cd'",
 	}, func(chunk string) {
 		chunks = append(chunks, chunk)
@@ -92,7 +92,7 @@ func TestExecuteBashTimesOut(t *testing.T) {
 	defer cancel()
 
 	wd := t.TempDir()
-	result := ExecuteTool(ctx, wd, tool.Bash, map[string]any{
+	result := ExecuteTool(ctx, wd, tools.Bash, map[string]any{
 		"command": "sleep 5",
 	})
 	require.True(t, result.Cancelled)

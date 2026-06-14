@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/riipandi/elph/pkg/ai/provider"
-	"github.com/riipandi/elph/pkg/tool/catalog"
+	"github.com/riipandi/elph/pkg/tools/catalog"
 	"github.com/stretchr/testify/require"
 )
 

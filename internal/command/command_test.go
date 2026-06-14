@@ -4,9 +4,9 @@ import (
 	"testing"
 
 	"github.com/riipandi/elph/internal/runtime"
-	"github.com/riipandi/elph/internal/tools"
+	inttools "github.com/riipandi/elph/internal/tools"
 	"github.com/riipandi/elph/pkg/ai/provider"
-	"github.com/riipandi/elph/pkg/tool"
+	"github.com/riipandi/elph/pkg/tools"
 	"github.com/stretchr/testify/require"
 )
 
@@ -89,8 +89,8 @@ func TestDiagnosticListTools(t *testing.T) {
 	require.Empty(t, result.Output)
 	require.Equal(t, "Available tools", result.DetailLabel)
 	require.True(t, result.DetailExpanded)
-	require.Contains(t, result.DetailBody, tool.Read)
-	require.Contains(t, result.DetailBody, tools.DiagnosticListTools)
+	require.Contains(t, result.DetailBody, tools.Read)
+	require.Contains(t, result.DetailBody, inttools.DiagnosticListTools)
 }
 
 func TestDiagnosticSystemPrompt(t *testing.T) {

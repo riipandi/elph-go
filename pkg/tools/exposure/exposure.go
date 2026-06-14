@@ -3,7 +3,7 @@ package exposure
 import (
 	"strings"
 
-	"github.com/riipandi/elph/pkg/tool/catalog"
+	"github.com/riipandi/elph/pkg/tools/catalog"
 )
 
 // ResolveName maps a model-supplied tool name to the canonical built-in name.

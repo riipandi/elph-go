@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/riipandi/elph/pkg/tool/codesearch"
+	"github.com/riipandi/elph/pkg/tools/codesearch"
 )
 
 const maxCodeSearchBytes = 128 << 10

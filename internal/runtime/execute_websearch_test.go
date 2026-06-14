@@ -6,8 +6,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/riipandi/elph/pkg/tool"
-	"github.com/riipandi/elph/pkg/tool/websearch"
+	"github.com/riipandi/elph/pkg/tools"
+	"github.com/riipandi/elph/pkg/tools/websearch"
 	"github.com/stretchr/testify/require"
 )
 
@@ -27,7 +27,7 @@ func TestExecuteWebSearch(t *testing.T) {
 		},
 	})
 
-	result := ExecuteTool(context.Background(), t.TempDir(), tool.WebSearch, map[string]any{
+	result := ExecuteTool(context.Background(), t.TempDir(), tools.WebSearch, map[string]any{
 		"query": "elph agent",
 	})
 	require.NoError(t, result.Err)
@@ -38,7 +38,7 @@ func TestExecuteWebSearch(t *testing.T) {
 func TestExecuteWebSearchMissingQuery(t *testing.T) {
 	t.Parallel()
 
-	result := ExecuteTool(context.Background(), t.TempDir(), tool.WebSearch, map[string]any{})
+	result := ExecuteTool(context.Background(), t.TempDir(), tools.WebSearch, map[string]any{})
 	require.Error(t, result.Err)
 	require.Contains(t, result.Err.Error(), "query")
 }

@@ -7,18 +7,20 @@ import (
 	"github.com/riipandi/elph/internal/runtime"
 	"github.com/riipandi/elph/pkg/ai/provider"
 	"github.com/riipandi/elph/pkg/core/agent"
-	"github.com/riipandi/elph/pkg/tool"
+	"github.com/riipandi/elph/pkg/tools"
+	"github.com/riipandi/elph/pkg/tools/todolist"
 )
 
 func (m Model) resetNativeToolState() Model {
 	m.agent.NativeToolMsgIDs = nil
 	m.agent.TodoListUpdating = false
+	m.agent.TodoListBefore = nil
 	return m
 }
 
 func nativeToolDetailLabel(call provider.ToolCall) string {
-	name, _ := tool.ResolveName(call.Name)
-	if name != tool.Bash {
+	name, _ := tools.ResolveName(call.Name)
+	if name != tools.Bash {
 		return name
 	}
 	args, err := agent.ParseToolArguments(call.Arguments)
@@ -45,13 +47,14 @@ func bashCommandArg(args map[string]any) (string, bool) {
 }
 
 func isTodoListTool(name string) bool {
-	canonical, _ := tool.ResolveName(name)
-	return canonical == tool.TodoList
+	canonical, _ := tools.ResolveName(name)
+	return canonical == tools.TodoList
 }
 
 func (m Model) beginNativeToolCall(call provider.ToolCall) Model {
 	if isTodoListTool(call.Name) {
 		m.agent.TodoListUpdating = true
+		m.agent.TodoListBefore = append([]todolist.Todo(nil), m.session.Todos()...)
 		if m.agent.NativeToolMsgIDs == nil {
 			m.agent.NativeToolMsgIDs = make(map[string]int)
 		}
@@ -104,7 +107,7 @@ func (m Model) appendNativeToolOutput(call provider.ToolCall, delta string) Mode
 
 func nativeToolDetailBody(name string, result runtime.ToolResult, streamed string) string {
 	var body string
-	if name == tool.Bash {
+	if name == tools.Bash {
 		body = runtime.FormatBashToolDetailBody(result, streamed)
 	} else {
 		body = runtime.FormatToolDetailBodyFromResult(result)
@@ -113,7 +116,7 @@ func nativeToolDetailBody(name string, result runtime.ToolResult, streamed strin
 }
 
 func nativeToolDetailStatus(name string, result runtime.ToolResult) constants.DetailStatus {
-	if name == tool.Bash {
+	if name == tools.Bash {
 		return bashToolDetailStatus(result)
 	}
 	return toolDetailStatus(result)
@@ -125,6 +128,17 @@ func (m Model) finishNativeToolCall(call provider.ToolCall, result agent.ToolRun
 		if m.agent.NativeToolMsgIDs != nil {
 			delete(m.agent.NativeToolMsgIDs, call.ID)
 		}
+		after := m.session.Todos()
+		before := m.agent.TodoListBefore
+		m.agent.TodoListBefore = nil
+		switch {
+		case !todolist.AllDone(before) && todolist.AllDone(after):
+			m = m.addTodoCompletionMessage(formatTodosCompletedMessage(after))
+			m.session.ClearTodos()
+		case todolist.AllDone(after):
+			m.session.ClearTodos()
+		}
+		m = m.syncLayout(m.content.AtBottom())
 		return m
 	}
 	runtimeResult := runtime.ToolResult{
@@ -132,7 +146,7 @@ func (m Model) finishNativeToolCall(call provider.ToolCall, result agent.ToolRun
 		Err:       result.Err,
 		Cancelled: result.Cancelled,
 	}
-	name, _ := tool.ResolveName(call.Name)
+	name, _ := tools.ResolveName(call.Name)
 
 	var streamed string
 	if idx, ok := m.agent.NativeToolMsgIDs[call.ID]; ok && idx >= 0 && idx < len(m.messages) {

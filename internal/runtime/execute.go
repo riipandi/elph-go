@@ -13,7 +13,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/bmatcuk/doublestar/v4"
-	"github.com/riipandi/elph/pkg/tool"
+	"github.com/riipandi/elph/pkg/tools"
 	"mvdan.cc/sh/v3/syntax"
 )
 
@@ -40,39 +40,39 @@ func ExecuteTool(ctx context.Context, workDir, name string, args map[string]any)
 
 // ExecuteToolWithOutput runs a built-in tool, streaming shell chunks to onChunk when supported.
 func ExecuteToolWithOutput(ctx context.Context, workDir, name string, args map[string]any, onChunk func(string)) ToolResult {
-	canonical, known := tool.ResolveName(name)
+	canonical, known := tools.ResolveName(name)
 	if !known {
 		return ToolResult{Err: ErrToolUnknown}
 	}
-	if !tool.IsExecutable(canonical) {
+	if !tools.IsExecutable(canonical) {
 		return ToolResult{Err: ErrToolUnavailable}
 	}
 
 	switch canonical {
-	case tool.Read:
+	case tools.Read:
 		return executeRead(workDir, args)
-	case tool.Write:
+	case tools.Write:
 		return executeWrite(workDir, args)
-	case tool.Edit:
+	case tools.Edit:
 		return executeEdit(workDir, args)
-	case tool.Grep:
+	case tools.Grep:
 		return executeGrep(ctx, workDir, args)
-	case tool.Glob:
+	case tools.Glob:
 		return executeGlob(workDir, args)
-	case tool.ReadMediaFile:
+	case tools.ReadMediaFile:
 		return executeReadMediaFile(workDir, args)
-	case tool.Bash:
+	case tools.Bash:
 		return executeBash(ctx, workDir, args, onChunk)
-	case tool.WebSearch:
+	case tools.WebSearch:
 		return executeWebSearch(ctx, args)
-	case tool.FetchURL:
+	case tools.FetchURL:
 		return executeFetchURL(ctx, args)
-	case tool.CodeSearch:
+	case tools.CodeSearch:
 		return executeCodeSearch(ctx, args)
-	case tool.Skill:
+	case tools.Skill:
 		return executeSkill(ctx, workDir, args)
-	case tool.TodoList:
-		return executeTodoList(ctx, args)
+	case tools.TodoList:
+		return executeTodoList(ctx, workDir, args)
 	default:
 		return ToolResult{Err: fmt.Errorf("%w: %s", ErrToolNotImplemented, canonical)}
 	}

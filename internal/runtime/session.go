@@ -9,8 +9,8 @@ import (
 	"github.com/riipandi/elph/pkg/ai"
 	"github.com/riipandi/elph/pkg/ai/provider"
 	"github.com/riipandi/elph/pkg/core/agent"
-	"github.com/riipandi/elph/pkg/memz"
 	"github.com/riipandi/elph/pkg/skill"
+	"github.com/riipandi/elph/pkg/tools/todolist"
 	"go.jetify.com/typeid/v2"
 )
 
@@ -31,7 +31,7 @@ type Session struct {
 	Catalog           provider.Catalog
 	EnabledModelCount int
 	History           []provider.ChatMessage
-	Todos             []memz.Todo
+	todoStore         *[]todolist.Todo // heap pointer; stable when Model copies Session
 }
 
 // NewSession creates a session with a generated typeid and assembled system prompt.
@@ -58,9 +58,11 @@ func NewSession(workDir string) Session {
 		providerName = providerID
 	}
 
+	todoStore := loadSessionTodos(workDir, id.String())
 	return Session{
-		ID:      id,
-		WorkDir: workDir,
+		ID:        id,
+		WorkDir:   workDir,
+		todoStore: &todoStore,
 		SystemPrompt: prompt.Build(prompt.Options{
 			WorkDir:                  workDir,
 			PreferedResponseLanguage: prefs.ResponseLanguage(),
@@ -81,6 +83,39 @@ func NewSession(workDir string) Session {
 	}
 }
 
+// Todos returns the current session todo list.
+func (s Session) Todos() []todolist.Todo {
+	if s.todoStore == nil {
+		return nil
+	}
+	if len(*s.todoStore) == 0 {
+		return nil
+	}
+	out := make([]todolist.Todo, len(*s.todoStore))
+	copy(out, *s.todoStore)
+	return out
+}
+
+// ReplaceTodos replaces the session todo list.
+func (s *Session) ReplaceTodos(todos []todolist.Todo) {
+	if s.todoStore == nil {
+		store := append([]todolist.Todo(nil), todos...)
+		s.todoStore = &store
+		return
+	}
+	*s.todoStore = append([]todolist.Todo(nil), todos...)
+}
+
+// ClearTodos removes all session todos and deletes any on-disk snapshot.
+func (s *Session) ClearTodos() {
+	if s.todoStore == nil {
+		_ = SaveTodosSnapshot(s.WorkDir, s.ID.String(), nil)
+		return
+	}
+	*s.todoStore = nil
+	_ = SaveTodosSnapshot(s.WorkDir, s.ID.String(), nil)
+}
+
 // AppendLog records an event in the session log file.
 func (s Session) AppendLog(kind, text string) {
 	_ = AppendLog(s.LogPath, kind, text)
@@ -97,7 +132,12 @@ func (s Session) AppendRequestsLog(kind, text string) {
 // StartTurn starts an agent turn and streams framework-neutral events.
 func (s *Session) StartTurn(ctx context.Context, opts agent.TurnOptions) <-chan agent.Event {
 	ctx = skill.WithDepthHolder(ctx)
-	ctx = memz.WithStore(ctx, &s.Todos)
+	ctx = withTodoSession(ctx, s.WorkDir, s.ID.String())
+	if s.todoStore == nil {
+		store := make([]todolist.Todo, 0)
+		s.todoStore = &store
+	}
+	ctx = todolist.WithStore(ctx, s.todoStore)
 	opts.SystemPrompt = s.SystemPrompt
 	if opts.Model == "" {
 		opts.Model = s.ModelID
@@ -147,4 +187,12 @@ func (s *Session) ApplyHistory(history []provider.ChatMessage) {
 		return
 	}
 	s.History = agent.CompactMessages(history)
+}
+
+func loadSessionTodos(workDir, sessionID string) []todolist.Todo {
+	loaded, err := LoadTodos(workDir, sessionID)
+	if err != nil || len(loaded) == 0 {
+		return make([]todolist.Todo, 0)
+	}
+	return loaded
 }

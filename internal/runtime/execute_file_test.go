@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/riipandi/elph/pkg/tool"
+	"github.com/riipandi/elph/pkg/tools"
 	"github.com/stretchr/testify/require"
 )
 
@@ -25,7 +25,7 @@ func TestExecuteRead(t *testing.T) {
 	path := filepath.Join(wd, "hello.txt")
 	require.NoError(t, os.WriteFile(path, []byte("hello\nworld"), 0o644))
 
-	result := ExecuteTool(context.Background(), wd, tool.Read, map[string]any{
+	result := ExecuteTool(context.Background(), wd, tools.Read, map[string]any{
 		"path": "hello.txt",
 	})
 	require.NoError(t, result.Err)
@@ -38,7 +38,7 @@ func TestExecuteReadTruncatesLargeFile(t *testing.T) {
 	path := filepath.Join(wd, "big.txt")
 	require.NoError(t, os.WriteFile(path, []byte(strings.Repeat("x", maxReadBytes+10)), 0o644))
 
-	result := ExecuteTool(context.Background(), wd, tool.Read, map[string]any{
+	result := ExecuteTool(context.Background(), wd, tools.Read, map[string]any{
 		"path": "big.txt",
 	})
 	require.NoError(t, result.Err)
@@ -50,7 +50,7 @@ func TestExecuteWriteCreatesFileAndParents(t *testing.T) {
 	t.Parallel()
 	wd := t.TempDir()
 
-	result := ExecuteTool(context.Background(), wd, tool.Write, map[string]any{
+	result := ExecuteTool(context.Background(), wd, tools.Write, map[string]any{
 		"path":     "nested/out.txt",
 		"contents": "created",
 	})
@@ -68,7 +68,7 @@ func TestExecuteWriteOverwritesAndAllowsEmptyContents(t *testing.T) {
 	path := filepath.Join(wd, "file.txt")
 	require.NoError(t, os.WriteFile(path, []byte("old"), 0o644))
 
-	result := ExecuteTool(context.Background(), wd, tool.Write, map[string]any{
+	result := ExecuteTool(context.Background(), wd, tools.Write, map[string]any{
 		"path":     "file.txt",
 		"contents": "",
 	})
@@ -85,7 +85,7 @@ func TestExecuteEditReplacesSingleOccurrence(t *testing.T) {
 	path := filepath.Join(wd, "main.go")
 	require.NoError(t, os.WriteFile(path, []byte("foo bar foo"), 0o644))
 
-	result := ExecuteTool(context.Background(), wd, tool.Edit, map[string]any{
+	result := ExecuteTool(context.Background(), wd, tools.Edit, map[string]any{
 		"path":       "main.go",
 		"old_string": "foo bar",
 		"new_string": "baz qux",
@@ -104,7 +104,7 @@ func TestExecuteEditReplaceAll(t *testing.T) {
 	path := filepath.Join(wd, "main.go")
 	require.NoError(t, os.WriteFile(path, []byte("foo bar foo"), 0o644))
 
-	result := ExecuteTool(context.Background(), wd, tool.Edit, map[string]any{
+	result := ExecuteTool(context.Background(), wd, tools.Edit, map[string]any{
 		"path":        "main.go",
 		"old_string":  "foo",
 		"new_string":  "baz",
@@ -124,7 +124,7 @@ func TestExecuteEditErrors(t *testing.T) {
 	path := filepath.Join(wd, "main.go")
 	require.NoError(t, os.WriteFile(path, []byte("alpha beta alpha"), 0o644))
 
-	missing := ExecuteTool(context.Background(), wd, tool.Edit, map[string]any{
+	missing := ExecuteTool(context.Background(), wd, tools.Edit, map[string]any{
 		"path":       "main.go",
 		"old_string": "missing",
 		"new_string": "x",
@@ -132,7 +132,7 @@ func TestExecuteEditErrors(t *testing.T) {
 	require.Error(t, missing.Err)
 	require.Contains(t, missing.Err.Error(), "not found")
 
-	ambiguous := ExecuteTool(context.Background(), wd, tool.Edit, map[string]any{
+	ambiguous := ExecuteTool(context.Background(), wd, tools.Edit, map[string]any{
 		"path":       "main.go",
 		"old_string": "alpha",
 		"new_string": "x",
@@ -148,7 +148,7 @@ func TestExecuteGrepFindsMatch(t *testing.T) {
 	wd := t.TempDir()
 	require.NoError(t, os.WriteFile(filepath.Join(wd, "a.go"), []byte("package main\nfunc main() {}\n"), 0o644))
 
-	result := ExecuteTool(context.Background(), wd, tool.Grep, map[string]any{
+	result := ExecuteTool(context.Background(), wd, tools.Grep, map[string]any{
 		"pattern": "func main",
 	})
 	require.NoError(t, result.Err)
@@ -162,7 +162,7 @@ func TestExecuteGrepNoMatches(t *testing.T) {
 	wd := t.TempDir()
 	require.NoError(t, os.WriteFile(filepath.Join(wd, "a.go"), []byte("package main\n"), 0o644))
 
-	result := ExecuteTool(context.Background(), wd, tool.Grep, map[string]any{
+	result := ExecuteTool(context.Background(), wd, tools.Grep, map[string]any{
 		"pattern": "not-in-file",
 	})
 	require.NoError(t, result.Err)
@@ -177,7 +177,7 @@ func TestExecuteGrepFilesWithMatches(t *testing.T) {
 	require.NoError(t, os.WriteFile(filepath.Join(wd, "a.go"), []byte("needle"), 0o644))
 	require.NoError(t, os.WriteFile(filepath.Join(wd, "b.go"), []byte("other"), 0o644))
 
-	result := ExecuteTool(context.Background(), wd, tool.Grep, map[string]any{
+	result := ExecuteTool(context.Background(), wd, tools.Grep, map[string]any{
 		"pattern":     "needle",
 		"output_mode": "files_with_matches",
 	})
@@ -193,21 +193,21 @@ func TestExecuteGlobSimpleAndRecursive(t *testing.T) {
 	require.NoError(t, os.WriteFile(filepath.Join(wd, "root.go"), []byte("x"), 0o644))
 	require.NoError(t, os.WriteFile(filepath.Join(wd, "pkg", "app", "main.go"), []byte("x"), 0o644))
 
-	simple := ExecuteTool(context.Background(), wd, tool.Glob, map[string]any{
+	simple := ExecuteTool(context.Background(), wd, tools.Glob, map[string]any{
 		"pattern": "*.go",
 	})
 	require.NoError(t, simple.Err)
 	require.Contains(t, simple.Output, "root.go")
 	require.NotContains(t, simple.Output, "main.go")
 
-	recursive := ExecuteTool(context.Background(), wd, tool.Glob, map[string]any{
+	recursive := ExecuteTool(context.Background(), wd, tools.Glob, map[string]any{
 		"pattern": "**/*.go",
 	})
 	require.NoError(t, recursive.Err)
 	require.Contains(t, recursive.Output, "root.go")
 	require.Contains(t, recursive.Output, "main.go")
 
-	scoped := ExecuteTool(context.Background(), wd, tool.Glob, map[string]any{
+	scoped := ExecuteTool(context.Background(), wd, tools.Glob, map[string]any{
 		"pattern": "pkg/**/*.go",
 	})
 	require.NoError(t, scoped.Err)

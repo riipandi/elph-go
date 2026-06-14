@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	inttools "github.com/riipandi/elph/internal/tools"
-	"github.com/riipandi/elph/pkg/tool"
+	"github.com/riipandi/elph/pkg/tools"
 )
 
 var (
@@ -82,7 +82,7 @@ func ResolveToolRequest(rawName string, params map[string]string) ToolRequestPre
 		}
 	}
 
-	name, known := tool.ResolveName(rawName)
+	name, known := tools.ResolveName(rawName)
 	if !known {
 		return ToolRequestPresentation{
 			Name:   name,
@@ -91,8 +91,8 @@ func ResolveToolRequest(rawName string, params map[string]string) ToolRequestPre
 		}
 	}
 
-	if tool.IsExecutable(name) {
-		if tool.RequiresApproval(name) {
+	if tools.IsExecutable(name) {
+		if tools.RequiresApproval(name) {
 			return ToolRequestPresentation{
 				Name:   name,
 				Reason: UnavailableNotExecutable,
@@ -142,7 +142,7 @@ func diagnosticUnavailableMessage(name string) string {
 	hint := diagnosticSlashHint(name)
 	if hint == "" {
 		return fmt.Sprintf(
-			"Tool unavailable\n\n%s is a diagnostic helper and cannot be run as an agent tool.",
+			"Tool unavailable\n\n%s is a diagnostic helper and cannot be run as an agent tools.",
 			name,
 		)
 	}

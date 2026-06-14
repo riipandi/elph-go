@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/riipandi/elph/pkg/tool"
+	"github.com/riipandi/elph/pkg/tools"
 	"github.com/stretchr/testify/require"
 )
 
@@ -19,7 +19,7 @@ func TestExecuteReadMediaFilePNG(t *testing.T) {
 	path := filepath.Join(dir, "shot.png")
 	writeTestPNG(t, path, 32, 24)
 
-	result := ExecuteTool(context.Background(), dir, tool.ReadMediaFile, map[string]any{
+	result := ExecuteTool(context.Background(), dir, tools.ReadMediaFile, map[string]any{
 		"path": "shot.png",
 	})
 	require.NoError(t, result.Err)
@@ -35,7 +35,7 @@ func TestExecuteReadMediaFileRejectsVideo(t *testing.T) {
 	path := filepath.Join(dir, "clip.mp4")
 	require.NoError(t, os.WriteFile(path, []byte{0, 0, 0, 0x18, 'f', 't', 'y', 'p'}, 0o644))
 
-	result := ExecuteTool(context.Background(), dir, tool.ReadMediaFile, map[string]any{
+	result := ExecuteTool(context.Background(), dir, tools.ReadMediaFile, map[string]any{
 		"path": "clip.mp4",
 	})
 	require.Error(t, result.Err)

@@ -1,8 +1,8 @@
 package prompt
 
 import (
-	"github.com/riipandi/elph/internal/tools"
-	"github.com/riipandi/elph/pkg/tool"
+	inttools "github.com/riipandi/elph/internal/tools"
+	"github.com/riipandi/elph/pkg/tools"
 )
 
 // Entry describes any tool available to the agent (built-in, MCP, plugin, etc.).
@@ -24,26 +24,26 @@ type TemplateData struct {
 	AvailableTools string
 }
 
-var pkgSectionByCategory = map[tool.Category]string{
-	tool.CategoryFile:            "File Tools",
-	tool.CategoryShell:           "Shell Tools",
-	tool.CategoryWeb:             "Web Tools",
-	tool.CategoryPlanMode:        "Plan Mode",
-	tool.CategoryStateManagement: "State Management",
-	tool.CategoryCollaboration:   "Collaboration Tools",
+var pkgSectionByCategory = map[tools.Category]string{
+	tools.CategoryFile:            "File Tools",
+	tools.CategoryShell:           "Shell Tools",
+	tools.CategoryWeb:             "Web Tools",
+	tools.CategoryPlanMode:        "Plan Mode",
+	tools.CategoryStateManagement: "State Management",
+	tools.CategoryCollaboration:   "Collaboration Tools",
 }
 
-var pkgCategoryOrder = []tool.Category{
-	tool.CategoryFile,
-	tool.CategoryShell,
-	tool.CategoryWeb,
-	tool.CategoryPlanMode,
-	tool.CategoryStateManagement,
-	tool.CategoryCollaboration,
+var pkgCategoryOrder = []tools.Category{
+	tools.CategoryFile,
+	tools.CategoryShell,
+	tools.CategoryWeb,
+	tools.CategoryPlanMode,
+	tools.CategoryStateManagement,
+	tools.CategoryCollaboration,
 }
 
 // EntryFromBuiltin converts a built-in tool definition into a catalog entry.
-func EntryFromBuiltin(def tool.Definition) Entry {
+func EntryFromBuiltin(def tools.Definition) Entry {
 	return Entry{
 		Name:                 def.Name,
 		Section:              pkgSectionByCategory[def.Category],
@@ -68,10 +68,10 @@ func catalogEntries(explicit []Entry) []Entry {
 		explicit = entriesFromExposedBuiltins()
 	}
 
-	entries := make([]Entry, 0, len(explicit)+len(tools.Diagnostic()))
+	entries := make([]Entry, 0, len(explicit)+len(inttools.Diagnostic()))
 	entries = append(entries, explicit...)
 
-	for _, def := range tools.Diagnostic() {
+	for _, def := range inttools.Diagnostic() {
 		if hasEntryName(entries, def.Name) {
 			continue
 		}
@@ -82,16 +82,16 @@ func catalogEntries(explicit []Entry) []Entry {
 }
 
 func entriesFromExposedBuiltins() []Entry {
-	defs := make([]tool.Definition, 0, 4)
-	for _, def := range tool.All() {
-		if tool.IsProviderExposed(def.Name) {
+	defs := make([]tools.Definition, 0, 4)
+	for _, def := range tools.All() {
+		if tools.IsProviderExposed(def.Name) {
 			defs = append(defs, def)
 		}
 	}
 	return entriesFromBuiltins(defs)
 }
 
-func entriesFromBuiltins(defs []tool.Definition) []Entry {
+func entriesFromBuiltins(defs []tools.Definition) []Entry {
 	entries := make([]Entry, 0, len(defs))
 
 	for _, category := range pkgCategoryOrder {
@@ -109,7 +109,7 @@ func entriesFromBuiltins(defs []tool.Definition) []Entry {
 	return entries
 }
 
-func entryFromDiagnostic(def tools.Definition) Entry {
+func entryFromDiagnostic(def inttools.Definition) Entry {
 	return Entry{
 		Name:            def.Name,
 		Section:         "Diagnostic Tools",

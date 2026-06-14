@@ -13,7 +13,9 @@ func TestRootAndSessionPaths(t *testing.T) {
 	require.Equal(t, filepath.Join(workDir, ".agents", "elph"), Root(workDir))
 	require.Equal(t, filepath.Join(workDir, ".agents", "elph", "prompts"), PromptsDir(workDir))
 	require.Equal(t, filepath.Join(workDir, ".agents", "elph", "skills"), SkillsDir(workDir))
-	require.Equal(t, filepath.Join(workDir, ".agents", "elph", "logs", "sess_01"), SessionDir(workDir, "sess_01"))
+	require.Equal(t, filepath.Join(workDir, ".agents", "elph", "metadata"), MetadataDir(workDir))
+	require.Equal(t, filepath.Join(workDir, ".agents", "elph", "metadata", "sess_01"), SessionMetadataDir(workDir, "sess_01"))
+	require.Equal(t, filepath.Join(workDir, ".agents", "elph", "metadata", "sess_01", "todos.jsonl"), SessionTodosPath(workDir, "sess_01"))
 }
 
 func TestEnsureRootWritesGitignore(t *testing.T) {
@@ -26,6 +28,7 @@ func TestEnsureRootWritesGitignore(t *testing.T) {
 	for _, entry := range gitignoreRequiredEntries {
 		require.Contains(t, string(raw), entry)
 	}
+	require.Contains(t, string(raw), "metadata/")
 
 	require.NoError(t, EnsureRoot(workDir))
 	mod, err := os.Stat(gitignore)
@@ -50,4 +53,10 @@ func TestEnsureRootUpgradesStaleGitignore(t *testing.T) {
 	for _, entry := range gitignoreRequiredEntries {
 		require.Contains(t, string(raw), entry)
 	}
+}
+
+func TestEnsureSessionMetadataDir(t *testing.T) {
+	workDir := t.TempDir()
+	require.NoError(t, EnsureSessionMetadataDir(workDir, "sess_01"))
+	require.DirExists(t, SessionMetadataDir(workDir, "sess_01"))
 }

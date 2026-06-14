@@ -19,7 +19,7 @@ func TestOpenAppendAndReadLog(t *testing.T) {
 	path, err := OpenLog(dir, id)
 	require.NoError(t, err)
 	require.FileExists(t, path)
-	require.Contains(t, path, filepath.Join(".agents", "elph", "logs", id.String(), eventsLogName))
+	require.Contains(t, path, filepath.Join(".agents", "elph", "metadata", id.String(), eventsLogName))
 	require.FileExists(t, filepath.Join(projectdir.Root(dir), ".gitignore"))
 
 	require.NoError(t, AppendLog(path, "user", "hello"))
@@ -68,7 +68,7 @@ func TestOpenRequestsLogCreatesFile(t *testing.T) {
 func TestRequestsLogPath(t *testing.T) {
 	id := typeid.MustGenerate("sess")
 	got := RequestsLogPath("/tmp/project", id)
-	require.Contains(t, got, ".agents/elph/logs/")
+	require.Contains(t, got, ".agents/elph/metadata/")
 	require.Contains(t, got, id.String())
 	require.Contains(t, got, requestsLogName)
 }

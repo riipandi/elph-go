@@ -6,23 +6,23 @@ import (
 	"testing"
 
 	"github.com/riipandi/elph/pkg/ai/provider"
-	"github.com/riipandi/elph/pkg/tool"
+	"github.com/riipandi/elph/pkg/tools"
 	"github.com/stretchr/testify/require"
 )
 
 func TestToolInteractKindFor(t *testing.T) {
-	kind, ok := ToolInteractKindFor(tool.AskUser, false)
+	kind, ok := ToolInteractKindFor(tools.AskUser, false)
 	require.True(t, ok)
 	require.Equal(t, ToolInteractAskUser, kind)
 
-	kind, ok = ToolInteractKindFor(tool.Bash, false)
+	kind, ok = ToolInteractKindFor(tools.Bash, false)
 	require.True(t, ok)
 	require.Equal(t, ToolInteractApproval, kind)
 
-	_, ok = ToolInteractKindFor(tool.Bash, true)
+	_, ok = ToolInteractKindFor(tools.Bash, true)
 	require.False(t, ok)
 
-	_, ok = ToolInteractKindFor(tool.Read, false)
+	_, ok = ToolInteractKindFor(tools.Read, false)
 	require.False(t, ok)
 }
 

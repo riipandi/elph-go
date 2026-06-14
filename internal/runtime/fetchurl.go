@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/riipandi/elph/pkg/tool/fetchurl"
+	"github.com/riipandi/elph/pkg/tools/fetchurl"
 )
 
 func executeFetchURL(ctx context.Context, args map[string]any) ToolResult {

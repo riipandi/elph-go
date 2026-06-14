@@ -202,7 +202,7 @@ Flow per iteration:
 | **Bash**          | `bash -c`, streamed output, 120s timeout                   |
 | **ReadMediaFile** | Image decode/resize → PNG + base64 metadata (32 KB cap)    |
 
-`pkg/tool/availability.go` — `IsExecutable` returns true for Read, Write, Edit,
+`pkg/tools/availability.go` — `IsExecutable` returns true for Read, Write, Edit,
 Grep, Glob, ReadMediaFile, Bash, and AskUser (AskUser returns the huh answer without subprocess
 execution).
 
@@ -237,18 +237,18 @@ run. Models called unavailable tools and got errors.
 3. `IsExecutable(name)`
 4. Has a provider JSON schema
 
-| Function              | Location                   | Role                             |
-|-----------------------|----------------------------|----------------------------------|
-| `IsProviderExposed`   | `pkg/tool/availability.go` | Single-tool gate                 |
-| `FilterProviderTools` | `pkg/tool/schema.go`       | Filter any tool list             |
-| `ProviderDefinitions` | `pkg/tool/schema.go`       | Built-in schemas → filtered      |
-| Loop integration      | `pkg/core/agent/loop.go`   | Always filters before `Complete` |
+| Function              | Location                    | Role                             |
+|-----------------------|-----------------------------|----------------------------------|
+| `IsProviderExposed`   | `pkg/tools/availability.go` | Single-tool gate                 |
+| `FilterProviderTools` | `pkg/tools/schema.go`       | Filter any tool list             |
+| `ProviderDefinitions` | `pkg/tools/schema.go`       | Built-in schemas → filtered      |
+| Loop integration      | `pkg/core/agent/loop.go`    | Always filters before `Complete` |
 
 **Currently API-exposed:** Read, Write, Edit, Grep, Glob, ReadMediaFile, AskUser, Bash.
 
 Detailed reference: [docs/tools.md § Provider API exposure](./tools.md#provider-api-exposure).
 
-Tests: `pkg/tool/schema_test.go`, `pkg/tool/availability_test.go`.
+Tests: `pkg/tools/schema_test.go`, `pkg/tools/availability_test.go`.
 
 ---
 
@@ -491,7 +491,7 @@ Docs: [configuration.md § Directory layout](./configuration.md#directory-layout
 | Glob  | `executeGlob`  | `github.com/bmatcuk/doublestar/v4` — `**`, files only         |
 
 `IsProviderExposed` and `IsExecutable` include Write and Edit. Provider schemas in
-`pkg/tool/schema.go`.
+`pkg/tools/schema.go`.
 
 Docs: [tools.md § Provider API exposure](./tools.md#provider-api-exposure), [consideration.md § Built-in tools](./consideration.md#built-in-tools).
 

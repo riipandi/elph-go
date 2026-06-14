@@ -29,6 +29,9 @@ func (m Model) collapsibleShowsStatusPreview(msg message, index int) bool {
 		}
 		return m.thinkingInFlight(index)
 	case constants.MessageDetail:
+		if msg.detailStatus == constants.DetailStatusRunning && isRunningDetailPlaceholder(msg.text) {
+			return true
+		}
 		if msg.detailExpanded {
 			return false
 		}
@@ -47,7 +50,7 @@ func (m Model) collapsibleShowsStatusPreview(msg message, index int) bool {
 
 func (m Model) collapsibleRenderOpts(msg message, index int) collapsibleRenderOpts {
 	show := m.collapsibleShowsStatusPreview(msg, index)
-	live := m.thinkingShowsLiveBody(msg, index)
+	live := m.thinkingShowsLiveBody(msg, index) || m.nativeToolOutputStreaming(index)
 	if !show && !live {
 		return collapsibleRenderOpts{}
 	}
@@ -58,8 +61,21 @@ func (m Model) collapsibleRenderOpts(msg message, index int) collapsibleRenderOp
 	}
 }
 
+func (m Model) nativeToolOutputStreaming(index int) bool {
+	if index < 0 || index >= len(m.messages) {
+		return false
+	}
+	msg := m.messages[index]
+	if msg.kind != constants.MessageDetail || msg.detailStatus != constants.DetailStatusRunning {
+		return false
+	}
+	return !isRunningDetailPlaceholder(msg.text)
+}
+
 func (m Model) collapsibleNeedsLiveRefresh(msg message, index int) bool {
-	return m.collapsibleShowsStatusPreview(msg, index) || m.thinkingShowsLiveBody(msg, index)
+	return m.collapsibleShowsStatusPreview(msg, index) ||
+		m.thinkingShowsLiveBody(msg, index) ||
+		m.nativeToolOutputStreaming(index)
 }
 
 func (m Model) needsSpinnerContentRefresh() bool {

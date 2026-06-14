@@ -32,24 +32,36 @@ func runProviderLoop(ctx context.Context, opts TurnOptions, ch chan<- Event) {
 	)
 
 	for step := 0; step < maxToolIterations; step++ {
+		thinking := opts.Thinking
+		showThinking := opts.ShowThinking
+		if step > 0 {
+			// Tool-result follow-ups (e.g. after deny) should answer quickly without
+			// another full reasoning pass.
+			if !sendEvent(ctx, ch, ActivityEvent(ActivityThinking)) {
+				return
+			}
+			thinking = provider.ThinkingConfig{}
+			showThinking = false
+		}
+
 		stream := &provider.TurnStream{
 			OnContent: func(chunk string) {
 				sendEvent(ctx, ch, ResponseDeltaEvent(chunk))
 			},
 		}
-		if opts.ShowThinking {
+		if showThinking {
 			stream.OnThinking = wrapThinkingStream(opts.LogProvider, func(chunk string) {
 				sendEvent(ctx, ch, ThinkingDeltaEvent(chunk))
 			})
 		}
 
-		logProviderRequest(opts.LogProvider, step, opts.Model, len(tools), len(messages), opts.Thinking)
+		logProviderRequest(opts.LogProvider, step, opts.Model, len(tools), len(messages), thinking)
 
 		result, err := opts.Provider.Complete(ctx, provider.TurnRequest{
 			SystemPrompt: opts.SystemPrompt,
 			UserPrompt:   opts.UserPrompt,
 			Model:        opts.Model,
-			Thinking:     opts.Thinking,
+			Thinking:     thinking,
 			Compat:       opts.Compat,
 			Stream:       stream,
 			Messages:     messages,
@@ -69,7 +81,7 @@ func runProviderLoop(ctx context.Context, opts TurnOptions, ch chan<- Event) {
 		if len(result.ToolCalls) == 0 {
 			finalResult = result
 			finalResult.Usage = usage
-			if !opts.ShowThinking {
+			if !showThinking {
 				finalResult.Thinking = ""
 			}
 			if strings.TrimSpace(result.Content) != "" {
@@ -97,7 +109,7 @@ func runProviderLoop(ctx context.Context, opts TurnOptions, ch chan<- Event) {
 			}
 			logToolStart(opts.LogProvider, step, call)
 
-			runResult := runToolCall(ctx, opts, call)
+			runResult := runToolCall(ctx, opts, ch, call)
 			logToolDone(opts.LogProvider, step, call, runResult)
 			displayResult := LimitToolRunResult(runResult, MaxDisplayToolBytes)
 			if !sendEvent(ctx, ch, ToolCallDoneEvent(call, displayResult)) {
@@ -119,7 +131,7 @@ func runProviderLoop(ctx context.Context, opts TurnOptions, ch chan<- Event) {
 	}, CompactMessages(messages)))
 }
 
-func runToolCall(ctx context.Context, opts TurnOptions, call provider.ToolCall) ToolRunResult {
+func runToolCall(ctx context.Context, opts TurnOptions, ch chan<- Event, call provider.ToolCall) ToolRunResult {
 	args, err := ParseToolArguments(call.Arguments)
 	if err != nil {
 		return ToolRunResult{Err: err}
@@ -149,11 +161,18 @@ func runToolCall(ctx context.Context, opts TurnOptions, call provider.ToolCall) 
 			return ToolRunResult{Output: resp.Answer}
 		case ToolInteractApproval:
 			if !resp.Approved {
-				return ToolRunResult{Output: "User denied tool execution"}
+				return ToolRunResult{Output: ToolDeniedMessage}
 			}
 		}
 	}
 
+	if opts.ExecuteToolStream != nil {
+		return opts.ExecuteToolStream(ctx, call, args, func(chunk string) {
+			if chunk != "" {
+				sendEvent(ctx, ch, ToolCallOutputDeltaEvent(call, chunk))
+			}
+		})
+	}
 	if opts.ExecuteTool == nil {
 		return ToolRunResult{Err: fmt.Errorf("tool executor not configured")}
 	}

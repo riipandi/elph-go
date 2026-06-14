@@ -7,19 +7,71 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestDetailExpandedShowsAnimatedRunningPreview(t *testing.T) {
+	m := testInputModel(t)
+	m.agent.Busy = true
+	m.agent.SpinnerFrame = 0
+	m.messages = []message{{
+		kind:           constants.MessageDetail,
+		detailLabel:    "Bash",
+		text:           "(running...)",
+		detailStatus:   constants.DetailStatusRunning,
+		detailExpanded: true,
+	}}
+	m = m.syncLayout(false)
+
+	rendered := stripANSI(m.renderMessageAt(0))
+	require.Contains(t, rendered, "Running...")
+	require.NotContains(t, rendered, "(running...)")
+
+	updated, cmd := m.Update(spinnerTickMsg{})
+	m = updated.(Model)
+	require.NotNil(t, cmd)
+	require.NotEqual(t, rendered, stripANSI(m.renderMessageAt(0)))
+}
+
+func TestDetailExpandedRunningShowsStreamedOutput(t *testing.T) {
+	m := testModel()
+	m.messages = []message{{
+		kind:           constants.MessageDetail,
+		detailLabel:    "$ echo hi",
+		text:           "hi\n",
+		detailStatus:   constants.DetailStatusRunning,
+		detailExpanded: true,
+	}}
+
+	rendered := stripANSI(m.renderMessageAt(0))
+	require.Contains(t, rendered, "hi")
+	require.NotContains(t, rendered, "Running...")
+}
+
+func TestDetailCollapsedShowsLiveBashStream(t *testing.T) {
+	m := testInputModel(t)
+	m.agent.Busy = true
+	m.messages = []message{{
+		kind:         constants.MessageDetail,
+		detailLabel:  "$ ping 1.1.1.1",
+		text:         "PING 1.1.1.1\n",
+		detailStatus: constants.DetailStatusRunning,
+	}}
+
+	rendered := stripANSI(m.renderMessageAt(0))
+	require.Contains(t, rendered, "PING 1.1.1.1")
+	require.NotContains(t, rendered, "Running...")
+}
+
 func TestDetailCollapsedShowsRunningStatusPreview(t *testing.T) {
 	m := testModel()
 	m.agent.SpinnerFrame = 2
 	m.messages = []message{{
 		kind:         constants.MessageDetail,
 		detailLabel:  "$ ls",
-		text:         "(running...)\nfile.txt",
+		text:         "(running...)",
 		detailStatus: constants.DetailStatusRunning,
 	}}
 
 	rendered := stripANSI(m.renderMessageAt(0))
 	require.Contains(t, rendered, "Running...")
-	require.NotContains(t, rendered, "file.txt")
 }
 
 func TestDetailCollapsedShowsBodyPreviewWhenIdle(t *testing.T) {

@@ -31,7 +31,8 @@ Prefer code when they disagree until docs or behavior are updated.
 
 ### Accurate
 
-- Native tool loop and API filter (Read/Grep/Glob only) — `tools.md`, `progress.md`, `agent-runtime.md`
+- Native tool loop and API filter (Read, Grep, Glob, AskUser, Bash) — `tools.md`, `progress.md`, `agent-runtime.md`
+- Bash approval (huh), streaming output, deny cache — `tools.md`, `tui.md`, `agent-runtime.md`
 - Prompt template paths and placeholders — `prompt-templates.md`
 - Provider CLI (`connect`, `update`, `list`, enable/disable) — `cli.md`, `configuration.md`
 - Git footer (lazy branch refresh + on-demand line stats) — `tui.md`, `architecture.md`, `internal/git`
@@ -48,17 +49,18 @@ Prefer code when they disagree until docs or behavior are updated.
 
 ### Still placeholder / not implemented
 
-| Area                                                    | Code state                                     | Doc reference               |
-|---------------------------------------------------------|------------------------------------------------|-----------------------------|
-| MCP                                                     | Banner shows `0/0`; no client                  | `architecture.md`, `tui.md` |
-| Banner stats                                            | Hardcoded `0` extensions/commands/skills/tools | `tui.md`                    |
-| `/diff`, `/settings`, `/changelog`, `/diagnostic:debug` | `notImplemented` handlers                      | `slash-commands.md`         |
-| `elph doctor`                                           | Prints "not yet implemented"                   | `cli.md`                    |
-| `--no-session`                                          | Mentioned in tips only; no flag                | `configuration.md`          |
-| Requests log                                            | Path reserved; not written in production       | `agent-runtime.md`          |
-| Agent modes (`build`/`plan`/`ask`/`brave`)              | UI + settings only; no runtime effect          | `agent-runtime.md`          |
-| `internal/datastore`                                    | Empty package stub                             | `architecture.md`           |
-| WebSearch, FetchURL, Write, Bash, …                     | Catalog only or needs approval                 | `tools.md`                  |
+| Area                                                    | Code state                                     | Doc reference                  |
+|---------------------------------------------------------|------------------------------------------------|--------------------------------|
+| MCP                                                     | Banner shows `0/0`; no client                  | `architecture.md`, `tui.md`    |
+| Banner stats                                            | Hardcoded `0` extensions/commands/skills/tools | `tui.md`                       |
+| `/diff`, `/settings`, `/changelog`, `/diagnostic:debug` | `notImplemented` handlers                      | `slash-commands.md`            |
+| `elph doctor`                                           | Prints "not yet implemented"                   | `cli.md`                       |
+| `--no-session`                                          | Mentioned in tips only; no flag                | `configuration.md`             |
+| Requests log                                            | Path reserved; not written in production       | `agent-runtime.md`             |
+| Agent modes (`build`/`plan`/`ask`)                      | UI + settings only; no runtime effect yet      | `agent-runtime.md`             |
+| Agent mode **brave**                                    | Skips tool approval (`SkipToolApproval`)       | `agent-runtime.md`, `tools.md` |
+| `internal/datastore`                                    | Empty package stub                             | `architecture.md`              |
+| WebSearch, FetchURL, Write, Edit, …                     | Catalog only or not executable yet             | `tools.md`                     |
 
 ### Contributing
 

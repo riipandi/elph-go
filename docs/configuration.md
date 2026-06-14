@@ -53,18 +53,18 @@ Loads variables with `gotenv.OverLoad` before any subcommand (`cmd/coding-agent/
 
 Path: `~/.elph/settings.json` (`internal/settings/settings.go`).
 
-| Field                   | Default | Description                                                        |
-|-------------------------|---------|--------------------------------------------------------------------|
-| `theme`                 | `auto`  | `auto`, `dark`, or `light`                                         |
-| `showThinking`          | `true`  | Stream reasoning blocks in TUI                                     |
-| `autoExpandThinking`    | `false` | Thinking blocks start expanded                                     |
-| `thinkingBudgets`       | —       | Per-level token budget overrides                                   |
-| `session.providerId`    | —       | Last selected provider                                             |
-| `session.modelId`       | —       | Last selected model                                                |
-| `session.agentMode`     | `build` | `build`, `plan`, `ask`, `brave` (UI only today)                    |
-| `session.thinkingLevel` | `high`  | `off` … `xhigh`                                                    |
-| `models.lastSync`       | —       | RFC3339 timestamp of last models.dev sync                          |
-| `models.syncInterval`   | `24h`   | Minimum interval before the TUI checks models.dev again at startup |
+| Field                   | Default | Description                                                             |
+|-------------------------|---------|-------------------------------------------------------------------------|
+| `theme`                 | `auto`  | `auto`, `dark`, or `light`                                              |
+| `showThinking`          | `true`  | Stream reasoning blocks in TUI                                          |
+| `autoExpandThinking`    | `false` | Thinking blocks start expanded                                          |
+| `thinkingBudgets`       | —       | Per-level token budget overrides                                        |
+| `session.providerId`    | —       | Last selected provider                                                  |
+| `session.modelId`       | —       | Last selected model                                                     |
+| `session.agentMode`     | `build` | `build`, `plan`, `ask`, `brave` — **brave** skips tool approval prompts |
+| `session.thinkingLevel` | `high`  | `off` … `xhigh`                                                         |
+| `models.lastSync`       | —       | RFC3339 timestamp of last models.dev sync                               |
+| `models.syncInterval`   | `24h`   | Minimum interval before the TUI checks models.dev again at startup      |
 
 Model selection priority (`pkg/ai/provider/registry.go`):
 

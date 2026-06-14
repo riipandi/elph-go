@@ -36,7 +36,9 @@ else                  → single Provider.Complete (no tools)
 - Max **8** iterations (`maxToolIterations`)
 - Tools: `FilterProviderTools(opts.Tools)` or `tool.ProviderDefinitions()`
 - Streams `EventResponseDelta`, `EventThinkingDelta`, `EventActivity`
-- On `result.ToolCalls`: `EventToolCallStart` → `ExecuteTool` → `EventToolCallDone`
+- On `result.ToolCalls`: `EventToolCallStart` → `InteractTool` (if needed) → `ExecuteTool` or
+  `ExecuteToolStream` → `EventToolCallOutputDelta` (shell tools) → `EventToolCallDone`
+- Tool follow-ups after step 0 disable thinking for faster replies (e.g. after deny)
 - Appends assistant + tool messages to `Messages`
 - Ends with `TurnDoneWithHistoryEvent` (history for next turn)
 
@@ -49,18 +51,23 @@ Provider adapters:
 
 Only tools passing `IsProviderExposed` are sent to the provider:
 
-- Today: **Read**, **Grep**, **Glob**
+- Today: **Read**, **Grep**, **Glob**, **AskUser**, **Bash**
 - Details: [tools.md § Provider API exposure](./tools.md#provider-api-exposure)
 
 ## Runtime execution
 
 `ExecuteTool` (`internal/runtime/execute.go`):
 
-| Tool | Implementation            |
-|------|---------------------------|
-| Read | Read file under workspace |
-| Grep | `rg` subprocess           |
-| Glob | Glob walk                 |
+| Tool | Implementation                                         |
+|------|--------------------------------------------------------|
+| Read | Read file under workspace                              |
+| Grep | `rg` subprocess                                        |
+| Glob | Glob walk                                              |
+| Bash | `bash -c` via `RunShellContext`; streams stdout/stderr |
+
+`ExecuteToolStream` (`session.toolExecuteStream`) passes chunks to `EventToolCallOutputDelta` for
+live TUI updates. Bash validates syntax with `mvdan.cc/sh` before spawn and times out after 120s by
+default.
 
 Errors:
 
@@ -84,16 +91,22 @@ Native tool calling is the primary path when a provider is configured.
 
 `internal/renderer/agent_bridge.go`:
 
-| Event                | TUI effect                                      |
-|----------------------|-------------------------------------------------|
-| `EventActivity`      | Activity line + stopwatch                       |
-| `EventThinkingDelta` | Append to thinking block                        |
-| `EventResponseDelta` | Append to AI message (markdown async)           |
-| `EventToolCallStart` | Native tool detail box (running)                |
-| `EventToolCallDone`  | Update detail status/body                       |
-| `EventTurnDone`      | Finalize turn, apply history, token/cost footer |
+| Event                      | TUI effect                                         |
+|----------------------------|----------------------------------------------------|
+| `EventActivity`            | Activity line + stopwatch                          |
+| `EventThinkingDelta`       | Append to thinking block                           |
+| `EventResponseDelta`       | Append to AI message (markdown async)              |
+| `EventToolCallStart`       | Native tool detail box (running, `$ cmd` for Bash) |
+| `EventToolCallOutputDelta` | Append streamed shell output to detail box         |
+| `EventToolCallDone`        | Finalize detail status/body                        |
+| `EventTurnDone`            | Finalize turn, apply history, token/cost footer    |
 
-Native tool UI: `agent_native.go`. Text-markup tool UI: `agent_toolcall.go`.
+Native tool UI: `agent_native.go`, `tool_interact.go` (huh approval / AskUser). Text-markup tool
+UI: `agent_toolcall.go`.
+
+`toolInteractBridge` (`internal/renderer/tool_interact.go`) blocks the agent loop until the user
+responds. Approval choices, session allow, and per-turn deny cache are documented in
+[tools.md § User approval](./tools.md#user-approval-huh).
 
 ## Agent modes
 
@@ -103,7 +116,9 @@ Modes: `build`, `plan`, `ask`, `brave` (`internal/constants`).
 - Switched with **Ctrl+A** or footer click
 - Shown in input border color and footer
 
-**Runtime note:** Modes do not currently change system prompt, tool filter, or approval behavior. They are UI/state placeholders for future behavior.
+**Runtime note:** Modes do not change system prompt or tool filter today. **Brave** skips huh
+approval for requires-approval tools (`SkipToolApproval` in `buildTurnOptions`). **Build**, **plan**,
+and **ask** behave the same at runtime for now.
 
 ## Thinking levels
 

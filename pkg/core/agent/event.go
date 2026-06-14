@@ -10,6 +10,7 @@ const (
 	EventThinkingDelta
 	EventResponseDelta
 	EventToolCallStart
+	EventToolCallOutputDelta
 	EventToolCallDone
 	EventTurnDone
 )
@@ -46,6 +47,11 @@ func ResponseDeltaEvent(delta string) Event {
 // ToolCallStartEvent announces a provider-native tool invocation.
 func ToolCallStartEvent(call provider.ToolCall) Event {
 	return Event{Kind: EventToolCallStart, ToolCall: call}
+}
+
+// ToolCallOutputDeltaEvent streams incremental tool output to the host UI.
+func ToolCallOutputDeltaEvent(call provider.ToolCall, delta string) Event {
+	return Event{Kind: EventToolCallOutputDelta, ToolCall: call, Delta: delta}
 }
 
 // ToolCallDoneEvent reports a completed tool invocation.

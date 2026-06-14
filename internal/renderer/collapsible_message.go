@@ -147,6 +147,11 @@ func collapsibleStatusPreview(kind constants.MessageKind, status constants.Detai
 	return spinner + labelStyle.Render(string(runes[1:]))
 }
 
+func isRunningDetailPlaceholder(body string) bool {
+	trimmed := strings.TrimSpace(body)
+	return trimmed == "" || trimmed == "(running...)"
+}
+
 func firstDetailLine(body string) string {
 	for _, line := range strings.Split(body, "\n") {
 		if trimmed := strings.TrimSpace(line); trimmed != "" {
@@ -204,14 +209,14 @@ func collapsibleBodyBox(style lipgloss.Style, kind constants.MessageKind, status
 		if kind == constants.MessageThinking {
 			content = dimStyle.Render(body)
 		}
+	case opts.showStatusPreview:
+		content = collapsibleStatusPreview(kind, status, style, opts.spinnerFrame, innerW)
+		preStyled = true
 	case expanded && trimmed != "":
 		content = body
 		if kind == constants.MessageThinking {
 			content = dimStyle.Render(body)
 		}
-	case opts.showStatusPreview:
-		content = collapsibleStatusPreview(kind, status, style, opts.spinnerFrame, innerW)
-		preStyled = true
 	case trimmed != "":
 		if preview := collapsiblePreview(trimmed, innerW); preview != "" {
 			content = dimStyle.Render(preview)

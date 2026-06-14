@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"charm.land/bubbles/v2/stopwatch"
 	tea "charm.land/bubbletea/v2"
 	"github.com/riipandi/elph/internal/constants"
 	"github.com/riipandi/elph/internal/settings"
@@ -67,7 +68,7 @@ func (m Model) buildTurnOptions(prompt string, bridge *toolInteractBridge) agent
 		Model:            m.session.ModelID,
 		Provider:         m.session.Provider,
 		ShowThinking:     showThinking,
-		SkipToolApproval: m.mode == constants.ModeBrave,
+		SkipToolApproval: m.mode == constants.ModeBrave || m.agent.SessionAllowTools,
 	}
 	if bridge != nil {
 		opts.InteractTool = bridge.Interact
@@ -154,6 +155,44 @@ func (m Model) spinnerTickCmd() tea.Cmd {
 		return nil
 	}
 	return tea.Tick(spinnerInterval, func(time.Time) tea.Msg { return spinnerTickMsg{} })
+}
+
+func (m Model) activityTickCmds() []tea.Cmd {
+	if tick := m.spinnerTickCmd(); tick != nil {
+		return []tea.Cmd{tick}
+	}
+	return nil
+}
+
+// handleActivityTick processes spinner and stopwatch messages. Overlays such as
+// tool-approval dialogs route Update through a separate path; without this helper
+// the spinner chain would stop until the dialog closes.
+func (m Model) handleActivityTick(msg tea.Msg) (Model, []tea.Cmd, bool) {
+	switch msg.(type) {
+	case spinnerTickMsg:
+		if m.showsActivity() || m.modelsSyncingActive() {
+			m.agent.SpinnerFrame++
+			if m.modelsSyncingActive() {
+				m = m.refreshModelsSyncStatus()
+			}
+			if m.needsSpinnerContentRefresh() {
+				m = m.invalidateSpinnerPreviewCaches()
+				m.layout.ContentDirty = true
+				m = m.syncLayout(m.content.AtBottom())
+			}
+			return m, m.activityTickCmds(), true
+		}
+		return m, nil, true
+	case stopwatch.TickMsg, stopwatch.StartStopMsg, stopwatch.ResetMsg:
+		var swCmd tea.Cmd
+		m.agent.Stopwatch, swCmd = m.agent.Stopwatch.Update(msg)
+		if swCmd != nil {
+			return m, []tea.Cmd{swCmd}, true
+		}
+		return m, nil, true
+	default:
+		return m, nil, false
+	}
 }
 
 func (m Model) finishAgentTurn(thinking, response string, providerErr error) (Model, tea.Cmd) {

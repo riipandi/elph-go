@@ -25,9 +25,10 @@ type ToolInteractRequest struct {
 
 // ToolInteractResponse is the user's answer to a ToolInteractRequest.
 type ToolInteractResponse struct {
-	Approved  bool
-	Answer    string
-	Cancelled bool
+	Approved     bool
+	AllowSession bool // auto-approve requires-approval tools for the rest of this session
+	Answer       string
+	Cancelled    bool
 }
 
 // ToolInteractFunc blocks until the host returns a ToolInteractResponse.

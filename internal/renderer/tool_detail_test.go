@@ -15,6 +15,16 @@ func TestToolDetailStatusTransitions(t *testing.T) {
 	require.Equal(t, constants.DetailStatusWarning, toolDetailStatus(runtime.ToolResult{Cancelled: true}))
 }
 
+func TestToolDetailExpandedByDefault(t *testing.T) {
+	m := New()
+	m = m.addToolDetailMessage("Bash", "echo hello")
+
+	require.True(t, m.messages[0].detailExpanded)
+	rendered := stripANSI(m.renderMessageAt(0))
+	require.Contains(t, rendered, "echo hello")
+	require.Contains(t, rendered, "ctrl+o to collapse")
+}
+
 func TestAddToolDetailFromResultFormatsFailure(t *testing.T) {
 	m := New()
 	m = m.addToolDetailFromResult("Read", runtime.ToolResult{

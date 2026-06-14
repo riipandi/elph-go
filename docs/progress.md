@@ -162,14 +162,15 @@ receives JSON schemas and returns structured `tool_calls` / `tool_use` blocks.
 
 ### Agent loop
 
-| Component                                | Location                                                                                          |
-|------------------------------------------|---------------------------------------------------------------------------------------------------|
-| Multi-round tool loop (max 8 iterations) | `pkg/core/agent/loop.go`                                                                          |
-| Tool execution hook                      | `pkg/core/agent/toolrun.go`                                                                       |
-| Turn routing (native vs placeholder)     | `pkg/core/agent/turn.go`                                                                          |
-| Events                                   | `pkg/core/agent/event.go` — `EventToolCallStart`, `EventToolCallDone`, `TurnDoneWithHistoryEvent` |
-| Options                                  | `pkg/core/agent/options.go` — `ToolsEnabled`, `ExecuteTool`, `Messages`                           |
-| Tests                                    | `pkg/core/agent/loop_test.go`                                                                     |
+| Component                                | Location                                                                                                                      |
+|------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------|
+| Multi-round tool loop (max 8 iterations) | `pkg/core/agent/loop.go`                                                                                                      |
+| Tool execution hook                      | `pkg/core/agent/toolrun.go`                                                                                                   |
+| Turn routing (native vs placeholder)     | `pkg/core/agent/turn.go`                                                                                                      |
+| Events                                   | `pkg/core/agent/event.go` — `EventToolCallStart`, `EventToolCallOutputDelta`, `EventToolCallDone`, `TurnDoneWithHistoryEvent` |
+| Options                                  | `pkg/core/agent/options.go` — `ToolsEnabled`, `ExecuteTool`, `ExecuteToolStream`, `InteractTool`, `SkipToolApproval`          |
+| User interact                            | `pkg/core/agent/interact.go` — AskUser + approval kinds; denied message constant                                              |
+| Tests                                    | `pkg/core/agent/loop_test.go`                                                                                                 |
 
 Flow per iteration:
 
@@ -191,23 +192,26 @@ Flow per iteration:
 
 `internal/runtime/execute.go` implements:
 
-| Tool     | Behavior                  |
-|----------|---------------------------|
-| **Read** | Read file under workspace |
-| **Grep** | ripgrep search            |
-| **Glob** | Glob file discovery       |
+| Tool     | Behavior                                 |
+|----------|------------------------------------------|
+| **Read** | Read file under workspace                |
+| **Grep** | ripgrep search                           |
+| **Glob** | Glob file discovery                      |
+| **Bash** | `bash -c`, streamed output, 120s timeout |
 
-`pkg/tool/availability.go` — `IsExecutable` returns true only for Read, Grep,
-Glob.
+`pkg/tool/availability.go` — `IsExecutable` returns true for Read, Grep, Glob,
+Bash, and AskUser (AskUser returns the huh answer without subprocess execution).
 
 Tests: `internal/runtime/tool_test.go`.
 
 ### TUI — native tool rendering
 
-| File                                | Role                                     |
-|-------------------------------------|------------------------------------------|
-| `internal/renderer/agent_native.go` | Collapsible detail boxes per native call |
-| `internal/renderer/agent_bridge.go` | Maps agent events to TUI updates         |
+| File                                 | Role                                                         |
+|--------------------------------------|--------------------------------------------------------------|
+| `internal/renderer/agent_native.go`  | Native tool detail boxes; Bash `$ cmd` + streamed raw output |
+| `internal/renderer/tool_interact.go` | huh AskUser / approval; session allow; per-turn deny cache   |
+| `internal/renderer/agent_bridge.go`  | Maps agent events to TUI updates (incl. output deltas)       |
+| `internal/runtime/shell.go`          | `ApplyStreamChunk` — `\r` overwrite + preserved `\n`         |
 
 Native tool messages are tracked by `NativeToolMsgIDs` in `AgentState`
 (`internal/renderer/state.go`).
@@ -235,7 +239,7 @@ run. Models called unavailable tools and got errors.
 | `ProviderDefinitions` | `pkg/tool/schema.go`       | Built-in schemas → filtered      |
 | Loop integration      | `pkg/core/agent/loop.go`   | Always filters before `Complete` |
 
-**Currently API-exposed:** Read, Grep, Glob only.
+**Currently API-exposed:** Read, Grep, Glob, AskUser, Bash.
 
 Detailed reference: [docs/tools.md § Provider API exposure](./tools.md#provider-api-exposure).
 
@@ -355,8 +359,8 @@ go build -o elph ./cmd/coding-agent
 | Item                                          | Notes                                                                          |
 |-----------------------------------------------|--------------------------------------------------------------------------------|
 | **WebSearch, FetchURL, CodeSearch execution** | Schemas exist; need runtime handlers + `IsExecutable`                          |
-| **Write, Edit, Bash**                         | Require approval UI before API exposure                                        |
-| **ReadMediaFile, plan mode, AskUser**         | Need runtime handlers and exposure rules                                       |
+| **Write, Edit**                               | Require approval UI + runtime handlers before API exposure                     |
+| **ReadMediaFile, plan mode**                  | Need runtime handlers and exposure rules                                       |
 | **MCP tools in provider schemas**             | `internal/tools/lookup.go` stub; wire to `ProviderDefinitions`                 |
 | **Disable XML parser when native-only**       | Reduce dual-path complexity once providers are stable                          |
 | **Slash commands**                            | `/diff`, `/settings`, `/changelog` still `notImplemented`; `/commit` not added |
@@ -378,6 +382,23 @@ When adding an API-exposed tool, follow the checklist in
 | 6     | Documentation       | `docs/tools.md` exposure section; this progress log                           |
 | 7     | Doc audit           | Full doc set in `docs/README.md`; fixed `tui.md`, tips, stale messages        |
 | 8     | Memory & startup    | Idle RSS ~30 MB; lazy git, catalog trim, history caps, huh models.dev confirm |
+| 9     | Bash + approval UX  | huh allow once/session/deny; streamed tool output; deny cache per turn        |
+
+---
+
+## 11. Bash execution and approval UX (June 2026)
+
+| Area            | Implementation                                                                                        |
+|-----------------|-------------------------------------------------------------------------------------------------------|
+| Approval dialog | huh select in `tool_interact.go` — allow once, allow for session, deny; shortcuts `y`/`a`/`n`/`1`–`3` |
+| Session allow   | `SessionAllowTools` + bridge `skipSessionApproval` for remaining TUI session                          |
+| Deny            | `ToolDeniedMessage` to provider; Esc = deny; identical signature auto-denied within same turn         |
+| Brave mode      | `SkipToolApproval` when `session.agentMode == brave`                                                  |
+| Streaming       | `ExecuteToolStream` → `EventToolCallOutputDelta`; `ApplyStreamChunk` for `\r`/`\n`                    |
+| Bash detail     | Label `$ <command>`; raw output in box; non-zero exit appends `(exit N)`                              |
+| Timeouts        | `defaultBashTimeout` 120s for agent Bash tool                                                         |
+
+Docs: [tools.md § User approval](./tools.md#user-approval-huh), [tui.md § Native tool detail](./tui.md#native-tool-detail).
 
 ---
 

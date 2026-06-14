@@ -37,7 +37,7 @@ func (m Model) handleAgentEvent(msg agentEventMsg) (Model, tea.Cmd) {
 				return m, tea.Batch(cmd, func() tea.Msg { return agentTurnClosedMsg{} })
 			}
 			switch evt.Kind {
-			case agent.EventThinkingDelta, agent.EventResponseDelta:
+			case agent.EventThinkingDelta, agent.EventResponseDelta, agent.EventToolCallOutputDelta:
 				m, cmd = m.coalesceAgentEvent(cmd, evt)
 				continue
 			default:
@@ -83,21 +83,25 @@ func (m Model) applyAgentEvent(evt agent.Event) (Model, tea.Cmd) {
 	case agent.EventResponseDelta:
 		m = m.appendAgentResponseDelta(evt.Delta)
 		return m.markStreamDirty()
+	case agent.EventToolCallOutputDelta:
+		m = m.appendNativeToolOutput(evt.ToolCall, evt.Delta)
+		return m.markStreamDirty()
 	case agent.EventToolCallStart:
 		m.agent.Activity = agent.ActivityForTool(evt.ToolCall.Name)
 		m = m.beginNativeToolCall(evt.ToolCall)
 		m, cmd := m.markStreamDirty()
-		if m.agent.ToolInteractBridge != nil {
-			wait := waitToolInteractOffer(m.agent.ToolInteractBridge)
-			if cmd == nil {
-				return m, wait
-			}
-			return m, tea.Batch(cmd, wait)
+		var cmds []tea.Cmd
+		if cmd != nil {
+			cmds = append(cmds, cmd)
 		}
-		return m, cmd
+		cmds = append(cmds, m.drainAgentEvents()...)
+		if m.agent.ToolInteractBridge != nil {
+			cmds = append(cmds, waitToolInteractOffer(m.agent.ToolInteractBridge))
+		}
+		return m, tea.Batch(cmds...)
 	case agent.EventToolCallDone:
 		m = m.finishNativeToolCall(evt.ToolCall, evt.ToolResult)
-		return m.markStreamDirty()
+		return m.flushContentNow()
 	case agent.EventTurnDone:
 		m.turnCount++
 		m = m.applyTurnUsage(evt.Usage)

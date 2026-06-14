@@ -106,7 +106,7 @@ func (m Model) handleShellSubmit(command string, withContext bool) (Model, tea.C
 					return
 				}
 				select {
-				case outCh <- runtime.SanitizeStreamChunk(chunk):
+				case outCh <- chunk:
 				case <-ctx.Done():
 				}
 			}
@@ -179,13 +179,10 @@ func (m Model) updateShellDetailMessage(result *runtime.ShellResult) Model {
 			result.Err,
 			result.Cancelled,
 		)
+	} else if output := m.shell.Output; output == "" || isRunningDetailPlaceholder(output) {
+		text = "(running...)"
 	} else {
-		output := runtime.TrimStreamOutput(m.shell.Output)
-		if output == "" {
-			text = "(running...)"
-		} else {
-			text = output
-		}
+		text = output
 	}
 
 	idx := m.shell.DetailMsgID
@@ -238,7 +235,7 @@ func (m Model) finishShellDone(msg shellDoneMsg) (Model, tea.Cmd) {
 }
 
 func (m Model) handleShellOutput(msg shellOutputMsg) (Model, tea.Cmd) {
-	m.shell.Output += msg.chunk
+	m.shell.Output = runtime.ApplyStreamChunk(m.shell.Output, msg.chunk)
 	m = m.updateShellDetailMessage(nil)
 	m = m.syncLayout(true)
 

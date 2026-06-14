@@ -53,6 +53,9 @@ func (m Model) View() tea.View {
 // Empty layers are omitted so JoinVertical does not insert blank lines.
 func (m Model) viewParts() []string {
 	parts := []string{m.contentAreaView()}
+	if m.toolInteractDialogActive() {
+		parts = append(parts, m.toolInteractChromeView())
+	}
 	if av := m.activityView(); av != "" {
 		parts = append(parts, av)
 	}
@@ -66,6 +69,9 @@ func (m Model) renderedViewHeight() int {
 
 func (m Model) chromeHeight() int {
 	h := lipgloss.Height(m.inputChromeView()) + lipgloss.Height(m.footerView())
+	if m.toolInteractDialogActive() {
+		h += lipgloss.Height(m.toolInteractChromeView())
+	}
 	if m.showsActivity() {
 		h += lipgloss.Height(m.activityView())
 	}
@@ -445,9 +451,6 @@ func (m Model) inputBodyView() string {
 }
 
 func (m Model) inputChromeView() string {
-	if m.toolInteractDialogActive() {
-		return m.toolInteractDialogView()
-	}
 	if m.modelsSyncDialogActive() {
 		return m.modelsSyncDialogView()
 	}

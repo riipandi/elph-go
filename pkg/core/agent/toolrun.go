@@ -7,6 +7,9 @@ import (
 	"github.com/riipandi/elph/pkg/ai/provider"
 )
 
+// ToolDeniedMessage is the tool-role payload after the user rejects an approval dialog.
+const ToolDeniedMessage = "User denied tool execution"
+
 // ToolRunResult is the outcome of executing one provider-native tool call.
 type ToolRunResult struct {
 	Output    string

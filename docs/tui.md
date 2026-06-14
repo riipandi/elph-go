@@ -126,12 +126,13 @@ Inputs starting with `/` invoke slash commands. Built-in commands (for example `
 `/exit`) are always available. Custom prompt templates are loaded from `~/.elph/prompts/*.md` and
 `<workDir>/.elph/prompts/*.md` — each file becomes a slash command named after the filename.
 
-Detail blocks (prompt templates, shell output, tool results) and thinking blocks are shown
-separately from user input. They are dimmed, collapsible, and collapsed by default (thinking
-respects `autoExpandThinking`). Click a thinking header or any block hint to expand or collapse that specific block.
-Detail titles are plain text (no background); only the hint row is clickable for detail
-blocks. `Ctrl+O` always toggles the most recent collapsible block in the session.
-Detail box colors reflect status: neutral, running, success, warning, or error.
+Detail blocks (prompt templates, shell output, native tool results) and thinking blocks are shown
+separately from user input. They are dimmed and collapsible. **Thinking** respects
+`autoExpandThinking` in settings (default collapsed). **Native tool** detail boxes start
+**expanded** so streamed output is visible immediately. Click a header or hint row to expand or
+collapse that block. Detail titles are plain text (no background); the hint row is clickable for
+detail blocks. `Ctrl+O` toggles the most recent collapsible block in the session. Detail box colors
+reflect status: neutral, running, success, warning, or error.
 
 See [prompt-templates.md](./prompt-templates.md) for format, argument placeholders, and examples.
 
@@ -283,7 +284,50 @@ Type `@` in input to fuzzy-search workspace files and directories (`internal/men
 | `!cmd`  | Run shell; output can be queued as agent context |
 | `!!cmd` | Run shell without agent context                  |
 
-Output appears in a collapsible detail box with status colors (running / success / error / cancelled).
+Output appears in a collapsible detail box labeled `$ <command>` with status colors (running /
+success / error / cancelled). Stream chunks honor terminal carriage returns (e.g. ping statistics
+overwriting one line) while preserving newlines between separate lines.
+
+## Tool approval and AskUser
+
+When the agent calls **Bash** or **AskUser**, a huh form appears in the input chrome (replacing the
+normal prompt until you answer).
+
+### Bash approval
+
+| Input    | Action              |
+|----------|---------------------|
+| `y` / `1` | Allow once          |
+| `a` / `2` | Allow for session   |
+| `n` / `3` | Deny                |
+| `Enter`  | Confirm selection (default: allow once) |
+| `Esc`    | Deny                  |
+
+Denying returns `User denied tool execution` to the model. The same command is not prompted again
+during the current agent turn. See [tools.md § User approval](./tools.md#user-approval-huh).
+
+### AskUser
+
+Questions with `options` support number keys `1`–`9` and arrow keys. Free-text questions use a
+single-line input.
+
+Agent events (tool start, stream deltas, response tokens) continue to update the main area while the
+dialog is open.
+
+## Native tool detail
+
+Native tool calls (`EventToolCallStart` / `EventToolCallOutputDelta` / `EventToolCallDone`) render in
+`internal/renderer/agent_native.go`:
+
+| Tool  | Title        | Body                                                         |
+|-------|--------------|--------------------------------------------------------------|
+| Bash  | `$ <command>` | Raw stdout/stderr streamed live; final body adds `(exit N)` on non-zero exit |
+| Other | Tool name    | Formatted via `runtime.FormatToolDetailBodyFromResult`       |
+
+While **running**, the detail box shows a spinner until the first output byte arrives, then streams
+text live (including when collapsed). Chunk boundaries preserve `\n` so line-oriented tools (e.g.
+`ping`) stay readable. Shell `!` output uses the same `ApplyStreamChunk` helper
+(`internal/runtime/shell.go`).
 
 ## Stream Messages
 

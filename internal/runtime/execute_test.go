@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/riipandi/elph/pkg/tool"
 	"github.com/stretchr/testify/require"
@@ -63,4 +64,31 @@ func TestExecuteBashInvalidSyntax(t *testing.T) {
 func TestValidateShellCommandRejectsNullByte(t *testing.T) {
 	t.Parallel()
 	require.Error(t, validateShellCommand("echo\x00bad"))
+}
+
+func TestExecuteBashStreamsOutputChunks(t *testing.T) {
+	t.Parallel()
+	wd := t.TempDir()
+	var chunks []string
+	result := ExecuteToolWithOutput(context.Background(), wd, tool.Bash, map[string]any{
+		"command": "printf 'ab'; printf 'cd'",
+	}, func(chunk string) {
+		chunks = append(chunks, chunk)
+	})
+	require.NoError(t, result.Err)
+	require.Equal(t, "abcd", result.Output)
+	require.NotEmpty(t, chunks)
+}
+
+func TestExecuteBashTimesOut(t *testing.T) {
+	t.Parallel()
+	prev := bashToolTimeout
+	bashToolTimeout = 200 * time.Millisecond
+	defer func() { bashToolTimeout = prev }()
+
+	wd := t.TempDir()
+	result := ExecuteTool(context.Background(), wd, tool.Bash, map[string]any{
+		"command": "sleep 5",
+	})
+	require.True(t, result.Cancelled)
 }

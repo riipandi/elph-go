@@ -95,7 +95,7 @@ func TestRunTurnBashApprovalDenied(t *testing.T) {
 
 	for evt := range events {
 		if evt.Kind == EventToolCallDone {
-			require.Equal(t, "User denied tool execution", evt.ToolResult.Output)
+			require.Equal(t, ToolDeniedMessage, evt.ToolResult.Output)
 		}
 	}
 }

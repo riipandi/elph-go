@@ -241,8 +241,6 @@ func (m Model) maxInputHeight() int {
 	}
 	overlayH := 0
 	switch {
-	case m.toolInteractDialogActive():
-		overlayH = m.toolInteractDialogHeight()
 	case m.modelsSyncDialogActive():
 		overlayH = m.modelsSyncDialogHeight()
 	case m.commandPaletteActive():

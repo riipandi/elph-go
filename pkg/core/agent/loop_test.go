@@ -64,6 +64,64 @@ func TestRunTurnAppendsFollowUpPromptToHistory(t *testing.T) {
 	require.Equal(t, "second", stub.lastMessages[2].Content)
 }
 
+func TestRunTurnDisablesThinkingOnToolFollowUp(t *testing.T) {
+	stub := &loopStubProvider{steps: []provider.TurnResult{
+		{
+			StopReason: provider.StopReasonToolUse,
+			ToolCalls: []provider.ToolCall{{
+				ID:        "call_1",
+				Name:      "Bash",
+				Arguments: json.RawMessage(`{"command":"echo hi"}`),
+			}},
+		},
+		{Content: "Done.", StopReason: provider.StopReasonEndTurn},
+	}}
+	rec := &thinkingRecordingProvider{inner: stub}
+
+	events := RunTurn(context.Background(), TurnOptions{
+		UserPrompt:   "run",
+		Provider:     rec,
+		ToolsEnabled: true,
+		Thinking:     provider.ThinkingConfig{Enabled: true, ThinkingFormat: provider.ThinkingFormatQwen},
+		ShowThinking: true,
+		InteractTool: func(ctx context.Context, req ToolInteractRequest) (ToolInteractResponse, error) {
+			return ToolInteractResponse{Approved: false}, nil
+		},
+		ExecuteTool: func(ctx context.Context, name string, args map[string]any) ToolRunResult {
+			t.Fatal("denied bash should not execute")
+			return ToolRunResult{}
+		},
+	})
+
+	var afterDeny bool
+	var sawFollowUpThinking bool
+	for evt := range events {
+		if evt.Kind == EventToolCallDone {
+			afterDeny = true
+		}
+		if afterDeny && evt.Kind == EventActivity && evt.Activity == ActivityThinking {
+			sawFollowUpThinking = true
+		}
+	}
+
+	require.True(t, sawFollowUpThinking, "follow-up provider call should show Thinking activity")
+	require.Len(t, rec.thinking, 2)
+	require.True(t, rec.thinking[0].Enabled)
+	require.False(t, rec.thinking[1].Enabled)
+}
+
+type thinkingRecordingProvider struct {
+	inner    *loopStubProvider
+	thinking []provider.ThinkingConfig
+}
+
+func (r *thinkingRecordingProvider) ID() string { return r.inner.ID() }
+
+func (r *thinkingRecordingProvider) Complete(ctx context.Context, req provider.TurnRequest) (provider.TurnResult, error) {
+	r.thinking = append(r.thinking, req.Thinking)
+	return r.inner.Complete(ctx, req)
+}
+
 func TestRunTurnNativeToolLoop(t *testing.T) {
 	stub := &loopStubProvider{steps: []provider.TurnResult{
 		{

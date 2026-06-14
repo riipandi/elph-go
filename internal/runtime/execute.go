@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"github.com/riipandi/elph/pkg/tool"
@@ -21,10 +22,22 @@ const (
 	maxGrepBytes = 128 << 10
 	maxGlobPaths = 500
 	maxGlobBytes = 128 << 10
+
+	// defaultBashTimeout caps agent Bash tool runtime so open-ended commands
+	// (e.g. ping without -c) cannot block the turn indefinitely.
+	defaultBashTimeout = 120 * time.Second
 )
+
+// bashToolTimeout is the runtime cap for agent Bash tool calls. Tests may lower it.
+var bashToolTimeout = defaultBashTimeout
 
 // ExecuteTool runs a built-in agent tool and returns its result.
 func ExecuteTool(ctx context.Context, workDir, name string, args map[string]any) ToolResult {
+	return ExecuteToolWithOutput(ctx, workDir, name, args, nil)
+}
+
+// ExecuteToolWithOutput runs a built-in tool, streaming shell chunks to onChunk when supported.
+func ExecuteToolWithOutput(ctx context.Context, workDir, name string, args map[string]any, onChunk func(string)) ToolResult {
 	canonical, known := tool.ResolveName(name)
 	if !known {
 		return ToolResult{Err: ErrToolUnknown}
@@ -41,7 +54,7 @@ func ExecuteTool(ctx context.Context, workDir, name string, args map[string]any)
 	case tool.Glob:
 		return executeGlob(workDir, args)
 	case tool.Bash:
-		return executeBash(ctx, workDir, args)
+		return executeBash(ctx, workDir, args, onChunk)
 	default:
 		return ToolResult{Err: fmt.Errorf("%w: %s", ErrToolNotImplemented, canonical)}
 	}
@@ -98,7 +111,7 @@ func executeGrep(ctx context.Context, workDir string, args map[string]any) ToolR
 	return ToolResult{Output: truncateToolOutput(strings.TrimRight(string(out), "\n"), maxGrepBytes)}
 }
 
-func executeBash(ctx context.Context, workDir string, args map[string]any) ToolResult {
+func executeBash(ctx context.Context, workDir string, args map[string]any, onChunk func(string)) ToolResult {
 	command, ok := stringArg(args, "command")
 	if !ok {
 		return ToolResult{Err: errors.New("missing required argument: command")}
@@ -107,7 +120,9 @@ func executeBash(ctx context.Context, workDir string, args map[string]any) ToolR
 		return ToolResult{Err: err}
 	}
 
-	shell := RunShellContext(ctx, workDir, command, nil)
+	bashCtx, cancel := context.WithTimeout(ctx, bashToolTimeout)
+	defer cancel()
+	shell := RunShellContext(bashCtx, workDir, command, onChunk)
 	result := ToolResult{
 		Output:    shell.Output,
 		Cancelled: shell.Cancelled,

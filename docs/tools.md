@@ -78,8 +78,27 @@ A tool is sent to the provider API only when **all** of the following are true
 4. It has a provider JSON schema (`providerSchema`).
 
 Today **Read**, **Grep**, **Glob**, **AskUser**, and **Bash** are exposed. **AskUser** opens a huh
-dialog; **Bash** (and future Write/Edit) shows an approval confirm unless agent mode is **brave**.
-Auto-allow tools like WebSearch stay out until `IsExecutable` returns true for them.
+question dialog. **Bash** (and future Write/Edit) shows an approval dialog unless agent mode is
+**brave** or the user chose **allow for session** earlier in the TUI session. Auto-allow tools like
+WebSearch stay out until `IsExecutable` returns true for them.
+
+### User approval (huh)
+
+Requires-approval tools block in `runToolCall` until the renderer answers `InteractTool`
+(`pkg/core/agent/interact.go`, `internal/renderer/tool_interact.go`).
+
+| Choice                | Shortcut | Effect                                                                              |
+|-----------------------|----------|-------------------------------------------------------------------------------------|
+| **Allow once**        | `y`, `1` | Run this call only; next Bash in the same or a later turn prompts again             |
+| **Allow for session** | `a`, `2` | Skip approval for requires-approval tools until the TUI exits (`SessionAllowTools`) |
+| **Deny**              | `n`, `3` | Return `User denied tool execution` to the model; do not run the command            |
+
+- **Enter** on the default selection approves **once**.
+- **Esc** on the approval form counts as **deny** (not cancel).
+- After a deny, the same tool signature (e.g. `Bash` + identical `command`) is **auto-denied**
+  for the rest of the **current agent turn** without showing the dialog again.
+- **Brave** mode (`session.agentMode`) sets `SkipToolApproval` for the whole session UI — no huh
+  prompt for requires-approval tools.
 
 ### Exposure vs approval vs execution
 
@@ -99,8 +118,13 @@ Auto-allow tools like WebSearch stay out until `IsExecutable` returns true for t
 | Edit          | Requires approval | No           | No                       |
 | Bash          | Requires approval | Yes          | Yes (huh confirm/brave)  |
 
-`requires-approval` tools are sent to the provider API when executable; **huh** confirm gates each call
-(**brave** mode skips approval). **AskUser** always uses huh before returning the answer to the model.
+`requires-approval` tools are sent to the provider API when executable; **huh** gates each call unless
+**brave** or **allow for session** applies. **AskUser** always uses huh before returning the answer
+to the model.
+
+**Bash** runs via `bash -c` in the workspace directory. Long-running commands (e.g. `ping` without
+`-c`) are capped at **120s** (`defaultBashTimeout` in `internal/runtime/execute.go`). Output is
+streamed to the TUI during execution (see [tui.md § Native tool detail](./tui.md#native-tool-detail)).
 
 ### Request flow
 
@@ -117,9 +141,10 @@ sequenceDiagram
     Tool-->>Loop: Read, Grep, Glob schemas
     Loop->>Provider: Complete(TurnRequest.Tools)
     Provider-->>Loop: tool_calls / tool_use
-    Loop->>Runtime: ExecuteTool(name, args)
+    Loop->>Loop: InteractTool (AskUser / approval)
+    Loop->>Runtime: ExecuteTool / ExecuteToolStream
     Runtime->>Tool: IsExecutable(name)
-    Runtime-->>Loop: output or error
+    Runtime-->>Loop: output or error (streamed chunks via EventToolCallOutputDelta)
     Loop->>Provider: tool_result follow-up message
 ```
 

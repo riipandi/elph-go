@@ -1,6 +1,8 @@
 package renderer
 
 import (
+	"strings"
+
 	"github.com/riipandi/elph/internal/constants"
 	"github.com/riipandi/elph/internal/runtime"
 	"github.com/riipandi/elph/pkg/ai/provider"
@@ -13,15 +15,94 @@ func (m Model) resetNativeToolState() Model {
 	return m
 }
 
-func (m Model) beginNativeToolCall(call provider.ToolCall) Model {
+func nativeToolDetailLabel(call provider.ToolCall) string {
 	name, _ := tool.ResolveName(call.Name)
-	m = m.addToolDetailMessageWithStatus(name, "(running...)", constants.DetailStatusRunning)
+	if name != tool.Bash {
+		return name
+	}
+	args, err := agent.ParseToolArguments(call.Arguments)
+	if err != nil {
+		return name
+	}
+	if cmd, ok := bashCommandArg(args); ok {
+		return shellDetailLabel(cmd)
+	}
+	return name
+}
+
+func bashCommandArg(args map[string]any) (string, bool) {
+	raw, ok := args["command"]
+	if !ok || raw == nil {
+		return "", false
+	}
+	cmd, ok := raw.(string)
+	if !ok {
+		return "", false
+	}
+	cmd = strings.TrimSpace(cmd)
+	return cmd, cmd != ""
+}
+
+func (m Model) beginNativeToolCall(call provider.ToolCall) Model {
+	m = m.addToolDetailMessageWithStatus(nativeToolDetailLabel(call), "(running...)", constants.DetailStatusRunning)
 	idx := len(m.messages) - 1
 	if m.agent.NativeToolMsgIDs == nil {
 		m.agent.NativeToolMsgIDs = make(map[string]int)
 	}
 	m.agent.NativeToolMsgIDs[call.ID] = idx
 	return m
+}
+
+func (m Model) applyApprovalInteractUI(resp agent.ToolInteractResponse, req agent.ToolInteractRequest) Model {
+	if req.Kind != agent.ToolInteractApproval || req.ToolCall.ID == "" {
+		return m
+	}
+	switch {
+	case resp.Cancelled:
+		m = m.finishNativeToolCall(req.ToolCall, agent.ToolRunResult{Cancelled: true, Output: "User cancelled"})
+	case !resp.Approved:
+		m = m.finishNativeToolCall(req.ToolCall, agent.ToolRunResult{Output: agent.ToolDeniedMessage})
+	default:
+		return m
+	}
+	m.agent.Activity = agent.ActivityThinking
+	m.layout.ContentDirty = true
+	m = m.refreshStreamPrefixCache()
+	return m
+}
+
+func (m Model) appendNativeToolOutput(call provider.ToolCall, delta string) Model {
+	if delta == "" {
+		return m
+	}
+	idx, ok := m.agent.NativeToolMsgIDs[call.ID]
+	if !ok || idx < 0 || idx >= len(m.messages) {
+		return m
+	}
+	if isRunningDetailPlaceholder(m.messages[idx].text) {
+		m.messages[idx].text = ""
+	}
+	m.messages[idx].text = runtime.ApplyStreamChunk(m.messages[idx].text, delta)
+	m.messages[idx].renderCache = messageRenderCache{}
+	m.layout.ContentDirty = true
+	return m
+}
+
+func nativeToolDetailBody(name string, result runtime.ToolResult, streamed string) string {
+	var body string
+	if name == tool.Bash {
+		body = runtime.FormatBashToolDetailBody(result, streamed)
+	} else {
+		body = runtime.FormatToolDetailBodyFromResult(result)
+	}
+	return agent.TruncateWithNotice(body, agent.MaxDisplayToolBytes)
+}
+
+func nativeToolDetailStatus(name string, result runtime.ToolResult) constants.DetailStatus {
+	if name == tool.Bash {
+		return bashToolDetailStatus(result)
+	}
+	return toolDetailStatus(result)
 }
 
 func (m Model) finishNativeToolCall(call provider.ToolCall, result agent.ToolRunResult) Model {
@@ -31,14 +112,21 @@ func (m Model) finishNativeToolCall(call provider.ToolCall, result agent.ToolRun
 		Cancelled: result.Cancelled,
 	}
 	name, _ := tool.ResolveName(call.Name)
-	body := agent.TruncateWithNotice(
-		runtime.FormatToolDetailBodyFromResult(runtimeResult),
-		agent.MaxDisplayToolBytes,
-	)
-	status := toolDetailStatus(runtimeResult)
+
+	var streamed string
+	if idx, ok := m.agent.NativeToolMsgIDs[call.ID]; ok && idx >= 0 && idx < len(m.messages) {
+		if !isRunningDetailPlaceholder(m.messages[idx].text) {
+			streamed = m.messages[idx].text
+		}
+	}
+
+	body := nativeToolDetailBody(name, runtimeResult, streamed)
+	status := nativeToolDetailStatus(name, runtimeResult)
 
 	if idx, ok := m.agent.NativeToolMsgIDs[call.ID]; ok && idx >= 0 && idx < len(m.messages) {
-		m.messages[idx].detailLabel = name
+		if strings.TrimSpace(m.messages[idx].detailLabel) == "" {
+			m.messages[idx].detailLabel = nativeToolDetailLabel(call)
+		}
 		m.messages[idx].text = body
 		m.messages[idx].detailStatus = status
 		m.messages[idx].renderCache = messageRenderCache{}
@@ -46,7 +134,7 @@ func (m Model) finishNativeToolCall(call provider.ToolCall, result agent.ToolRun
 		return m
 	}
 
-	return m.addToolDetailMessageWithStatus(name, body, status)
+	return m.addToolDetailMessageWithStatus(nativeToolDetailLabel(call), body, status)
 }
 
 func (m Model) applySessionHistory(history []provider.ChatMessage) Model {

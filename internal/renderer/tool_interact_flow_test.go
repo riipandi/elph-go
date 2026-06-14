@@ -30,9 +30,15 @@ func TestToolInteractOfferShowsAskUserDialog(t *testing.T) {
 	m = updated.(Model)
 
 	require.True(t, m.toolInteractDialogActive())
-	view := stripANSI(m.inputChromeView())
-	require.Contains(t, view, "AskUser")
-	require.Contains(t, view, "Pick one")
+	dialog := stripANSI(m.toolInteractChromeView())
+	require.Contains(t, dialog, "Question")
+	require.Contains(t, dialog, "Pick one")
+	require.NotContains(t, dialog, "↑ up")
+	input := stripANSI(m.inputChromeView())
+	require.Contains(t, input, ">")
+	require.NotContains(t, input, "Pick one")
+	content := stripANSI(m.contentView())
+	require.NotContains(t, content, "Pick one")
 	require.False(t, m.input.Focused())
 }
 

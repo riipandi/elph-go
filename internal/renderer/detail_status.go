@@ -7,6 +7,19 @@ import (
 	"github.com/riipandi/elph/internal/runtime"
 )
 
+func bashToolDetailStatus(result runtime.ToolResult) constants.DetailStatus {
+	if result.Cancelled {
+		return constants.DetailStatusWarning
+	}
+	if result.Err != nil {
+		return constants.DetailStatusError
+	}
+	if _, exitCode := runtime.SplitShellExitSuffix(result.Output); exitCode != 0 {
+		return constants.DetailStatusError
+	}
+	return constants.DetailStatusSuccess
+}
+
 func toolDetailStatus(result runtime.ToolResult) constants.DetailStatus {
 	if result.Cancelled {
 		return constants.DetailStatusWarning

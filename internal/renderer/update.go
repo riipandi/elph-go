@@ -44,7 +44,32 @@ func resolveKeyAction(msg tea.KeyPressMsg) constants.KeyAction {
 
 // ─── Update ──────────────────────────────────────────────────────────────────
 
+func (m Model) handleAgentTurnClosed() (Model, tea.Cmd) {
+	if m.agent.Busy {
+		m.agent.Cancel = nil
+		m.agent.Busy = false
+		m.agent.Activity = agent.ActivityIdle
+		m.agent.SpinnerFrame = 0
+		m = m.stopActivityStopwatch()
+		m = m.syncLayout(true)
+	}
+	m.agent.Events = nil
+	return m, nil
+}
+
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	// Agent and layout messages must run while approval/ask dialogs are open.
+	// Otherwise ToolCallStart and stream updates are swallowed by huh and never
+	// reach the renderer (no tool detail box, no follow-up response stream).
+	switch msg := msg.(type) {
+	case agentEventMsg:
+		return m.handleAgentEvent(msg)
+	case agentTurnClosedMsg:
+		return m.handleAgentTurnClosed()
+	case streamFlushMsg:
+		return m.handleStreamFlush()
+	}
+
 	if m.toolInteractDialogActive() {
 		return m.updateToolInteractForm(msg)
 	}
@@ -124,53 +149,19 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case glamourRenderMsg:
 		return m.handleGlamourRenderMsg(msg)
 
-	case streamFlushMsg:
-		return m.handleStreamFlush()
-
-	case agentEventMsg:
-		return m.handleAgentEvent(msg)
-
 	case toolInteractOfferMsg:
 		var cmd tea.Cmd
 		m, cmd = m.offerToolInteract(msg)
-		m.layout.ContentDirty = true
 		m = m.syncLayout(true)
 		if cmd != nil {
 			return m, cmd
 		}
 		return m, nil
 
-	case agentTurnClosedMsg:
-		if m.agent.Busy {
-			m.agent.Cancel = nil
-			m.agent.Busy = false
-			m.agent.Activity = agent.ActivityIdle
-			m.agent.SpinnerFrame = 0
-			m = m.stopActivityStopwatch()
-			m = m.syncLayout(true)
-		}
-		m.agent.Events = nil
-
-	case stopwatch.TickMsg, stopwatch.StartStopMsg, stopwatch.ResetMsg:
-		var swCmd tea.Cmd
-		m.agent.Stopwatch, swCmd = m.agent.Stopwatch.Update(msg)
-		if swCmd != nil {
-			cmds = append(cmds, swCmd)
-		}
-
-	case spinnerTickMsg:
-		if m.showsActivity() || m.modelsSyncingActive() {
-			m.agent.SpinnerFrame++
-			if m.modelsSyncingActive() {
-				m = m.refreshModelsSyncStatus()
-			}
-			if m.needsSpinnerContentRefresh() {
-				m = m.invalidateSpinnerPreviewCaches()
-				m.layout.ContentDirty = true
-				m = m.syncLayout(m.content.AtBottom())
-			}
-			cmds = append(cmds, m.spinnerTickCmd())
-		}
+	case spinnerTickMsg, stopwatch.TickMsg, stopwatch.StartStopMsg, stopwatch.ResetMsg:
+		var tickCmds []tea.Cmd
+		m, tickCmds, _ = m.handleActivityTick(msg)
+		cmds = append(cmds, tickCmds...)
 
 	case shellOutputMsg:
 		var cmd tea.Cmd
@@ -486,7 +477,11 @@ func (m Model) addToolDetailMessage(toolName, body string) Model {
 }
 
 func (m Model) addToolDetailMessageWithStatus(toolName, body string, status constants.DetailStatus) Model {
-	return m.addDetailMessageWithStatusAt(toolName, body, status, time.Now())
+	m = m.addDetailMessageWithStatusAt(toolName, body, status, time.Now())
+	idx := len(m.messages) - 1
+	m.messages[idx].detailExpanded = true
+	m.layout.ContentDirty = true
+	return m
 }
 
 func (m Model) addToolDetailFromResult(toolName string, result runtime.ToolResult) Model {

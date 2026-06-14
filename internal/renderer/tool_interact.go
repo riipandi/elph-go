@@ -3,6 +3,8 @@ package renderer
 import (
 	"context"
 	"fmt"
+	"image/color"
+	"strconv"
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
@@ -23,16 +25,30 @@ type toolInteractOfferMsg struct {
 }
 
 type toolInteractBridge struct {
-	inbox chan toolInteractOffer
+	inbox               chan toolInteractOffer
+	skipSessionApproval bool // set after "allow for session" within the current turn
+	deniedApprovals     map[string]struct{}
 }
 
+const (
+	approvalChoiceOnce    = "once"
+	approvalChoiceSession = "session"
+	approvalChoiceDeny    = "deny"
+)
+
 func newToolInteractBridge() *toolInteractBridge {
-	// Buffered so the agent goroutine can offer a dialog before the TUI cmd
-	// begins receiving on the inbox.
 	return &toolInteractBridge{inbox: make(chan toolInteractOffer, 1)}
 }
 
 func (b *toolInteractBridge) Interact(ctx context.Context, req agent.ToolInteractRequest) (agent.ToolInteractResponse, error) {
+	if b.skipSessionApproval && req.Kind == agent.ToolInteractApproval {
+		return agent.ToolInteractResponse{Approved: true}, nil
+	}
+	if req.Kind == agent.ToolInteractApproval && b.deniedApprovals != nil {
+		if _, denied := b.deniedApprovals[toolApprovalSignature(req)]; denied {
+			return agent.ToolInteractResponse{Approved: false}, nil
+		}
+	}
 	respCh := make(chan agent.ToolInteractResponse, 1)
 	select {
 	case b.inbox <- toolInteractOffer{Req: req, RespCh: respCh}:
@@ -65,14 +81,20 @@ func (m Model) toolInteractDialogActive() bool {
 }
 
 func (m Model) toolInteractFormWidth() int {
-	return m.modelsSyncFormWidth()
+	return inputContentWidth(borderedChromeWidth(m.chromeOuterWidth()))
 }
 
 func (m Model) offerToolInteract(msg toolInteractOfferMsg) (Model, tea.Cmd) {
 	m.input.Blur()
+	m.showPromptPrefix = true
 	m.toolInteractPending = msg.offer
 	m.toolInteractForm = newToolInteractForm(msg.offer.Req, m.toolInteractFormWidth())
-	return m, m.toolInteractForm.Init()
+	var cmds []tea.Cmd
+	if init := m.toolInteractForm.Init(); init != nil {
+		cmds = append(cmds, init)
+	}
+	cmds = append(cmds, m.activityTickCmds()...)
+	return m, tea.Batch(cmds...)
 }
 
 func newToolInteractForm(req agent.ToolInteractRequest, width int) *huh.Form {
@@ -84,6 +106,42 @@ func newToolInteractForm(req agent.ToolInteractRequest, width int) *huh.Form {
 	default:
 		return nil
 	}
+}
+
+func toolInteractHuhTheme(isDark bool) *huh.Styles {
+	t := huh.ThemeBase(isDark)
+
+	plain := lipgloss.NewStyle()
+	t.Form.Base = plain
+	t.Group.Base = plain
+	t.Focused.Base = plain
+	t.Blurred.Base = plain
+	t.Focused.Card = plain
+	t.Blurred.Card = plain
+
+	t.Focused.Title = lipgloss.NewStyle().Foreground(constants.BrightText).Bold(true)
+	t.Focused.Description = lipgloss.NewStyle().Foreground(constants.DimText)
+	t.Focused.SelectSelector = lipgloss.NewStyle().Foreground(constants.Yellow).SetString("› ")
+	t.Focused.SelectedOption = lipgloss.NewStyle().Foreground(constants.BrightText).Bold(true)
+	t.Focused.UnselectedOption = lipgloss.NewStyle().Foreground(constants.DimText)
+	t.Focused.TextInput.Prompt = lipgloss.NewStyle().Foreground(constants.Yellow).SetString("› ")
+	t.Focused.TextInput.Text = lipgloss.NewStyle().Foreground(constants.BrightText)
+	t.Focused.TextInput.Placeholder = lipgloss.NewStyle().Foreground(constants.DimText)
+	t.Focused.TextInput.Cursor = lipgloss.NewStyle().Foreground(constants.Yellow)
+
+	button := lipgloss.NewStyle().Padding(0, 1).MarginRight(1)
+	t.Focused.FocusedButton = button.Foreground(constants.BrightText).Background(constants.Yellow).Bold(true)
+	t.Focused.BlurredButton = button.Foreground(constants.DimText)
+
+	t.Blurred = t.Focused
+	t.Blurred.SelectSelector = lipgloss.NewStyle().SetString("  ")
+	t.Group.Title = t.Focused.Title
+	t.Group.Description = t.Focused.Description
+	return t
+}
+
+func toolInteractFormTheme() huh.ThemeFunc {
+	return huh.ThemeFunc(toolInteractHuhTheme)
 }
 
 func newAskUserForm(req agent.ToolInteractRequest, width int) *huh.Form {
@@ -100,15 +158,14 @@ func newAskUserForm(req agent.ToolInteractRequest, width int) *huh.Form {
 			huh.NewGroup(
 				huh.NewSelect[string]().
 					Key("answer").
-					Title("AskUser").
-					Description(question).
+					Title(question).
 					Options(opts...).
 					Value(&selected),
 			),
 		).
 			WithWidth(width).
-			WithShowHelp(true).
-			WithTheme(huh.ThemeFunc(huh.ThemeCharm))
+			WithShowHelp(false).
+			WithTheme(toolInteractFormTheme())
 	}
 
 	var answer string
@@ -116,34 +173,36 @@ func newAskUserForm(req agent.ToolInteractRequest, width int) *huh.Form {
 		huh.NewGroup(
 			huh.NewInput().
 				Key("answer").
-				Title("AskUser").
-				Description(question).
+				Title(question).
 				Placeholder("Your answer…").
 				Value(&answer),
 		),
 	).
 		WithWidth(width).
-		WithShowHelp(true).
-		WithTheme(huh.ThemeFunc(huh.ThemeCharm))
+		WithShowHelp(false).
+		WithTheme(toolInteractFormTheme())
 }
 
 func newToolApprovalForm(req agent.ToolInteractRequest, width int) *huh.Form {
 	name, _ := tool.ResolveName(req.Name)
-	var approved bool
+	choice := approvalChoiceOnce
 	return huh.NewForm(
 		huh.NewGroup(
-			huh.NewConfirm().
-				Key("approved").
+			huh.NewSelect[string]().
+				Key("approval").
 				Title(fmt.Sprintf("Allow %s?", name)).
 				Description(formatApprovalDescription(name, req.Args)).
-				Affirmative("Allow").
-				Negative("Deny").
-				Value(&approved),
+				Options(
+					huh.NewOption("Allow once", approvalChoiceOnce),
+					huh.NewOption("Allow for session", approvalChoiceSession),
+					huh.NewOption("Deny", approvalChoiceDeny),
+				).
+				Value(&choice),
 		),
 	).
 		WithWidth(width).
-		WithShowHelp(true).
-		WithTheme(huh.ThemeFunc(huh.ThemeCharm))
+		WithShowHelp(false).
+		WithTheme(toolInteractFormTheme())
 }
 
 func formatApprovalDescription(name string, args map[string]any) string {
@@ -151,11 +210,12 @@ func formatApprovalDescription(name string, args map[string]any) string {
 	switch name {
 	case tool.Bash:
 		if cmd, ok := stringArgAny(args, "command"); ok {
-			b.WriteString("Command:\n")
 			b.WriteString(cmd)
 		}
 		if desc, ok := stringArgAny(args, "description"); ok {
-			b.WriteString("\n\n")
+			if b.Len() > 0 {
+				b.WriteString("\n\n")
+			}
 			b.WriteString(desc)
 		}
 	default:
@@ -174,6 +234,10 @@ func formatApprovalDescription(name string, args map[string]any) string {
 }
 
 func (m Model) updateToolInteractForm(msg tea.Msg) (Model, tea.Cmd) {
+	if m, tickCmds, ok := m.handleActivityTick(msg); ok {
+		return m, tea.Batch(tickCmds...)
+	}
+
 	var cmds []tea.Cmd
 
 	switch msg := msg.(type) {
@@ -182,8 +246,12 @@ func (m Model) updateToolInteractForm(msg tea.Msg) (Model, tea.Cmd) {
 		m.height = msg.Height
 		m.ready = true
 		m.toolInteractForm = m.toolInteractForm.WithWidth(m.toolInteractFormWidth())
-		m.layout.ContentDirty = true
 		m = m.syncLayout(false)
+
+	case tea.KeyPressMsg:
+		if resp, ok := m.toolInteractShortcutResponse(msg); ok {
+			return m.completeToolInteractWith(resp)
+		}
 	}
 
 	form, cmd := m.toolInteractForm.Update(msg)
@@ -193,6 +261,7 @@ func (m Model) updateToolInteractForm(msg tea.Msg) (Model, tea.Cmd) {
 	if cmd != nil {
 		cmds = append(cmds, cmd)
 	}
+	m = m.syncLayout(m.content.AtBottom())
 
 	switch m.toolInteractForm.State {
 	case huh.StateCompleted, huh.StateAborted:
@@ -206,15 +275,62 @@ func (m Model) updateToolInteractForm(msg tea.Msg) (Model, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
+func (m Model) toolInteractShortcutResponse(msg tea.KeyPressMsg) (agent.ToolInteractResponse, bool) {
+	req := m.toolInteractPending.Req
+	switch req.Kind {
+	case agent.ToolInteractApproval:
+		switch strings.ToLower(msg.String()) {
+		case "y":
+			return agent.ToolInteractResponse{Approved: true}, true
+		case "a":
+			return agent.ToolInteractResponse{Approved: true, AllowSession: true}, true
+		case "n":
+			return agent.ToolInteractResponse{Approved: false}, true
+		case "1":
+			return agent.ToolInteractResponse{Approved: true}, true
+		case "2":
+			return agent.ToolInteractResponse{Approved: true, AllowSession: true}, true
+		case "3":
+			return agent.ToolInteractResponse{Approved: false}, true
+		}
+	case agent.ToolInteractAskUser:
+		opts := askUserOptions(req.Args)
+		if len(opts) > 0 && len(msg.Text) == 1 {
+			if n, err := strconv.Atoi(msg.Text); err == nil && n >= 1 && n <= len(opts) {
+				return agent.ToolInteractResponse{Answer: opts[n-1]}, true
+			}
+		}
+	}
+	return agent.ToolInteractResponse{}, false
+}
+
+func (m Model) completeToolInteractWith(resp agent.ToolInteractResponse) (Model, tea.Cmd) {
+	offer := m.toolInteractPending
+	m.toolInteractForm = nil
+	m.toolInteractPending = toolInteractOffer{}
+	m.showPromptPrefix = false
+	m.input.Focus()
+	m = m.applyApprovalInteractUI(resp, offer.Req)
+	m = m.applySessionToolApproval(resp)
+	m = m.recordToolApprovalDenial(resp, offer.Req)
+
+	if offer.RespCh != nil {
+		offer.RespCh <- resp
+	}
+
+	return m.finalizeToolInteractComplete()
+}
+
 func (m Model) abortToolInteract(resp agent.ToolInteractResponse) Model {
 	offer := m.toolInteractPending
 	m.toolInteractForm = nil
 	m.toolInteractPending = toolInteractOffer{}
+	m.showPromptPrefix = false
 	if offer.RespCh != nil {
 		offer.RespCh <- resp
 	}
 	m.input.Focus()
-	return m
+	return m.syncLayout(m.content.AtBottom())
 }
 
 func (m Model) completeToolInteractForm() (Model, tea.Cmd) {
@@ -222,6 +338,7 @@ func (m Model) completeToolInteractForm() (Model, tea.Cmd) {
 	offer := m.toolInteractPending
 	m.toolInteractForm = nil
 	m.toolInteractPending = toolInteractOffer{}
+	m.showPromptPrefix = false
 	m.input.Focus()
 
 	resp := agent.ToolInteractResponse{}
@@ -232,14 +349,33 @@ func (m Model) completeToolInteractForm() (Model, tea.Cmd) {
 		case agent.ToolInteractApproval:
 			resp = m.approvalFormResponse(form)
 		}
+		m = m.applyApprovalInteractUI(resp, offer.Req)
+		m = m.applySessionToolApproval(resp)
+		m = m.recordToolApprovalDenial(resp, offer.Req)
 		offer.RespCh <- resp
 	}
 
+	return m.finalizeToolInteractComplete()
+}
+
+func (m Model) applySessionToolApproval(resp agent.ToolInteractResponse) Model {
+	if resp.Approved && resp.AllowSession {
+		m.agent.SessionAllowTools = true
+		if bridge := m.agent.ToolInteractBridge; bridge != nil {
+			bridge.skipSessionApproval = true
+		}
+	}
+	return m
+}
+
+func (m Model) finalizeToolInteractComplete() (Model, tea.Cmd) {
 	var cmds []tea.Cmd
 	if m.agent.Busy && m.agent.ToolInteractBridge != nil {
 		cmds = append(cmds, waitToolInteractOffer(m.agent.ToolInteractBridge))
 	}
-	return m, tea.Batch(cmds...)
+	cmds = append(cmds, m.activityTickCmds()...)
+	m = m.syncLayout(m.content.AtBottom())
+	return m.batchAgentDrain(cmds...)
 }
 
 func (m Model) askUserFormResponse(form *huh.Form) agent.ToolInteractResponse {
@@ -257,20 +393,110 @@ func (m Model) askUserFormResponse(form *huh.Form) agent.ToolInteractResponse {
 
 func (m Model) approvalFormResponse(form *huh.Form) agent.ToolInteractResponse {
 	if form.State == huh.StateAborted {
-		return agent.ToolInteractResponse{Cancelled: true}
+		return agent.ToolInteractResponse{Approved: false}
 	}
-	return agent.ToolInteractResponse{Approved: form.GetBool("approved")}
+	switch parseApprovalChoice(form) {
+	case approvalChoiceSession:
+		return agent.ToolInteractResponse{Approved: true, AllowSession: true}
+	case approvalChoiceDeny:
+		return agent.ToolInteractResponse{Approved: false}
+	default:
+		return agent.ToolInteractResponse{Approved: true}
+	}
 }
 
-func (m Model) toolInteractDialogView() string {
-	formView := strings.TrimSuffix(m.toolInteractForm.View(), "\n\n")
+func parseApprovalChoice(form *huh.Form) string {
+	raw := strings.TrimSpace(form.GetString("approval"))
+	if raw == "" {
+		if v := form.Get("approval"); v != nil {
+			raw = strings.TrimSpace(fmt.Sprint(v))
+		}
+	}
+	return normalizeApprovalChoice(raw)
+}
+
+func toolApprovalSignature(req agent.ToolInteractRequest) string {
+	name, ok := tool.ResolveName(req.Name)
+	if !ok {
+		name = req.Name
+	}
+	var b strings.Builder
+	b.WriteString(name)
+	if name == tool.Bash {
+		if cmd, ok := bashCommandArg(req.Args); ok {
+			b.WriteByte(0)
+			b.WriteString(cmd)
+		}
+		return b.String()
+	}
+	for _, key := range sortedArgKeys(req.Args) {
+		if val, ok := stringArgAny(req.Args, key); ok {
+			b.WriteByte(0)
+			b.WriteString(key)
+			b.WriteByte('=')
+			b.WriteString(val)
+		}
+	}
+	return b.String()
+}
+
+func (m Model) recordToolApprovalDenial(resp agent.ToolInteractResponse, req agent.ToolInteractRequest) Model {
+	if req.Kind != agent.ToolInteractApproval || resp.Approved || resp.Cancelled {
+		return m
+	}
+	bridge := m.agent.ToolInteractBridge
+	if bridge == nil {
+		return m
+	}
+	if bridge.deniedApprovals == nil {
+		bridge.deniedApprovals = make(map[string]struct{})
+	}
+	bridge.deniedApprovals[toolApprovalSignature(req)] = struct{}{}
+	return m
+}
+
+func normalizeApprovalChoice(raw string) string {
+	switch strings.ToLower(strings.TrimSpace(raw)) {
+	case approvalChoiceOnce, "allow once":
+		return approvalChoiceOnce
+	case approvalChoiceSession, "allow for session":
+		return approvalChoiceSession
+	case approvalChoiceDeny:
+		return approvalChoiceDeny
+	default:
+		if raw == "" {
+			return approvalChoiceOnce
+		}
+		return raw
+	}
+}
+
+func trimTrailingLineSpaces(s string) string {
+	if s == "" {
+		return s
+	}
+	lines := strings.Split(s, "\n")
+	for i, line := range lines {
+		lines[i] = strings.TrimRight(line, " ")
+	}
+	return strings.Join(lines, "\n")
+}
+
+func (m Model) toolInteractDialogBody() string {
+	formView := trimTrailingLineSpaces(strings.TrimSuffix(m.toolInteractForm.View(), "\n\n"))
+	req := m.toolInteractPending.Req
+
+	label, accent := toolInteractDialogAccent(req)
+	labelLine := lipgloss.NewStyle().Foreground(accent).Bold(true).Render(label)
+	hintLine := lipgloss.NewStyle().Foreground(constants.DimText).Render(toolInteractFooterHint(req))
+	return lipgloss.JoinVertical(lipgloss.Left, labelLine, "", formView, "", hintLine)
+}
+
+func (m Model) toolInteractChromeView() string {
 	boxW := borderedChromeWidth(m.chromeOuterWidth())
-	border := lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(constants.Blue).
-		Padding(1, 2)
+	inner := m.toolInteractDialogBody()
 	return lipgloss.NewStyle().MarginTop(1).Render(
-		border.Width(boxW).Render(formView),
+		cachedInputBorder(m.mode).Width(boxW).Render(inner),
 	)
 }
 
@@ -278,7 +504,33 @@ func (m Model) toolInteractDialogHeight() int {
 	if !m.toolInteractDialogActive() {
 		return 0
 	}
-	return lipgloss.Height(m.toolInteractDialogView())
+	return lipgloss.Height(m.toolInteractChromeView())
+}
+
+func toolInteractDialogAccent(req agent.ToolInteractRequest) (string, color.Color) {
+	switch req.Kind {
+	case agent.ToolInteractAskUser:
+		return "Question", constants.Yellow
+	case agent.ToolInteractApproval:
+		name, _ := tool.ResolveName(req.Name)
+		return fmt.Sprintf("Approve %s", name), constants.Blue
+	default:
+		return "Input required", constants.Blue
+	}
+}
+
+func toolInteractFooterHint(req agent.ToolInteractRequest) string {
+	switch req.Kind {
+	case agent.ToolInteractAskUser:
+		if len(askUserOptions(req.Args)) > 0 {
+			return "↑/↓ · 1-9 · Enter · Esc"
+		}
+		return "Enter · Esc"
+	case agent.ToolInteractApproval:
+		return "y once · a session · n deny · 1-3 · ↑/↓ · Enter · Esc"
+	default:
+		return "Enter · Esc"
+	}
 }
 
 func askUserQuestion(args map[string]any) string {

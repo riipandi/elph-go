@@ -107,16 +107,26 @@ func (s Session) StartTurn(ctx context.Context, opts agent.TurnOptions) <-chan a
 	}
 	if opts.Provider != nil {
 		opts.ToolsEnabled = true
+		opts.ExecuteToolStream = s.toolExecuteStream()
 		opts.ExecuteTool = func(ctx context.Context, name string, args map[string]any) agent.ToolRunResult {
-			result := ExecuteTool(ctx, s.WorkDir, name, args)
-			return agent.ToolRunResult{
-				Output:    result.Output,
-				Err:       result.Err,
-				Cancelled: result.Cancelled,
-			}
+			return toolRunResult(ExecuteTool(ctx, s.WorkDir, name, args))
 		}
 	}
 	return agent.RunTurn(ctx, opts)
+}
+
+func toolRunResult(result ToolResult) agent.ToolRunResult {
+	return agent.ToolRunResult{
+		Output:    result.Output,
+		Err:       result.Err,
+		Cancelled: result.Cancelled,
+	}
+}
+
+func (s Session) toolExecuteStream() agent.ToolExecuteStreamFunc {
+	return func(ctx context.Context, call provider.ToolCall, args map[string]any, onChunk func(string)) agent.ToolRunResult {
+		return toolRunResult(ExecuteToolWithOutput(ctx, s.WorkDir, call.Name, args, onChunk))
+	}
 }
 
 // ApplyHistory replaces the session conversation history used for provider calls.

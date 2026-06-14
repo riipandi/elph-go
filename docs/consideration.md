@@ -36,7 +36,8 @@ See: [tools.md](./tools.md), [architecture.md](./architecture.md).
 
 ## Built-in tools
 
-Today only **Read**, **Grep**, **Glob** run end-to-end. Rest of catalog in `pkg/tool` awaits handlers + (for some) approval UI.
+Today **Read**, **Grep**, **Glob**, **Bash**, and **AskUser** run end-to-end (Bash/AskUser via huh
+approval or question UI). Rest of catalog in `pkg/tool` awaits handlers + (for some) approval UI.
 
 | Package                                                                                   | Status    | Tool / area                                              |
 |-------------------------------------------------------------------------------------------|-----------|----------------------------------------------------------|

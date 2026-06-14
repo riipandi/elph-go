@@ -7,6 +7,7 @@ import (
 	"io"
 	"os/exec"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -134,6 +135,50 @@ func FormatShellContext(command, output string, exitCode int) string {
 	return b.String()
 }
 
+// SplitShellExitSuffix separates trailing "(exit N)" metadata from bash tool output.
+func SplitShellExitSuffix(output string) (body string, exitCode int) {
+	trimmed := strings.TrimRight(output, "\n")
+	if trimmed == "" {
+		return output, 0
+	}
+	const prefix = "(exit "
+	if strings.HasPrefix(trimmed, prefix) && strings.HasSuffix(trimmed, ")") {
+		inner := strings.TrimSuffix(strings.TrimPrefix(trimmed, prefix), ")")
+		if code, err := strconv.Atoi(inner); err == nil {
+			return "", code
+		}
+	}
+	const marker = "\n\n(exit "
+	if idx := strings.LastIndex(trimmed, marker); idx >= 0 {
+		suffix := trimmed[idx+len(marker):]
+		if strings.HasSuffix(suffix, ")") {
+			inner := strings.TrimSuffix(suffix, ")")
+			if code, err := strconv.Atoi(inner); err == nil {
+				return trimmed[:idx], code
+			}
+		}
+	}
+	return output, 0
+}
+
+// FormatBashToolDetailBody formats agent Bash tool output for the detail box.
+// preferStream keeps streamed UI text when the tool finishes.
+func FormatBashToolDetailBody(result ToolResult, preferStream string) string {
+	streamed := strings.TrimRight(preferStream, "\n")
+	body, exitCode := SplitShellExitSuffix(result.Output)
+	body = strings.TrimRight(body, "\n")
+	if streamed != "" {
+		body = streamed
+	}
+	if result.Cancelled {
+		return FormatShellDetailBody(body, 0, nil, true)
+	}
+	if result.Err != nil {
+		return FormatShellDetailBody(body, 0, result.Err, false)
+	}
+	return FormatShellDetailBody(body, exitCode, nil, false)
+}
+
 // FormatShellDetailBody returns collapsible detail text for shell output (without the command line).
 func FormatShellDetailBody(output string, exitCode int, runErr error, cancelled bool) string {
 	if cancelled {
@@ -249,11 +294,45 @@ func killOnCancel(ctx context.Context, cmd *exec.Cmd) {
 }
 
 // SanitizeStreamChunk normalizes streamed shell bytes for display.
+// Prefer ApplyStreamChunk when accumulating output across chunks.
 func SanitizeStreamChunk(chunk string) string {
 	return strings.NewReplacer("\r\n", "\n", "\r", "\n").Replace(chunk)
 }
 
-// TrimStreamOutput trims trailing whitespace from accumulated stream output.
+// ApplyStreamChunk appends a shell output chunk to acc, honoring carriage
+// returns used by tools like ping to overwrite the current line.
+func ApplyStreamChunk(acc, chunk string) string {
+	for i := 0; i < len(chunk); {
+		switch chunk[i] {
+		case '\r':
+			if i+1 < len(chunk) && chunk[i+1] == '\n' {
+				acc += "\n"
+				i += 2
+				continue
+			}
+			if idx := strings.LastIndex(acc, "\n"); idx >= 0 {
+				acc = acc[:idx+1]
+			} else {
+				acc = ""
+			}
+			i++
+		case '\n':
+			acc += "\n"
+			i++
+		default:
+			j := i
+			for j < len(chunk) && chunk[j] != '\r' && chunk[j] != '\n' {
+				j++
+			}
+			acc += chunk[i:j]
+			i = j
+		}
+	}
+	return acc
+}
+
+// TrimStreamOutput trims trailing newlines from completed stream output.
+// Do not call this after every streamed chunk; chunk boundaries often end on \n.
 func TrimStreamOutput(s string) string {
 	return strings.TrimRight(s, "\n")
 }

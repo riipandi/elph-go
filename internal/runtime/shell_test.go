@@ -2,6 +2,7 @@ package runtime
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -65,6 +66,31 @@ func TestFormatShellDetailBody(t *testing.T) {
 	got = FormatShellDetailBody("partial", 0, nil, true)
 	require.Contains(t, got, "partial")
 	require.Contains(t, got, "(cancelled)")
+}
+
+func TestSplitShellExitSuffix(t *testing.T) {
+	body, code := SplitShellExitSuffix("hello\n\n(exit 2)")
+	require.Equal(t, "hello", body)
+	require.Equal(t, 2, code)
+
+	body, code = SplitShellExitSuffix("(exit 3)")
+	require.Equal(t, "", body)
+	require.Equal(t, 3, code)
+
+	body, code = SplitShellExitSuffix("plain output")
+	require.Equal(t, "plain output", body)
+	require.Equal(t, 0, code)
+}
+
+func TestFormatBashToolDetailBodyPreservesStream(t *testing.T) {
+	result := ToolResult{Output: "line one\n\n(exit 1)"}
+	got := FormatBashToolDetailBody(result, "line one")
+	require.Equal(t, "line one\n(exit 1)", got)
+
+	result = ToolResult{Err: errors.New("boom")}
+	got = FormatBashToolDetailBody(result, "partial\n")
+	require.Equal(t, "partial\nboom", got)
+	require.NotContains(t, got, "Tool failed")
 }
 
 func TestFormatShellDisplay(t *testing.T) {

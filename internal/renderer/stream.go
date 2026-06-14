@@ -124,13 +124,19 @@ func (m Model) markStreamDirty() (Model, tea.Cmd) {
 	return m.batchAgentDrain(cmds...)
 }
 
-// flushThinkingStreamNow repaints the thinking detail box immediately instead of
-// waiting for the throttled stream flush tick.
-func (m Model) flushThinkingStreamNow() (Model, tea.Cmd) {
+// flushContentNow repaints scrollable content immediately instead of waiting for
+// the throttled stream flush tick.
+func (m Model) flushContentNow() (Model, tea.Cmd) {
 	m.layout.ContentDirty = true
 	m = m.refreshStreamPrefixCache()
 	m = m.syncLayout(m.content.AtBottom())
 	return m.batchAgentDrain()
+}
+
+// flushThinkingStreamNow repaints the thinking detail box immediately instead of
+// waiting for the throttled stream flush tick.
+func (m Model) flushThinkingStreamNow() (Model, tea.Cmd) {
+	return m.flushContentNow()
 }
 
 func (m Model) batchAgentDrain(cmds ...tea.Cmd) (Model, tea.Cmd) {

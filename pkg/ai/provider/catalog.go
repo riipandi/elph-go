@@ -38,18 +38,42 @@ func (c Catalog) Model(providerID, modelID string) (ResolvedModel, bool) {
 	return ResolvedModel{}, false
 }
 
-// FirstConfigured returns the first provider with a configured API key and its first model.
+// FirstConfigured returns the first enabled provider with a configured API key
+// and its first enabled model.
 func (c Catalog) FirstConfigured() (RegisteredProvider, ResolvedModel, bool) {
 	for _, provider := range c.Providers {
+		if !ProviderConfigEnabled(provider.Config) {
+			continue
+		}
 		if !IsConfigured(provider.Config.APIKey) {
 			continue
 		}
-		if len(provider.Models) == 0 {
-			continue
+		if model, ok := FirstEnabledModel(provider); ok {
+			return provider, model, true
 		}
-		return provider, provider.Models[0], true
 	}
 	return RegisteredProvider{}, ResolvedModel{}, false
+}
+
+// FirstEnabledModel returns the first enabled model for a provider.
+func FirstEnabledModel(provider RegisteredProvider) (ResolvedModel, bool) {
+	for _, model := range provider.Models {
+		if model.Enabled {
+			return model, true
+		}
+	}
+	return ResolvedModel{}, false
+}
+
+// EnabledModelCount returns how many models are enabled for a provider.
+func EnabledModelCount(provider RegisteredProvider) int {
+	n := 0
+	for _, model := range provider.Models {
+		if model.Enabled {
+			n++
+		}
+	}
+	return n
 }
 
 // NewProvider builds a runtime Provider for the given registered provider and model.
@@ -78,6 +102,7 @@ func NewProvider(provider RegisteredProvider, model ResolvedModel) (Provider, er
 			AuthHeader:   provider.Config.AuthHeader,
 			MaxTokens:    model.MaxTokens,
 			Temperature:  model.Temperature,
+			TopP:         model.TopP,
 		}), nil
 	case APIAnthropicMessages:
 		return NewAnthropic(AnthropicOptions{
@@ -88,6 +113,7 @@ func NewProvider(provider RegisteredProvider, model ResolvedModel) (Provider, er
 			Headers:     headers,
 			MaxTokens:   model.MaxTokens,
 			Temperature: model.Temperature,
+			TopP:        model.TopP,
 		}), nil
 	default:
 		return nil, fmt.Errorf("provider %q: unsupported api %q", provider.ID, model.API)

@@ -40,7 +40,7 @@ func TestSessionStartTurnStreamsEvents(t *testing.T) {
 	ctx := context.Background()
 
 	var events []agent.Event
-	for evt := range s.StartTurn(ctx, "hello", true) {
+	for evt := range s.StartTurn(ctx, agent.TurnOptions{UserPrompt: "hello", ShowThinking: true}) {
 		events = append(events, evt)
 	}
 

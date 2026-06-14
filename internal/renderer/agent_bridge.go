@@ -35,6 +35,8 @@ func (m Model) handleAgentEvent(msg agentEventMsg) (Model, tea.Cmd) {
 		m = m.appendAgentResponseDelta(msg.event.Delta)
 		return m.markStreamDirty()
 	case agent.EventTurnDone:
+		m.turnCount++
+		m = m.applyTurnUsage(msg.event.Usage)
 		return m.finishAgentTurn(msg.event.Thinking, msg.event.Response)
 	}
 	if m.agent.Events != nil {

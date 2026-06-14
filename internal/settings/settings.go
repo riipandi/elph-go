@@ -23,6 +23,7 @@ type Settings struct {
 	Theme              string          `json:"theme,omitempty"`
 	ShowThinking       *bool           `json:"showThinking,omitempty"`
 	AutoExpandThinking *bool           `json:"autoExpandThinking,omitempty"`
+	ThinkingBudgets    map[string]int  `json:"thinkingBudgets,omitempty"`
 	Session            SessionSettings `json:"session,omitempty"`
 }
 
@@ -118,6 +119,14 @@ func (s Settings) ShowThinkingEnabled() bool {
 // AutoExpandThinkingEnabled reports whether thinking blocks start expanded.
 func (s Settings) AutoExpandThinkingEnabled() bool {
 	return *s.withDefaults().AutoExpandThinking
+}
+
+// ThinkingBudgetOverrides returns custom token budgets per thinking level.
+func (s Settings) ThinkingBudgetOverrides() map[string]int {
+	if len(s.ThinkingBudgets) == 0 {
+		return nil
+	}
+	return s.ThinkingBudgets
 }
 
 func (m ModelsSettings) withDefaults() ModelsSettings {

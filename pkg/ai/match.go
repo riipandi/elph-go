@@ -21,7 +21,7 @@ func MatchModel(catalog provider.Catalog, query string) (provider.RegisteredProv
 
 	if providerID, modelID, ok := strings.Cut(query, "/"); ok {
 		reg, ok := catalog.Provider(providerID)
-		if !ok {
+		if !ok || !provider.ProviderConfigEnabled(reg.Config) {
 			return provider.RegisteredProvider{}, provider.ResolvedModel{}, false
 		}
 		if model, ok := matchProviderModel(reg, modelID); ok {
@@ -36,7 +36,13 @@ func MatchModel(catalog provider.Catalog, query string) (provider.RegisteredProv
 	lower := strings.ToLower(query)
 
 	for _, reg := range catalog.Providers {
+		if !provider.ProviderConfigEnabled(reg.Config) {
+			continue
+		}
 		for _, model := range reg.Models {
+			if !model.Enabled {
+				continue
+			}
 			if exactModelMatch(lower, reg.ID, model) {
 				return reg, model, true
 			}
@@ -55,20 +61,26 @@ func MatchModel(catalog provider.Catalog, query string) (provider.RegisteredProv
 }
 
 func matchProviderModel(reg provider.RegisteredProvider, query string) (provider.ResolvedModel, bool) {
+	if !provider.ProviderConfigEnabled(reg.Config) {
+		return provider.ResolvedModel{}, false
+	}
 	query = strings.TrimSpace(query)
 	if query == "" {
-		if len(reg.Models) > 0 {
-			return reg.Models[0], true
-		}
-		return provider.ResolvedModel{}, false
+		return provider.FirstEnabledModel(reg)
 	}
 	lower := strings.ToLower(query)
 	for _, model := range reg.Models {
+		if !model.Enabled {
+			continue
+		}
 		if exactModelMatch(lower, reg.ID, model) {
 			return model, true
 		}
 	}
 	for _, model := range reg.Models {
+		if !model.Enabled {
+			continue
+		}
 		if modelMatchScore(lower, reg.ID, model) >= 0 {
 			return model, true
 		}

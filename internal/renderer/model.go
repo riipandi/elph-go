@@ -10,10 +10,12 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/riipandi/elph/internal/constants"
+	"github.com/riipandi/elph/internal/git"
 	"github.com/riipandi/elph/internal/prompttemplate"
 	"github.com/riipandi/elph/internal/runtime"
 	"github.com/riipandi/elph/internal/settings"
 	"github.com/riipandi/elph/internal/theme"
+	"github.com/riipandi/elph/pkg/ai/provider"
 	"go.jetify.com/typeid/v2"
 )
 
@@ -72,32 +74,37 @@ type message struct {
 }
 
 type Model struct {
-	ready            bool
-	width            int
-	height           int
-	content          viewport.Model
-	input            textarea.Model
-	messages         []message
-	modelName        string
-	provider         string
-	mode             constants.AgentMode
-	thinkingLevel    constants.ThinkingLevel
-	sessionID        typeid.TypeID
-	workDir          string
-	branch           string
-	tip              string
-	contextUsed      float64 // 0.0 – 1.0
-	contextWindow    int
-	gitAdded         int
-	gitDeleted       int
-	promptChar       string // >, /, $, #
-	showPromptPrefix bool   // show prompt prefix in input
-	layout           LayoutCache
-	shell            ShellState
-	suggest          SuggestState
-	agent            AgentState
-	modelSelector    ModelSelectorState
-	themePreference  theme.Mode
+	ready              bool
+	width              int
+	height             int
+	content            viewport.Model
+	input              textarea.Model
+	messages           []message
+	modelName          string
+	provider           string
+	mode               constants.AgentMode
+	thinkingLevel      constants.ThinkingLevel
+	sessionID          typeid.TypeID
+	workDir            string
+	branch             string
+	tip                string
+	contextUsed        float64 // 0.0 – 1.0
+	contextWindow      int
+	tokensUsed         int
+	sessionCost        float64
+	turnCount          int
+	modelSupportsImage bool
+	modelCost          provider.Cost
+	gitAdded           int
+	gitDeleted         int
+	promptChar         string // >, /, $, #
+	showPromptPrefix   bool   // show prompt prefix in input
+	layout             LayoutCache
+	shell              ShellState
+	suggest            SuggestState
+	agent              AgentState
+	modelSelector      ModelSelectorState
+	themePreference    theme.Mode
 
 	mouseEnabled  bool // mouse capture for viewport wheel/scroll
 	selectingText bool // shift held — mouse released for terminal selection
@@ -166,7 +173,7 @@ func New() Model {
 	configureInputKeyMap(&ta)
 	ta.Focus()
 
-	return Model{
+	m := Model{
 		content:          vp,
 		input:            ta,
 		modelName:        session.ModelName,
@@ -179,7 +186,6 @@ func New() Model {
 		session:          session,
 		promptTemplates:  prompttemplate.Load(wd),
 		workDir:          wd,
-		branch:           "main",
 		messages:         []message{},
 		tip:              randomTip(),
 		contextUsed:      0.0,
@@ -190,12 +196,23 @@ func New() Model {
 		shell:            ShellState{DetailMsgID: -1},
 		ctrlCNoticeID:    -1,
 	}
+	m = m.applyGitStatus(git.Read(wd))
+	m = m.syncActiveModelMetadata()
+	if model, ok := m.session.Catalog.Model(m.session.ProviderID, m.session.ModelID); ok {
+		m.thinkingLevel = provider.ClampThinkingLevel(m.thinkingLevel, model)
+	}
+	return m
 }
 
 // ─── tea.Model Implementation ────────────────────────────────────────────────
 
 func (m Model) Init() tea.Cmd {
-	cmds := []tea.Cmd{enableTerminalFeatures(), checkModelsSyncDueCmd()}
+	cmds := []tea.Cmd{
+		enableTerminalFeatures(),
+		checkModelsSyncDueCmd(),
+		refreshGitStatusCmd(m.workDir),
+		gitRefreshTickCmd(),
+	}
 	if m.themePreference == theme.Auto {
 		cmds = append(cmds, requestBackgroundColorCmd())
 	}

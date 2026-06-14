@@ -5,13 +5,15 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // BootstrapResult reports which primary provider files were created or skipped.
 type BootstrapResult struct {
-	Dir     string
-	Created []string
-	Skipped []string
+	Dir        string
+	Created    []string
+	Skipped    []string
+	Backfilled []string
 }
 
 type bootstrapTemplate struct {
@@ -64,6 +66,10 @@ func primaryTemplates() []bootstrapTemplate {
 						ContextWindow: 200000,
 						MaxTokens:     100000,
 						Cost:          &Cost{Input: 1.1, Output: 4.4, CacheRead: 0.55, CacheWrite: 0},
+						ThinkingLevelMap: map[string]json.RawMessage{
+							"off":   json.RawMessage(`null`),
+							"xhigh": json.RawMessage(`"high"`),
+						},
 					},
 				},
 			},
@@ -99,6 +105,12 @@ func primaryTemplates() []bootstrapTemplate {
 						ContextWindow: 200000,
 						MaxTokens:     32000,
 						Cost:          &Cost{Input: 15, Output: 75, CacheRead: 1.5, CacheWrite: 18.75},
+						Compat: Compat{
+							ForceAdaptiveThinking: true,
+						},
+						ThinkingLevelMap: map[string]json.RawMessage{
+							"xhigh": json.RawMessage(`"max"`),
+						},
 					},
 				},
 			},
@@ -201,6 +213,9 @@ func primaryTemplates() []bootstrapTemplate {
 						ContextWindow: 1000000,
 						MaxTokens:     8192,
 						Cost:          &Cost{Input: 0.14, Output: 0.28, CacheRead: 0.0028, CacheWrite: 0},
+						Compat: Compat{
+							ThinkingFormat: string(ThinkingFormatDeepSeek),
+						},
 					},
 					{
 						ID:            "deepseek-v4-flash",
@@ -219,6 +234,13 @@ func primaryTemplates() []bootstrapTemplate {
 						ContextWindow: 1000000,
 						MaxTokens:     8192,
 						Cost:          &Cost{Input: 0.435, Output: 0.87, CacheRead: 0.003625, CacheWrite: 0},
+						ThinkingLevelMap: map[string]json.RawMessage{
+							"minimal": json.RawMessage(`null`),
+							"low":     json.RawMessage(`null`),
+							"medium":  json.RawMessage(`null`),
+							"high":    json.RawMessage(`"high"`),
+							"xhigh":   json.RawMessage(`"max"`),
+						},
 					},
 				},
 			},
@@ -274,9 +296,22 @@ func primaryTemplates() []bootstrapTemplate {
 	}
 }
 
+// BootstrapOptions configures provider bootstrap.
+type BootstrapOptions struct {
+	Dir      string
+	Force    bool
+	Reporter ProviderProgressReporter
+}
+
 // BootstrapProviders writes starter provider JSON files into dir.
 // Existing files are skipped unless force is true.
 func BootstrapProviders(dir string, force bool) (BootstrapResult, error) {
+	return BootstrapProvidersWithOptions(BootstrapOptions{Dir: dir, Force: force})
+}
+
+// BootstrapProvidersWithOptions writes or backfills starter provider files.
+func BootstrapProvidersWithOptions(opts BootstrapOptions) (BootstrapResult, error) {
+	dir := opts.Dir
 	if dir == "" {
 		var err error
 		dir, err = ProvidersDir()
@@ -289,13 +324,65 @@ func BootstrapProviders(dir string, force bool) (BootstrapResult, error) {
 		return BootstrapResult{}, fmt.Errorf("create providers dir %q: %w", dir, err)
 	}
 
+	templates := primaryTemplates()
+	total := len(templates)
 	result := BootstrapResult{Dir: dir}
-	for _, tmpl := range primaryTemplates() {
+	for i, tmpl := range templates {
 		filename := tmpl.ID + ".json"
 		path := filepath.Join(dir, filename)
+		label := strings.TrimSpace(tmpl.Config.Name)
+		if label == "" {
+			label = tmpl.ID
+		}
 
-		if _, err := os.Stat(path); err == nil && !force {
-			result.Skipped = append(result.Skipped, filename)
+		reportProviderProgress(opts.Reporter, ProviderProgressEvent{
+			Phase:      ProviderProgressConnect,
+			ProviderID: tmpl.ID,
+			Label:      label,
+			Index:      i + 1,
+			Total:      total,
+			Action:     ProviderProgressWorking,
+		})
+
+		if _, err := os.Stat(path); err == nil && !opts.Force {
+			raw, readErr := os.ReadFile(path)
+			if readErr != nil {
+				return result, fmt.Errorf("read %q: %w", path, readErr)
+			}
+			var cfg FileConfig
+			if err := json.Unmarshal(raw, &cfg); err != nil {
+				return result, fmt.Errorf("decode %q: %w", path, err)
+			}
+			updated, changed := BackfillProviderThinking(tmpl.ID, cfg)
+			if changed {
+				payload, err := json.MarshalIndent(updated, "", "  ")
+				if err != nil {
+					return result, fmt.Errorf("encode %q: %w", filename, err)
+				}
+				payload = append(payload, '\n')
+				if err := os.WriteFile(path, payload, 0o644); err != nil {
+					return result, fmt.Errorf("write %q: %w", path, err)
+				}
+				result.Backfilled = append(result.Backfilled, filename)
+				reportProviderProgress(opts.Reporter, ProviderProgressEvent{
+					Phase:      ProviderProgressConnect,
+					ProviderID: tmpl.ID,
+					Label:      label,
+					Index:      i + 1,
+					Total:      total,
+					Action:     ProviderProgressBackfill,
+				})
+			} else {
+				result.Skipped = append(result.Skipped, filename)
+				reportProviderProgress(opts.Reporter, ProviderProgressEvent{
+					Phase:      ProviderProgressConnect,
+					ProviderID: tmpl.ID,
+					Label:      label,
+					Index:      i + 1,
+					Total:      total,
+					Action:     ProviderProgressUnchanged,
+				})
+			}
 			continue
 		} else if err != nil && !os.IsNotExist(err) {
 			return result, fmt.Errorf("stat %q: %w", path, err)
@@ -311,6 +398,14 @@ func BootstrapProviders(dir string, force bool) (BootstrapResult, error) {
 			return result, fmt.Errorf("write %q: %w", path, err)
 		}
 		result.Created = append(result.Created, filename)
+		reportProviderProgress(opts.Reporter, ProviderProgressEvent{
+			Phase:      ProviderProgressConnect,
+			ProviderID: tmpl.ID,
+			Label:      label,
+			Index:      i + 1,
+			Total:      total,
+			Action:     ProviderProgressCreated,
+		})
 	}
 	return result, nil
 }

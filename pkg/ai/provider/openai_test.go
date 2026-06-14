@@ -21,6 +21,7 @@ func TestOpenAICompatibleComplete(t *testing.T) {
 		var body map[string]any
 		require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
 		require.Equal(t, 0.7, body["temperature"])
+		require.Equal(t, 0.95, body["top_p"])
 
 		_ = json.NewEncoder(w).Encode(map[string]any{
 			"choices": []map[string]any{{
@@ -38,6 +39,7 @@ func TestOpenAICompatibleComplete(t *testing.T) {
 		Headers:      map[string]string{"X-Proxy": "proxy"},
 		AuthHeader:   true,
 		Temperature:  0.7,
+		TopP:         0.95,
 	})
 
 	got, err := p.Complete(context.Background(), TurnRequest{
@@ -47,6 +49,71 @@ func TestOpenAICompatibleComplete(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.Equal(t, "hello from gpt", got.Content)
+}
+
+func TestOpenAICompatibleCompleteReasoningEffort(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var body map[string]any
+		require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
+		require.Equal(t, "medium", body["reasoning_effort"])
+
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"choices": []map[string]any{{
+				"message": map[string]string{"content": "done"},
+			}},
+		})
+	}))
+	defer srv.Close()
+
+	p := NewOpenAICompatible(OpenAIOptions{
+		APIKey:     "test-key",
+		BaseURL:    srv.URL,
+		AuthHeader: true,
+	})
+
+	got, err := p.Complete(context.Background(), TurnRequest{
+		UserPrompt: "hi",
+		Thinking: ThinkingConfig{
+			Enabled:         true,
+			ReasoningEffort: "medium",
+		},
+	})
+	require.NoError(t, err)
+	require.Equal(t, "done", got.Content)
+}
+
+func TestOpenAICompatibleCompleteOpenRouterReasoning(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var body map[string]any
+		require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
+		reasoning, ok := body["reasoning"].(map[string]any)
+		require.True(t, ok)
+		require.Equal(t, "high", reasoning["effort"])
+
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"choices": []map[string]any{{
+				"message": map[string]string{"content": "done"},
+			}},
+		})
+	}))
+	defer srv.Close()
+
+	p := NewOpenAICompatible(OpenAIOptions{
+		APIKey:     "test-key",
+		BaseURL:    srv.URL,
+		AuthHeader: true,
+	})
+
+	got, err := p.Complete(context.Background(), TurnRequest{
+		UserPrompt: "hi",
+		Thinking: ThinkingConfig{
+			Enabled:         true,
+			ReasoningEffort: "high",
+			ThinkingFormat:  ThinkingFormatOpenRouter,
+		},
+	})
+	require.NoError(t, err)
+	require.Equal(t, "done", got.Content)
 }
 
 func TestOpenAICompatibleCompleteReasoning(t *testing.T) {

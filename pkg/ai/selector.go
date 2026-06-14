@@ -21,8 +21,14 @@ func BuildSelectorGroups(catalog provider.Catalog, query string) ([]SelectorGrou
 	flat := make([]provider.ResolvedModel, 0)
 
 	for _, reg := range catalog.Providers {
+		if !provider.ProviderConfigEnabled(reg.Config) {
+			continue
+		}
 		matched := make([]provider.ResolvedModel, 0, len(reg.Models))
 		for _, model := range reg.Models {
+			if !model.Enabled {
+				continue
+			}
 			if selectorMatches(query, reg.ID, model) {
 				matched = append(matched, model)
 			}

@@ -19,6 +19,8 @@ type Config struct {
 	ProviderName  string
 	ContextWindow int
 	MaxTokens     int
+	Input         []string
+	Cost          Cost
 	Catalog       Catalog
 }
 
@@ -55,10 +57,10 @@ func resolveCatalog(catalog Catalog, savedProviderID, savedModelID string) Confi
 	}
 
 	if savedProvider := strings.TrimSpace(savedProviderID); savedProvider != "" {
-		if provider, ok := catalog.Provider(savedProvider); ok {
+		if provider, ok := catalog.Provider(savedProvider); ok && ProviderConfigEnabled(provider.Config) {
 			model, ok := pickModel(provider, strings.TrimSpace(savedModelID))
-			if !ok && len(provider.Models) > 0 {
-				model, ok = provider.Models[0], true
+			if !ok {
+				model, ok = FirstEnabledModel(provider)
 			}
 			if ok {
 				if cfg := buildConfig(catalog, provider, model); cfg.Provider != nil {
@@ -81,13 +83,22 @@ func resolveCatalog(catalog Catalog, savedProviderID, savedModelID string) Confi
 }
 
 func pickModel(provider RegisteredProvider, modelID string) (ResolvedModel, bool) {
-	if len(provider.Models) == 0 {
+	if !ProviderConfigEnabled(provider.Config) {
+		return ResolvedModel{}, false
+	}
+	enabled := make([]ResolvedModel, 0, len(provider.Models))
+	for _, model := range provider.Models {
+		if model.Enabled {
+			enabled = append(enabled, model)
+		}
+	}
+	if len(enabled) == 0 {
 		return ResolvedModel{}, false
 	}
 	if modelID == "" {
-		return provider.Models[0], true
+		return enabled[0], true
 	}
-	for _, model := range provider.Models {
+	for _, model := range enabled {
 		if model.ID == modelID || model.Name == modelID {
 			return model, true
 		}
@@ -117,6 +128,8 @@ func SelectModel(catalog Catalog, provider RegisteredProvider, model ResolvedMod
 		ProviderName:  model.ProviderName,
 		ContextWindow: model.ContextWindow,
 		MaxTokens:     model.MaxTokens,
+		Input:         model.Input,
+		Cost:          model.Cost,
 		Catalog:       catalog,
 	}, nil
 }

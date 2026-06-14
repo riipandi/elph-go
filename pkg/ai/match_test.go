@@ -12,8 +12,8 @@ func TestMatchModel(t *testing.T) {
 		Providers: []provider.RegisteredProvider{{
 			ID: "opencode",
 			Models: []provider.ResolvedModel{
-				{ID: "model-a", Name: "Model A", ProviderID: "opencode", ProviderName: "OpenCode"},
-				{ID: "model-b", Name: "Model B", ProviderID: "opencode", ProviderName: "OpenCode"},
+				{ID: "model-a", Name: "Model A", ProviderID: "opencode", ProviderName: "OpenCode", Enabled: true},
+				{ID: "model-b", Name: "Model B", ProviderID: "opencode", ProviderName: "OpenCode", Enabled: true},
 			},
 		}},
 	}

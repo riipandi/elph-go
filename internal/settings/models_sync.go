@@ -8,7 +8,14 @@ import (
 
 // RunModelsSync fetches models.dev and updates provider files, then records lastSync.
 func RunModelsSync() (provider.UpdateModelsResult, error) {
-	result, err := provider.UpdateModelsFromModelsDev(provider.UpdateModelsOptions{})
+	return RunModelsSyncWithReporter(nil)
+}
+
+// RunModelsSyncWithReporter syncs provider catalogs and reports per-provider progress.
+func RunModelsSyncWithReporter(reporter provider.ProviderProgressReporter) (provider.UpdateModelsResult, error) {
+	result, err := provider.UpdateModelsFromModelsDev(provider.UpdateModelsOptions{
+		Reporter: reporter,
+	})
 	if err != nil {
 		return result, err
 	}

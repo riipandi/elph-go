@@ -4,6 +4,7 @@ package provider
 type TurnResult struct {
 	Thinking string
 	Content  string
+	Usage    TurnUsage
 }
 
 // TurnStream receives incremental thinking and response text during a turn.

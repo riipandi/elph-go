@@ -47,6 +47,14 @@ func (m Model) handleMouse(msg tea.MouseMsg) (Model, []tea.Cmd) {
 	}
 
 	if click, ok := msg.(tea.MouseClickMsg); ok && click.Button == tea.MouseLeft && !click.Mod.Contains(tea.ModShift) {
+		if m.isInFooterArea(click.Y) {
+			m, cmd := m.handleFooterClick(click.X, click.Y)
+			var cmds []tea.Cmd
+			if cmd != nil {
+				cmds = append(cmds, cmd)
+			}
+			return m, cmds
+		}
 		if idx, ok := m.collapsibleToggleAtViewportY(click.Y); ok {
 			m, toggled := m.toggleDetailExpandAt(idx)
 			if toggled {

@@ -1,5 +1,11 @@
 package provider
 
+import (
+	"encoding/json"
+
+	"github.com/riipandi/elph/internal/constants"
+)
+
 // API identifies the upstream protocol used to complete a turn.
 type API string
 
@@ -18,45 +24,55 @@ type Cost struct {
 
 // ModelConfig describes a single model entry inside a provider file.
 type ModelConfig struct {
-	ID            string            `json:"id"`
-	Name          string            `json:"name,omitempty"`
-	API           API               `json:"api,omitempty"`
-	BaseURL       string            `json:"baseUrl,omitempty"`
-	Reasoning     bool              `json:"reasoning,omitempty"`
-	Input         []string          `json:"input,omitempty"`
-	ContextWindow int               `json:"contextWindow,omitempty"`
-	MaxTokens     int               `json:"maxTokens,omitempty"`
-	Temperature   *float64          `json:"temperature,omitempty"`
-	Cost          *Cost             `json:"cost,omitempty"`
-	Headers       map[string]string `json:"headers,omitempty"`
+	ID               string                     `json:"id"`
+	Enabled          *bool                      `json:"enabled,omitempty"`
+	Name             string                     `json:"name,omitempty"`
+	API              API                        `json:"api,omitempty"`
+	BaseURL          string                     `json:"baseUrl,omitempty"`
+	Reasoning        bool                       `json:"reasoning,omitempty"`
+	ThinkingLevelMap map[string]json.RawMessage `json:"thinkingLevelMap,omitempty"`
+	Input            []string                   `json:"input,omitempty"`
+	ContextWindow    int                        `json:"contextWindow,omitempty"`
+	MaxTokens        int                        `json:"maxTokens,omitempty"`
+	Temperature      *float64                   `json:"temperature,omitempty"`
+	TopP             *float64                   `json:"topP,omitempty"`
+	Cost             *Cost                      `json:"cost,omitempty"`
+	Headers          map[string]string          `json:"headers,omitempty"`
+	Compat           Compat                     `json:"compat,omitempty"`
 }
 
 // FileConfig is the JSON schema for one provider file in ~/.elph/providers.
 type FileConfig struct {
+	Enabled    *bool             `json:"enabled,omitempty"`
 	Name       string            `json:"name,omitempty"`
 	BaseURL    string            `json:"baseUrl,omitempty"`
 	API        API               `json:"api,omitempty"`
 	APIKey     string            `json:"apiKey,omitempty"`
 	AuthHeader bool              `json:"authHeader,omitempty"`
 	Headers    map[string]string `json:"headers,omitempty"`
+	Compat     Compat            `json:"compat,omitempty"`
 	Models     []ModelConfig     `json:"models"`
 }
 
 // ResolvedModel is a normalized model entry ready for UI and API calls.
 type ResolvedModel struct {
-	ID            string
-	Name          string
-	ProviderID    string
-	ProviderName  string
-	API           API
-	BaseURL       string
-	Reasoning     bool
-	Input         []string
-	ContextWindow int
-	MaxTokens     int
-	Temperature   float64
-	Cost          Cost
-	Headers       map[string]string
+	ID               string
+	Enabled          bool
+	Name             string
+	ProviderID       string
+	ProviderName     string
+	API              API
+	BaseURL          string
+	Reasoning        bool
+	ThinkingLevelMap map[constants.ThinkingLevel]ThinkingMapValue
+	Input            []string
+	ContextWindow    int
+	MaxTokens        int
+	Temperature      float64
+	TopP             float64
+	Cost             Cost
+	Headers          map[string]string
+	Compat           Compat
 }
 
 // RegisteredProvider is a provider loaded from disk with normalized models.

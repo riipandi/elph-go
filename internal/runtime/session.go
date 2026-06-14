@@ -74,12 +74,13 @@ func (s Session) AppendLog(kind, text string) {
 }
 
 // StartTurn starts an agent turn and streams framework-neutral events.
-func (s Session) StartTurn(ctx context.Context, userPrompt string, showThinking bool) <-chan agent.Event {
-	return agent.RunTurn(ctx, agent.TurnOptions{
-		SystemPrompt: s.SystemPrompt,
-		UserPrompt:   userPrompt,
-		Model:        s.ModelID,
-		Provider:     s.Provider,
-		ShowThinking: showThinking,
-	})
+func (s Session) StartTurn(ctx context.Context, opts agent.TurnOptions) <-chan agent.Event {
+	opts.SystemPrompt = s.SystemPrompt
+	if opts.Model == "" {
+		opts.Model = s.ModelID
+	}
+	if opts.Provider == nil {
+		opts.Provider = s.Provider
+	}
+	return agent.RunTurn(ctx, opts)
 }

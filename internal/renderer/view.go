@@ -446,11 +446,16 @@ func (m Model) footerView() string {
 	cw := footerContentWidth(m.width)
 
 	modelSty := lipgloss.NewStyle().Foreground(constants.ThinkingColor(m.thinkingLevel))
-	line1Left := modelSty.Render(m.modelName) + metaSty.Render(fmt.Sprintf(" | %s | T: %s | IMG", m.provider, m.thinkingLevel))
+	imgLabel := m.footerImageLabel()
+	if !m.modelSupportsImage {
+		imgLabel = dimStyle.Render(imgLabel)
+	}
+	line1Left := modelSty.Render(m.modelName) + metaSty.Render(fmt.Sprintf(" | %s | T: %s | %s", m.provider, m.thinkingLevel, imgLabel))
 
-	ctxColor := constants.ContextUsageColor(m.contextUsed)
+	ctxFrac := m.displayContextFraction()
+	ctxColor := constants.ContextUsageColor(ctxFrac)
 	ctxSty := lipgloss.NewStyle().Foreground(ctxColor)
-	line1Right := ctxSty.Render(fmt.Sprintf("$0.00 | %.1f%% (%s)", m.contextUsed*100, m.contextWindowLabel()))
+	line1Right := ctxSty.Render(fmt.Sprintf("%s | %.1f%% (%s)", m.footerCostLabel(), ctxFrac*100, m.contextWindowLabel()))
 
 	modeSty := lipgloss.NewStyle().Foreground(constants.ModeBorderColor(m.mode)).Bold(true)
 	line2Left := primaryBoldSty.Render(wd) + sidSty.Render(fmt.Sprintf(" [%s] ", sidVal)) + modeSty.Render(string(m.mode))
@@ -471,7 +476,7 @@ func (m Model) footerView() string {
 		gitColor = constants.Gray
 	}
 	gitSty := lipgloss.NewStyle().Foreground(gitColor)
-	line2Right := primarySty.Render(fmt.Sprintf("turn: 0 | %s ", m.branch)) + gitSty.Render(gitStr)
+	line2Right := primarySty.Render(fmt.Sprintf("turn: %d | %s ", m.turnCount, m.branch)) + gitSty.Render(gitStr)
 
 	row1 := footerRow(cw, line1Left, line1Right)
 	row2 := footerRow(cw, line2Left, line2Right)

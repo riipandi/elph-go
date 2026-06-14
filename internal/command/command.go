@@ -36,6 +36,8 @@ type ModelSwitch struct {
 	ModelName     string
 	ContextWindow int
 	MaxTokens     int
+	Input         []string
+	Cost          provider.Cost
 	Catalog       provider.Catalog
 }
 

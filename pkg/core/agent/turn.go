@@ -60,6 +60,8 @@ func runTurn(ctx context.Context, opts TurnOptions, ch chan<- Event) {
 		SystemPrompt: opts.SystemPrompt,
 		UserPrompt:   opts.UserPrompt,
 		Model:        opts.Model,
+		Thinking:     opts.Thinking,
+		Compat:       opts.Compat,
 		Stream:       stream,
 	})
 	if ctx.Err() != nil {

@@ -168,6 +168,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, tea.Batch(cmds...)
 
+	case gitStatusMsg:
+		m = m.applyGitStatus(msg.status)
+
+	case gitRefreshTickMsg:
+		cmds = append(cmds, refreshGitStatusCmd(m.workDir), gitRefreshTickCmd())
+
 	case mentionIndexMsg:
 		m.suggest.MentionIndexLoading = false
 		if msg.workDir == m.workDir {
@@ -296,9 +302,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, cmd
 
 		case constants.ActionCycleThink:
-			m.thinkingLevel = constants.NextThinkingLevel(m.thinkingLevel)
-			_ = settings.SetThinkingLevel(m.thinkingLevel)
-			m, cmd := m.withMessage(fmt.Sprintf("Thinking level: %s", m.thinkingLevel))
+			m, cmd := m.cycleThinkingLevel()
 			return m, cmd
 
 		case constants.ActionCycleTheme:

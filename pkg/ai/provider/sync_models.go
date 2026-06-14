@@ -26,6 +26,7 @@ type UpdateModelsOptions struct {
 	Dir        string
 	HTTPClient *http.Client
 	Data       ModelsDevData
+	Reporter   ProviderProgressReporter
 }
 
 // UpdateModelsFromModelsDev refreshes model metadata in ~/.elph/providers
@@ -42,6 +43,11 @@ func UpdateModelsFromModelsDev(opts UpdateModelsOptions) (UpdateModelsResult, er
 
 	data := opts.Data
 	if len(data.Catalog.Providers) == 0 && len(data.Models) == 0 {
+		reportProviderProgress(opts.Reporter, ProviderProgressEvent{
+			Phase:  ProviderProgressSync,
+			Label:  "models.dev",
+			Action: ProviderProgressFetchMeta,
+		})
 		var err error
 		data, err = FetchModelsDev(context.Background(), opts.HTTPClient)
 		if err != nil {
@@ -63,24 +69,45 @@ func UpdateModelsFromModelsDev(opts UpdateModelsOptions) (UpdateModelsResult, er
 		client = utils.NewHTTPClient()
 	}
 
+	syncTargets := listSyncProviderTargets(entries, data)
+	total := len(syncTargets)
+
 	result := UpdateModelsResult{Dir: dir}
-	for _, entry := range entries {
-		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".json") {
-			continue
+	for i, target := range syncTargets {
+		entry := target.entry
+		providerID := target.providerID
+		catalogID := target.catalogID
+		catalogProvider := target.catalogProvider
+		entryName := entry.Name()
+
+		label := strings.TrimSpace(catalogProvider.Name)
+		if label == "" {
+			label = providerID
 		}
-		providerID := strings.TrimSuffix(entry.Name(), ".json")
-		if providerID == "" {
+		if target.skipNotInCatalog {
+			result.Skipped = append(result.Skipped, entryName+": provider not in models.dev catalog")
+			reportProviderProgress(opts.Reporter, ProviderProgressEvent{
+				Phase:      ProviderProgressSync,
+				ProviderID: providerID,
+				Label:      label,
+				Index:      i + 1,
+				Total:      total,
+				Action:     ProviderProgressSkipped,
+				Detail:     "not in models.dev catalog",
+			})
 			continue
 		}
 
-		catalogID := modelsDevProviderID(providerID)
-		catalogProvider, inCatalog := data.Catalog.Providers[catalogID]
-		if !isLiveModelsProvider(providerID) && !inCatalog {
-			result.Skipped = append(result.Skipped, entry.Name()+": provider not in models.dev catalog")
-			continue
-		}
+		reportProviderProgress(opts.Reporter, ProviderProgressEvent{
+			Phase:      ProviderProgressSync,
+			ProviderID: providerID,
+			Label:      label,
+			Index:      i + 1,
+			Total:      total,
+			Action:     ProviderProgressWorking,
+		})
 
-		path := filepath.Join(dir, entry.Name())
+		path := filepath.Join(dir, entryName)
 		raw, err := os.ReadFile(path)
 		if err != nil {
 			return result, fmt.Errorf("provider %q: %w", providerID, err)
@@ -93,16 +120,27 @@ func UpdateModelsFromModelsDev(opts UpdateModelsOptions) (UpdateModelsResult, er
 
 		var changed bool
 		if isLiveModelsProvider(providerID) {
-			cfg, changed, err = syncLiveProviderModels(ctx, client, providerID, catalogID, cfg, data, catalogProvider, &result, entry.Name())
+			cfg, changed, err = syncLiveProviderModels(ctx, client, providerID, catalogID, cfg, data, catalogProvider, &result, entryName)
 			if err != nil {
 				return result, fmt.Errorf("provider %q: %w", providerID, err)
 			}
 		} else {
-			cfg, changed = syncCatalogProviderModels(catalogID, cfg, data, catalogProvider, &result, entry.Name())
+			cfg, changed = syncCatalogProviderModels(providerID, catalogID, cfg, data, catalogProvider, &result, entryName)
 		}
 
+		cfg, backfillChanged := BackfillProviderThinking(providerID, cfg)
+		changed = changed || backfillChanged
+
 		if !changed {
-			result.Skipped = append(result.Skipped, entry.Name()+": already up to date")
+			result.Skipped = append(result.Skipped, entryName+": already up to date")
+			reportProviderProgress(opts.Reporter, ProviderProgressEvent{
+				Phase:      ProviderProgressSync,
+				ProviderID: providerID,
+				Label:      label,
+				Index:      i + 1,
+				Total:      total,
+				Action:     ProviderProgressUnchanged,
+			})
 			continue
 		}
 
@@ -118,13 +156,64 @@ func UpdateModelsFromModelsDev(opts UpdateModelsOptions) (UpdateModelsResult, er
 		if err := os.WriteFile(path, payload, 0o644); err != nil {
 			return result, fmt.Errorf("provider %q: write: %w", providerID, err)
 		}
-		result.Updated = append(result.Updated, entry.Name())
+		result.Updated = append(result.Updated, entryName)
+		reportProviderProgress(opts.Reporter, ProviderProgressEvent{
+			Phase:      ProviderProgressSync,
+			ProviderID: providerID,
+			Label:      label,
+			Index:      i + 1,
+			Total:      total,
+			Action:     ProviderProgressSynced,
+		})
 	}
 
 	return result, nil
 }
 
+type syncProviderTarget struct {
+	entry            os.DirEntry
+	providerID       string
+	catalogID        string
+	catalogProvider  ModelsDevProvider
+	skipNotInCatalog bool
+}
+
+func listSyncProviderTargets(entries []os.DirEntry, data ModelsDevData) []syncProviderTarget {
+	targets := make([]syncProviderTarget, 0, len(entries))
+	for _, entry := range entries {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".json") {
+			continue
+		}
+		providerID := strings.TrimSuffix(entry.Name(), ".json")
+		if providerID == "" {
+			continue
+		}
+		catalogID := modelsDevProviderID(providerID)
+		catalogProvider, inCatalog := data.Catalog.Providers[catalogID]
+		if !isLiveModelsProvider(providerID) && !inCatalog {
+			targets = append(targets, syncProviderTarget{
+				entry:            entry,
+				providerID:       providerID,
+				catalogID:        catalogID,
+				skipNotInCatalog: true,
+			})
+			continue
+		}
+		targets = append(targets, syncProviderTarget{
+			entry:           entry,
+			providerID:      providerID,
+			catalogID:       catalogID,
+			catalogProvider: catalogProvider,
+		})
+	}
+	sort.Slice(targets, func(i, j int) bool {
+		return targets[i].providerID < targets[j].providerID
+	})
+	return targets
+}
+
 func syncCatalogProviderModels(
+	providerID string,
 	catalogID string,
 	cfg FileConfig,
 	data ModelsDevData,
@@ -142,7 +231,7 @@ func syncCatalogProviderModels(
 			continue
 		}
 		fresh := modelConfigFromModelsDev(src, catalogProvider.NPM)
-		updated := mergeModelConfig(model, fresh)
+		updated := mergeModelConfigWithTemplate(providerID, model, fresh)
 		if modelConfigsEqual(model, updated) {
 			continue
 		}
@@ -157,6 +246,9 @@ func syncCatalogProviderModels(
 		}
 		fresh := modelConfigFromModelsDev(src, catalogProvider.NPM)
 		fresh.ID = modelID
+		if tmpl, ok := thinkingTemplateModel(providerID, modelID); ok {
+			fresh = backfillModelThinking(fresh, tmpl)
+		}
 		added = append(added, fresh)
 	}
 	if len(added) > 0 {
@@ -207,7 +299,7 @@ func syncLiveProviderModels(
 
 	if liveModelsProviderRequiresAuth(providerID) && strings.TrimSpace(apiKey) == "" {
 		result.Warnings = append(result.Warnings, fmt.Sprintf("%s: API key unavailable for live /models (%s); using models.dev catalog only", entryName, strings.TrimSpace(cfg.APIKey)))
-		cfg, changed := syncCatalogProviderModels(catalogID, cfg, data, catalogProvider, result, entryName)
+		cfg, changed := syncCatalogProviderModels(providerID, catalogID, cfg, data, catalogProvider, result, entryName)
 		return cfg, changed, nil
 	}
 
@@ -241,7 +333,7 @@ func syncLiveProviderModels(
 
 		if src, ok := data.lookupModel(catalogID, modelID); ok {
 			fresh := modelConfigFromModelsDev(src, providerNPM)
-			model = mergeModelConfig(model, fresh)
+			model = mergeModelConfigWithTemplate(providerID, model, fresh)
 		} else {
 			result.Warnings = append(result.Warnings, fmt.Sprintf("%s: model %q not found in models.dev metadata", entryName, modelID))
 			if strings.TrimSpace(model.Name) == "" {

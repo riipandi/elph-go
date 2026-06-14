@@ -249,6 +249,8 @@ func (m Model) confirmModelSelector() (Model, tea.Cmd, bool) {
 		ModelName:     cfg.ModelName,
 		ContextWindow: cfg.ContextWindow,
 		MaxTokens:     cfg.MaxTokens,
+		Input:         model.Input,
+		Cost:          model.Cost,
 		Catalog:       m.modelSelector.Catalog,
 	})
 	m, cmd := m.withMessage(fmt.Sprintf("Switched to %s [%s]", cfg.ModelName, cfg.ProviderName))
@@ -273,6 +275,15 @@ func (m Model) applyModelSwitch(sw *command.ModelSwitch) Model {
 	m.modelName = sw.ModelName
 	m.provider = sw.ProviderName
 	m.contextWindow = sw.ContextWindow
+	m.modelSupportsImage = provider.SupportsImageInput(sw.Input)
+	m.modelCost = sw.Cost
+	if model, ok := sw.Catalog.Model(sw.ProviderID, sw.ModelID); ok {
+		m.thinkingLevel = provider.ClampThinkingLevel(m.thinkingLevel, model)
+		_ = settings.SetThinkingLevel(m.thinkingLevel)
+	}
+	if m.contextWindow > 0 {
+		m.contextUsed = min(float64(m.tokensUsed)/float64(m.contextWindow), 1.0)
+	}
 	return m
 }
 

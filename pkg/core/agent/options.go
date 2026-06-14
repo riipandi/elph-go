@@ -9,4 +9,6 @@ type TurnOptions struct {
 	Model        string
 	Provider     provider.Provider
 	ShowThinking bool
+	Thinking     provider.ThinkingConfig
+	Compat       provider.Compat
 }

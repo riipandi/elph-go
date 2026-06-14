@@ -24,6 +24,7 @@ type AnthropicOptions struct {
 	Headers     map[string]string
 	MaxTokens   int
 	Temperature float64
+	TopP        float64
 }
 
 // Anthropic calls the Anthropic Messages API.
@@ -35,6 +36,7 @@ type Anthropic struct {
 	Headers     map[string]string
 	MaxTokens   int
 	Temperature float64
+	TopP        float64
 	client      *http.Client
 }
 
@@ -52,6 +54,7 @@ func NewAnthropic(opts AnthropicOptions) *Anthropic {
 		Headers:     opts.Headers,
 		MaxTokens:   maxTokens,
 		Temperature: opts.Temperature,
+		TopP:        opts.TopP,
 		client:      utils.NewHTTPClient(),
 	}
 }
@@ -87,17 +90,6 @@ type anthropicContentBlock struct {
 }
 
 func (p *Anthropic) completeOnce(ctx context.Context, req TurnRequest) (TurnResult, error) {
-	type message struct {
-		Role    string `json:"role"`
-		Content string `json:"content"`
-	}
-	type request struct {
-		Model       string    `json:"model"`
-		MaxTokens   int       `json:"max_tokens"`
-		Temperature float64   `json:"temperature"`
-		System      string    `json:"system,omitempty"`
-		Messages    []message `json:"messages"`
-	}
 	type response struct {
 		Content []anthropicContentBlock `json:"content"`
 	}
@@ -108,13 +100,8 @@ func (p *Anthropic) completeOnce(ctx context.Context, req TurnRequest) (TurnResu
 	}
 
 	var out response
-	err := utils.PostJSON(ctx, p.client, p.apiURL(), p.requestHeaders(), request{
-		Model:       model,
-		MaxTokens:   p.MaxTokens,
-		Temperature: p.Temperature,
-		System:      req.SystemPrompt,
-		Messages:    []message{{Role: "user", Content: req.UserPrompt}},
-	}, &out)
+	body := p.buildRequestBody(req, model, false)
+	err := utils.PostJSON(ctx, p.client, p.apiURL(), p.requestHeaders(), body, &out)
 	if err != nil {
 		return TurnResult{}, err
 	}
@@ -132,20 +119,32 @@ func (p *Anthropic) completeStream(ctx context.Context, req TurnRequest) (TurnRe
 		model = p.Model
 	}
 
-	body := map[string]any{
-		"model":       model,
-		"max_tokens":  p.MaxTokens,
-		"temperature": p.Temperature,
-		"stream":      true,
-		"messages":    []map[string]string{{"role": "user", "content": req.UserPrompt}},
-	}
-	if strings.TrimSpace(req.SystemPrompt) != "" {
-		body["system"] = req.SystemPrompt
-	}
+	body := p.buildRequestBody(req, model, true)
 
 	var thinking, content strings.Builder
+	var usage TurnUsage
 	err := p.postAnthropicSSE(ctx, body, func(eventType string, data []byte) error {
 		switch eventType {
+		case "message_start":
+			var evt struct {
+				Message struct {
+					Usage struct {
+						InputTokens int `json:"input_tokens"`
+					} `json:"usage"`
+				} `json:"message"`
+			}
+			if err := json.Unmarshal(data, &evt); err == nil {
+				usage.InputTokens = evt.Message.Usage.InputTokens
+			}
+		case "message_delta":
+			var evt struct {
+				Usage struct {
+					OutputTokens int `json:"output_tokens"`
+				} `json:"usage"`
+			}
+			if err := json.Unmarshal(data, &evt); err == nil && evt.Usage.OutputTokens > 0 {
+				usage.OutputTokens = evt.Usage.OutputTokens
+			}
 		case "content_block_delta":
 			var evt anthropicDeltaEvent
 			if err := json.Unmarshal(data, &evt); err != nil {
@@ -173,6 +172,7 @@ func (p *Anthropic) completeStream(ctx context.Context, req TurnRequest) (TurnRe
 	result := TurnResult{
 		Thinking: strings.TrimSpace(thinking.String()),
 		Content:  strings.TrimSpace(content.String()),
+		Usage:    usage,
 	}
 	if result.Thinking == "" && result.Content == "" {
 		return TurnResult{}, fmt.Errorf("%s: empty response", p.ID())
@@ -264,6 +264,43 @@ func (p *Anthropic) postAnthropicSSE(ctx context.Context, body map[string]any, o
 		return fmt.Errorf("read stream: %w", err)
 	}
 	return nil
+}
+
+func (p *Anthropic) buildRequestBody(req TurnRequest, model string, stream bool) map[string]any {
+	body := map[string]any{
+		"model":       model,
+		"max_tokens":  p.MaxTokens,
+		"temperature": p.Temperature,
+		"top_p":       p.TopP,
+		"messages":    []map[string]string{{"role": "user", "content": req.UserPrompt}},
+	}
+	if stream {
+		body["stream"] = true
+	}
+	if strings.TrimSpace(req.SystemPrompt) != "" {
+		body["system"] = req.SystemPrompt
+	}
+	applyAnthropicThinking(body, req.Thinking)
+	return body
+}
+
+func applyAnthropicThinking(body map[string]any, thinking ThinkingConfig) {
+	if !thinking.Enabled {
+		return
+	}
+	if thinking.Adaptive {
+		body["thinking"] = map[string]any{"type": "adaptive"}
+		if thinking.AdaptiveEffort != "" {
+			body["output_config"] = map[string]any{"effort": thinking.AdaptiveEffort}
+		}
+		return
+	}
+	if thinking.BudgetTokens > 0 {
+		body["thinking"] = map[string]any{
+			"type":          "enabled",
+			"budget_tokens": thinking.BudgetTokens,
+		}
+	}
 }
 
 func (p *Anthropic) requestHeaders() map[string]string {

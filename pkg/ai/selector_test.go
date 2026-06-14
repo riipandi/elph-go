@@ -14,15 +14,15 @@ func TestBuildSelectorGroups(t *testing.T) {
 				ID:     "alpha",
 				Config: provider.FileConfig{Name: "Alpha"},
 				Models: []provider.ResolvedModel{
-					{ID: "a1", Name: "Alpha One", ProviderID: "alpha", ProviderName: "Alpha"},
+					{ID: "a1", Name: "Alpha One", ProviderID: "alpha", ProviderName: "Alpha", Enabled: true},
 				},
 			},
 			{
 				ID:     "beta",
 				Config: provider.FileConfig{Name: "Beta"},
 				Models: []provider.ResolvedModel{
-					{ID: "b1", Name: "Beta One", ProviderID: "beta", ProviderName: "Beta"},
-					{ID: "b2", Name: "Beta Two", ProviderID: "beta", ProviderName: "Beta"},
+					{ID: "b1", Name: "Beta One", ProviderID: "beta", ProviderName: "Beta", Enabled: true},
+					{ID: "b2", Name: "Beta Two", ProviderID: "beta", ProviderName: "Beta", Enabled: true},
 				},
 			},
 		},
@@ -41,8 +41,8 @@ func TestBuildSelectorGroupsFuzzyFilter(t *testing.T) {
 		Providers: []provider.RegisteredProvider{{
 			ID: "opencode",
 			Models: []provider.ResolvedModel{
-				{ID: "model-a", Name: "Fast Model", ProviderID: "opencode", ProviderName: "OpenCode"},
-				{ID: "model-b", Name: "Smart Model", ProviderID: "opencode", ProviderName: "OpenCode"},
+				{ID: "model-a", Name: "Fast Model", ProviderID: "opencode", ProviderName: "OpenCode", Enabled: true},
+				{ID: "model-b", Name: "Smart Model", ProviderID: "opencode", ProviderName: "OpenCode", Enabled: true},
 			},
 		}},
 	}
@@ -85,6 +85,23 @@ func TestNormalizeProviderFilter(t *testing.T) {
 	require.Equal(t, "", NormalizeProviderFilter("", groups))
 	require.Equal(t, "alpha", NormalizeProviderFilter("alpha", groups))
 	require.Equal(t, "", NormalizeProviderFilter("missing", groups))
+}
+
+func TestBuildSelectorGroupsSkipsDisabledModels(t *testing.T) {
+	catalog := provider.Catalog{
+		Providers: []provider.RegisteredProvider{{
+			ID: "demo",
+			Models: []provider.ResolvedModel{
+				{ID: "on", Enabled: true, ProviderID: "demo"},
+				{ID: "off", Enabled: false, ProviderID: "demo"},
+			},
+		}},
+	}
+
+	groups, flat := BuildSelectorGroups(catalog, "")
+	require.Len(t, groups, 1)
+	require.Len(t, flat, 1)
+	require.Equal(t, "on", flat[0].ID)
 }
 
 func TestSelectorPickIndex(t *testing.T) {

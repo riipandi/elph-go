@@ -8,6 +8,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/riipandi/elph/internal/constants"
 	"github.com/riipandi/elph/internal/settings"
+	"github.com/riipandi/elph/pkg/ai/provider"
 	"github.com/riipandi/elph/pkg/core/agent"
 )
 
@@ -53,10 +54,30 @@ func (m Model) showThinkingEnabled() bool {
 	return cfg.ShowThinkingEnabled()
 }
 
+func (m Model) buildTurnOptions(prompt string) agent.TurnOptions {
+	showThinking := m.showThinkingEnabled() && m.thinkingLevel != constants.ThinkingOff
+	opts := agent.TurnOptions{
+		UserPrompt:   prompt,
+		Model:        m.session.ModelID,
+		Provider:     m.session.Provider,
+		ShowThinking: showThinking,
+	}
+	if model, ok := m.session.Catalog.Model(m.session.ProviderID, m.session.ModelID); ok {
+		prefs, err := settings.Load()
+		budgets := map[string]int(nil)
+		if err == nil {
+			budgets = prefs.ThinkingBudgetOverrides()
+		}
+		opts.Thinking = provider.ResolveThinking(model, m.thinkingLevel, budgets)
+		opts.Compat = model.Compat
+	}
+	return opts
+}
+
 func (m Model) agentTurnCmds(prompt string) (Model, tea.Cmd) {
 	ctx, cancel := context.WithCancel(context.Background())
 	m.agent.Cancel = cancel
-	events := m.session.StartTurn(ctx, prompt, m.showThinkingEnabled())
+	events := m.session.StartTurn(ctx, m.buildTurnOptions(prompt))
 	m.agent.Events = events
 	return m, tea.Batch(waitAgentEvent(events), m.spinnerTickCmd())
 }

@@ -10,6 +10,9 @@ const (
 	defaultContextWindow = 128000
 	defaultMaxTokens     = 16384
 	defaultTemperature   = 0.4
+	// defaultTopP leaves nucleus sampling unrestricted so temperature (0.4) is the
+	// primary randomness control — a common setup for coding agents.
+	defaultTopP = 1.0
 )
 
 func normalizeProvider(id string, cfg FileConfig) (RegisteredProvider, error) {
@@ -90,6 +93,11 @@ func normalizeModel(providerID, providerName string, cfg FileConfig, model Model
 		temperature = *model.Temperature
 	}
 
+	topP := defaultTopP
+	if model.TopP != nil {
+		topP = *model.TopP
+	}
+
 	cost := Cost{}
 	if model.Cost != nil {
 		cost = *model.Cost
@@ -97,19 +105,25 @@ func normalizeModel(providerID, providerName string, cfg FileConfig, model Model
 
 	headers := utils.MergeStringMaps(cfg.Headers, model.Headers)
 
+	providerEnabled := ProviderConfigEnabled(cfg)
+
 	return ResolvedModel{
-		ID:            model.ID,
-		Name:          name,
-		ProviderID:    providerID,
-		ProviderName:  providerName,
-		API:           api,
-		BaseURL:       baseURL,
-		Reasoning:     model.Reasoning,
-		Input:         input,
-		ContextWindow: contextWindow,
-		MaxTokens:     maxTokens,
-		Temperature:   temperature,
-		Cost:          cost,
-		Headers:       headers,
+		ID:               model.ID,
+		Enabled:          providerEnabled && ModelConfigEnabled(model),
+		Name:             name,
+		ProviderID:       providerID,
+		ProviderName:     providerName,
+		API:              api,
+		BaseURL:          baseURL,
+		Reasoning:        model.Reasoning,
+		ThinkingLevelMap: ParseThinkingLevelMap(model.ThinkingLevelMap),
+		Input:            input,
+		ContextWindow:    contextWindow,
+		MaxTokens:        maxTokens,
+		Temperature:      temperature,
+		TopP:             topP,
+		Cost:             cost,
+		Headers:          headers,
+		Compat:           mergeCompat(cfg.Compat, model.Compat),
 	}, nil
 }

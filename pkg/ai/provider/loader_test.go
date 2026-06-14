@@ -50,6 +50,7 @@ func TestLoadCatalogFromDir(t *testing.T) {
 	require.Equal(t, defaultContextWindow, model.ContextWindow)
 	require.Equal(t, defaultMaxTokens, model.MaxTokens)
 	require.Equal(t, defaultTemperature, model.Temperature)
+	require.Equal(t, defaultTopP, model.TopP)
 	require.Equal(t, map[string]string{"X-Custom": "value"}, model.Headers)
 }
 
@@ -71,6 +72,26 @@ func TestLoadCatalogModelTemperatureOverride(t *testing.T) {
 	require.Len(t, catalog.Providers[0].Models, 2)
 	require.Equal(t, defaultTemperature, catalog.Providers[0].Models[0].Temperature)
 	require.Equal(t, 0.2, catalog.Providers[0].Models[1].Temperature)
+}
+
+func TestLoadCatalogModelTopPOverride(t *testing.T) {
+	dir := t.TempDir()
+	writeProviderFile(t, dir, "openai.json", `{
+		"baseUrl": "https://api.openai.com/v1",
+		"api": "openai-completions",
+		"apiKey": "test",
+		"models": [
+			{"id": "default-top-p"},
+			{"id": "custom-top-p", "topP": 0.95}
+		]
+	}`)
+
+	catalog, err := LoadCatalog(dir)
+	require.NoError(t, err)
+	require.Len(t, catalog.Providers, 1)
+	require.Len(t, catalog.Providers[0].Models, 2)
+	require.Equal(t, defaultTopP, catalog.Providers[0].Models[0].TopP)
+	require.Equal(t, 0.95, catalog.Providers[0].Models[1].TopP)
 }
 
 func TestLoadCatalogSkipsInvalidFiles(t *testing.T) {

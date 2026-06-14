@@ -19,6 +19,7 @@ type Event struct {
 	Delta    string
 	Thinking string
 	Response string
+	Usage    provider.TurnUsage
 }
 
 // ActivityEvent returns an activity phase update.
@@ -42,5 +43,6 @@ func TurnDoneEvent(result provider.TurnResult) Event {
 		Kind:     EventTurnDone,
 		Thinking: result.Thinking,
 		Response: result.Content,
+		Usage:    result.Usage,
 	}
 }

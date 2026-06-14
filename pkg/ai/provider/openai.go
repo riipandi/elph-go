@@ -22,6 +22,7 @@ type OpenAIOptions struct {
 	AuthHeader   bool
 	MaxTokens    int
 	Temperature  float64
+	TopP         float64
 }
 
 // OpenAICompatible calls an OpenAI-style chat completions endpoint.
@@ -34,6 +35,7 @@ type OpenAICompatible struct {
 	AuthHeader   bool
 	MaxTokens    int
 	Temperature  float64
+	TopP         float64
 	client       *http.Client
 }
 
@@ -58,6 +60,7 @@ func NewOpenAICompatible(opts OpenAIOptions) *OpenAICompatible {
 		AuthHeader:   opts.AuthHeader,
 		MaxTokens:    maxTokens,
 		Temperature:  opts.Temperature,
+		TopP:         opts.TopP,
 		client:       utils.NewHTTPClient(),
 	}
 }
@@ -129,10 +132,15 @@ func (p *OpenAICompatible) completeStream(ctx context.Context, req TurnRequest) 
 	}
 
 	var thinking, content strings.Builder
+	var usage TurnUsage
 	err = utils.PostSSE(ctx, p.client, p.BaseURL+"/chat/completions", p.requestHeaders(), body, func(data []byte) error {
 		var chunk openAIStreamChunk
 		if err := json.Unmarshal(data, &chunk); err != nil {
 			return nil
+		}
+		if chunk.Usage != nil {
+			usage.InputTokens = chunk.Usage.PromptTokens
+			usage.OutputTokens = chunk.Usage.CompletionTokens
 		}
 		if len(chunk.Choices) == 0 {
 			return nil
@@ -159,11 +167,17 @@ func (p *OpenAICompatible) completeStream(ctx context.Context, req TurnRequest) 
 	result := TurnResult{
 		Thinking: strings.TrimSpace(thinking.String()),
 		Content:  strings.TrimSpace(content.String()),
+		Usage:    usage,
 	}
 	if result.Thinking == "" && result.Content == "" {
 		return TurnResult{}, fmt.Errorf("%s: empty response", p.ID())
 	}
 	return result, nil
+}
+
+type openAIStreamUsage struct {
+	PromptTokens     int `json:"prompt_tokens"`
+	CompletionTokens int `json:"completion_tokens"`
 }
 
 type openAIStreamDelta struct {
@@ -178,6 +192,7 @@ type openAIStreamChoice struct {
 
 type openAIStreamChunk struct {
 	Choices []openAIStreamChoice `json:"choices"`
+	Usage   *openAIStreamUsage   `json:"usage,omitempty"`
 }
 
 func (p *OpenAICompatible) buildRequest(req TurnRequest, stream bool) (map[string]any, error) {
@@ -188,7 +203,11 @@ func (p *OpenAICompatible) buildRequest(req TurnRequest, stream bool) (map[strin
 
 	messages := make([]map[string]string, 0, 2)
 	if strings.TrimSpace(req.SystemPrompt) != "" {
-		messages = append(messages, map[string]string{"role": "system", "content": req.SystemPrompt})
+		role := "system"
+		if req.Thinking.Enabled && req.Compat.supportsDeveloperRole() {
+			role = "developer"
+		}
+		messages = append(messages, map[string]string{"role": role, "content": req.SystemPrompt})
 	}
 	messages = append(messages, map[string]string{"role": "user", "content": req.UserPrompt})
 
@@ -196,14 +215,41 @@ func (p *OpenAICompatible) buildRequest(req TurnRequest, stream bool) (map[strin
 		"model":       model,
 		"messages":    messages,
 		"temperature": p.Temperature,
+		"top_p":       p.TopP,
+	}
+	maxField := "max_tokens"
+	if req.Compat.MaxTokensField != "" {
+		maxField = req.Compat.MaxTokensField
 	}
 	if p.MaxTokens > 0 {
-		body["max_tokens"] = p.MaxTokens
+		body[maxField] = p.MaxTokens
 	}
+	applyOpenAIThinking(body, req.Thinking, req.Compat)
 	if stream {
 		body["stream"] = true
+		if req.Compat.supportsUsageInStreaming() {
+			body["stream_options"] = map[string]any{"include_usage": true}
+		}
 	}
 	return body, nil
+}
+
+func applyOpenAIThinking(body map[string]any, thinking ThinkingConfig, compat Compat) {
+	if !thinking.Enabled {
+		return
+	}
+	switch thinking.ThinkingFormat {
+	case ThinkingFormatOpenRouter:
+		if thinking.ReasoningEffort != "" {
+			body["reasoning"] = map[string]any{"effort": thinking.ReasoningEffort}
+		}
+	case ThinkingFormatQwen:
+		body["enable_thinking"] = thinking.EnableThinking
+	default:
+		if compat.supportsReasoningEffort() && thinking.ReasoningEffort != "" {
+			body["reasoning_effort"] = thinking.ReasoningEffort
+		}
+	}
 }
 
 func (p *OpenAICompatible) requestHeaders() map[string]string {

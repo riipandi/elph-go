@@ -10,6 +10,8 @@ type TurnRequest struct {
 	SystemPrompt string
 	UserPrompt   string
 	Model        string
+	Thinking     ThinkingConfig
+	Compat       Compat
 	Stream       *TurnStream
 }
 

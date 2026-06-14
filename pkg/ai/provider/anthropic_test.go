@@ -20,6 +20,7 @@ func TestAnthropicComplete(t *testing.T) {
 		require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
 		require.Equal(t, "sys", body["system"])
 		require.Equal(t, 0.4, body["temperature"])
+		require.Equal(t, 1.0, body["top_p"])
 
 		_ = json.NewEncoder(w).Encode(map[string]any{
 			"content": []map[string]string{{"type": "text", "text": "hello from claude"}},
@@ -35,6 +36,7 @@ func TestAnthropicComplete(t *testing.T) {
 		Headers:     map[string]string{"x-custom": "custom"},
 		MaxTokens:   1024,
 		Temperature: 0.4,
+		TopP:        1.0,
 	})
 
 	got, err := p.Complete(context.Background(), TurnRequest{
@@ -44,6 +46,71 @@ func TestAnthropicComplete(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.Equal(t, "hello from claude", got.Content)
+}
+
+func TestAnthropicCompleteThinkingBudget(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var body map[string]any
+		require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
+		thinking, ok := body["thinking"].(map[string]any)
+		require.True(t, ok)
+		require.Equal(t, "enabled", thinking["type"])
+		require.Equal(t, float64(4096), thinking["budget_tokens"])
+
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"content": []map[string]string{{"type": "text", "text": "done"}},
+		})
+	}))
+	defer srv.Close()
+
+	p := NewAnthropic(AnthropicOptions{
+		APIKey:  "test-key",
+		BaseURL: srv.URL + "/v1",
+	})
+
+	got, err := p.Complete(context.Background(), TurnRequest{
+		UserPrompt: "hi",
+		Thinking: ThinkingConfig{
+			Enabled:      true,
+			BudgetTokens: 4096,
+		},
+	})
+	require.NoError(t, err)
+	require.Equal(t, "done", got.Content)
+}
+
+func TestAnthropicCompleteAdaptiveThinking(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var body map[string]any
+		require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
+		thinking, ok := body["thinking"].(map[string]any)
+		require.True(t, ok)
+		require.Equal(t, "adaptive", thinking["type"])
+		output, ok := body["output_config"].(map[string]any)
+		require.True(t, ok)
+		require.Equal(t, "high", output["effort"])
+
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"content": []map[string]string{{"type": "text", "text": "done"}},
+		})
+	}))
+	defer srv.Close()
+
+	p := NewAnthropic(AnthropicOptions{
+		APIKey:  "test-key",
+		BaseURL: srv.URL + "/v1",
+	})
+
+	got, err := p.Complete(context.Background(), TurnRequest{
+		UserPrompt: "hi",
+		Thinking: ThinkingConfig{
+			Enabled:        true,
+			Adaptive:       true,
+			AdaptiveEffort: "high",
+		},
+	})
+	require.NoError(t, err)
+	require.Equal(t, "done", got.Content)
 }
 
 func TestAnthropicCompleteThinking(t *testing.T) {

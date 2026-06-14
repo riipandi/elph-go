@@ -211,5 +211,15 @@ func mergeModelConfig(existing ModelConfig, fresh ModelConfig) ModelConfig {
 	if fresh.API != "" {
 		merged.API = fresh.API
 	}
+	// Preserve user/provider thinking controls set outside models.dev sync.
+	// ThinkingLevelMap, Compat, Temperature, TopP, Headers, and BaseURL stay on existing.
+	return merged
+}
+
+func mergeModelConfigWithTemplate(providerID string, existing, fresh ModelConfig) ModelConfig {
+	merged := mergeModelConfig(existing, fresh)
+	if tmpl, ok := thinkingTemplateModel(providerID, merged.ID); ok {
+		merged = backfillModelThinking(merged, tmpl)
+	}
 	return merged
 }

@@ -1,19 +1,17 @@
 package provider
 
 import (
-	"bufio"
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
 	"strings"
 
+	"github.com/anthropics/anthropic-sdk-go"
+	"github.com/anthropics/anthropic-sdk-go/option"
 	"github.com/riipandi/elph/pkg/ai/utils"
 )
 
-const anthropicVersion = "2023-06-01"
+const defaultAnthropicBaseURL = "https://api.anthropic.com"
 
 // AnthropicOptions configures an Anthropic Messages API provider.
 type AnthropicOptions struct {
@@ -27,7 +25,7 @@ type AnthropicOptions struct {
 	TopP        float64
 }
 
-// Anthropic calls the Anthropic Messages API.
+// Anthropic calls the Anthropic Messages API via anthropic-sdk-go.
 type Anthropic struct {
 	IDName      string
 	APIKey      string
@@ -37,7 +35,7 @@ type Anthropic struct {
 	MaxTokens   int
 	Temperature float64
 	TopP        float64
-	client      *http.Client
+	client      anthropic.Client
 }
 
 // NewAnthropic builds an Anthropic provider from explicit settings.
@@ -46,6 +44,18 @@ func NewAnthropic(opts AnthropicOptions) *Anthropic {
 	if maxTokens == 0 {
 		maxTokens = defaultMaxTokens
 	}
+
+	clientOpts := []option.RequestOption{
+		option.WithBaseURL(normalizeAnthropicBaseURL(opts.BaseURL)),
+		option.WithHTTPClient(utils.NewHTTPClient()),
+	}
+	if opts.APIKey != "" {
+		clientOpts = append(clientOpts, option.WithAPIKey(opts.APIKey))
+	}
+	for key, value := range opts.Headers {
+		clientOpts = append(clientOpts, option.WithHeader(key, value))
+	}
+
 	return &Anthropic{
 		IDName:      opts.ID,
 		APIKey:      opts.APIKey,
@@ -55,15 +65,19 @@ func NewAnthropic(opts AnthropicOptions) *Anthropic {
 		MaxTokens:   maxTokens,
 		Temperature: opts.Temperature,
 		TopP:        opts.TopP,
-		client:      utils.NewHTTPClient(),
+		client:      anthropic.NewClient(clientOpts...),
 	}
 }
 
-func (p *Anthropic) apiURL() string {
-	if p.BaseURL == "" {
-		return ""
+func normalizeAnthropicBaseURL(baseURL string) string {
+	baseURL = strings.TrimRight(strings.TrimSpace(baseURL), "/")
+	if baseURL == "" {
+		return defaultAnthropicBaseURL
 	}
-	return p.BaseURL + "/messages"
+	if strings.HasSuffix(baseURL, "/v1") {
+		baseURL = strings.TrimSuffix(baseURL, "/v1")
+	}
+	return baseURL
 }
 
 func (p *Anthropic) ID() string {
@@ -84,19 +98,13 @@ func (p *Anthropic) Complete(ctx context.Context, req TurnRequest) (TurnResult, 
 }
 
 func (p *Anthropic) completeOnce(ctx context.Context, req TurnRequest) (TurnResult, error) {
-	model := req.Model
-	if model == "" {
-		model = p.Model
-	}
-
-	var out anthropicResponse
-	body := p.buildRequestBody(req, model, false)
-	err := utils.PostJSON(ctx, p.client, p.apiURL(), p.requestHeaders(), body, &out)
+	params := p.buildParams(req)
+	resp, err := p.client.Messages.New(ctx, params)
 	if err != nil {
 		return TurnResult{}, err
 	}
 
-	result := parseAnthropicResponse(out)
+	result := turnResultFromAnthropicMessage(resp)
 	if !anthropicResultValid(result) {
 		return TurnResult{}, fmt.Errorf("%s: empty response", p.ID())
 	}
@@ -104,77 +112,55 @@ func (p *Anthropic) completeOnce(ctx context.Context, req TurnRequest) (TurnResu
 }
 
 func (p *Anthropic) completeStream(ctx context.Context, req TurnRequest) (TurnResult, error) {
-	model := req.Model
-	if model == "" {
-		model = p.Model
-	}
-
-	body := p.buildRequestBody(req, model, true)
+	params := p.buildParams(req)
+	stream := p.client.Messages.NewStreaming(ctx, params)
 
 	var thinking, content strings.Builder
 	var usage TurnUsage
 	var toolCalls []ToolCall
 	var currentTool *ToolCall
 	var toolInput strings.Builder
-	err := p.postAnthropicSSE(ctx, body, func(eventType string, data []byte) error {
-		switch eventType {
-		case "message_start":
-			var evt struct {
-				Message struct {
-					Usage struct {
-						InputTokens int `json:"input_tokens"`
-					} `json:"usage"`
-				} `json:"message"`
+
+	for stream.Next() {
+		event := stream.Current()
+		switch variant := event.AsAny().(type) {
+		case anthropic.MessageStartEvent:
+			usage.InputTokens = int(variant.Message.Usage.InputTokens)
+		case anthropic.MessageDeltaEvent:
+			if variant.Usage.OutputTokens > 0 {
+				usage.OutputTokens = int(variant.Usage.OutputTokens)
 			}
-			if err := json.Unmarshal(data, &evt); err == nil {
-				usage.InputTokens = evt.Message.Usage.InputTokens
-			}
-		case "message_delta":
-			var evt struct {
-				Usage struct {
-					OutputTokens int `json:"output_tokens"`
-				} `json:"usage"`
-			}
-			if err := json.Unmarshal(data, &evt); err == nil && evt.Usage.OutputTokens > 0 {
-				usage.OutputTokens = evt.Usage.OutputTokens
-			}
-		case "content_block_start":
-			var evt struct {
-				ContentBlock anthropicToolUseBlock `json:"content_block"`
-			}
-			if err := json.Unmarshal(data, &evt); err == nil && evt.ContentBlock.Type == "tool_use" {
+		case anthropic.ContentBlockStartEvent:
+			if variant.ContentBlock.Type == "tool_use" {
 				currentTool = &ToolCall{
-					ID:   evt.ContentBlock.ID,
-					Name: evt.ContentBlock.Name,
+					ID:   variant.ContentBlock.ID,
+					Name: variant.ContentBlock.Name,
 				}
 				toolInput.Reset()
-				if evt.ContentBlock.Input != nil {
-					raw, _ := json.Marshal(evt.ContentBlock.Input)
+				if variant.ContentBlock.Input != nil {
+					raw, _ := json.Marshal(variant.ContentBlock.Input)
 					toolInput.Write(raw)
 				}
 			}
-		case "content_block_delta":
-			var evt anthropicDeltaEvent
-			if err := json.Unmarshal(data, &evt); err != nil {
-				return nil
-			}
-			switch evt.Delta.Type {
+		case anthropic.ContentBlockDeltaEvent:
+			delta := variant.Delta
+			switch delta.Type {
 			case "thinking_delta":
-				if evt.Delta.Thinking != "" {
-					thinking.WriteString(evt.Delta.Thinking)
-					req.Stream.emitThinking(evt.Delta.Thinking)
+				if delta.Thinking != "" {
+					thinking.WriteString(delta.Thinking)
+					req.Stream.emitThinking(delta.Thinking)
 				}
 			case "text_delta":
-				if evt.Delta.Text != "" {
-					content.WriteString(evt.Delta.Text)
-					req.Stream.emitContent(evt.Delta.Text)
+				if delta.Text != "" {
+					content.WriteString(delta.Text)
+					req.Stream.emitContent(delta.Text)
 				}
 			case "input_json_delta":
-				if evt.Delta.PartialJSON != "" {
-					toolInput.WriteString(evt.Delta.PartialJSON)
+				if delta.PartialJSON != "" {
+					toolInput.WriteString(delta.PartialJSON)
 				}
 			}
-		case "content_block_stop":
+		case anthropic.ContentBlockStopEvent:
 			if currentTool != nil {
 				args := json.RawMessage(toolInput.String())
 				if len(args) == 0 {
@@ -185,9 +171,8 @@ func (p *Anthropic) completeStream(ctx context.Context, req TurnRequest) (TurnRe
 				currentTool = nil
 			}
 		}
-		return nil
-	})
-	if err != nil {
+	}
+	if err := stream.Err(); err != nil {
 		return TurnResult{}, err
 	}
 
@@ -208,120 +193,45 @@ func (p *Anthropic) completeStream(ctx context.Context, req TurnRequest) (TurnRe
 	return result, nil
 }
 
-type anthropicDelta struct {
-	Type        string `json:"type"`
-	Text        string `json:"text"`
-	Thinking    string `json:"thinking"`
-	PartialJSON string `json:"partial_json"`
-}
-
-type anthropicDeltaEvent struct {
-	Delta anthropicDelta `json:"delta"`
-}
-
-func (p *Anthropic) postAnthropicSSE(ctx context.Context, body map[string]any, onEvent func(eventType string, data []byte) error) error {
-	payload, err := json.Marshal(body)
-	if err != nil {
-		return fmt.Errorf("encode request: %w", err)
+func (p *Anthropic) buildParams(req TurnRequest) anthropic.MessageNewParams {
+	model := req.Model
+	if model == "" {
+		model = p.Model
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, p.apiURL(), bytes.NewReader(payload))
-	if err != nil {
-		return fmt.Errorf("build request: %w", err)
-	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Accept", "text/event-stream")
-	for key, value := range p.requestHeaders() {
-		req.Header.Set(key, value)
-	}
-
-	resp, err := p.client.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		raw, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
-		return fmt.Errorf("upstream %s: %s", resp.Status, string(bytes.TrimSpace(raw)))
-	}
-
-	scanner := bufio.NewScanner(resp.Body)
-	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
-	var eventType string
-	for scanner.Scan() {
-		line := scanner.Text()
-		if strings.HasPrefix(line, "event:") {
-			eventType = strings.TrimSpace(strings.TrimPrefix(line, "event:"))
-			continue
-		}
-		if !strings.HasPrefix(line, "data:") {
-			continue
-		}
-		data := strings.TrimSpace(strings.TrimPrefix(line, "data:"))
-		if data == "" {
-			continue
-		}
-		if err := onEvent(eventType, []byte(data)); err != nil {
-			return err
-		}
-	}
-	if err := scanner.Err(); err != nil {
-		return fmt.Errorf("read stream: %w", err)
-	}
-	return nil
-}
-
-func (p *Anthropic) buildRequestBody(req TurnRequest, model string, stream bool) map[string]any {
-	body := map[string]any{
-		"model":       model,
-		"max_tokens":  p.MaxTokens,
-		"temperature": p.Temperature,
-		"top_p":       p.TopP,
-		"messages":    AnthropicMessages(BuildMessages(req)),
-	}
-	if stream {
-		body["stream"] = true
+	params := anthropic.MessageNewParams{
+		Model:      anthropic.Model(model),
+		MaxTokens:  int64(p.MaxTokens),
+		Messages:   anthropicMessages(BuildMessages(req)),
+		Temperature: anthropic.Float(p.Temperature),
+		TopP:        anthropic.Float(p.TopP),
 	}
 	if strings.TrimSpace(req.SystemPrompt) != "" {
-		body["system"] = req.SystemPrompt
+		params.System = []anthropic.TextBlockParam{{Text: req.SystemPrompt}}
 	}
-	if tools := AnthropicTools(req.Tools); len(tools) > 0 {
-		body["tools"] = tools
+	if tools := anthropicTools(req.Tools); len(tools) > 0 {
+		params.Tools = tools
 	}
-	applyAnthropicThinking(body, req.Thinking)
-	return body
+	applyAnthropicThinkingParams(&params, req.Thinking)
+	return params
 }
 
-func applyAnthropicThinking(body map[string]any, thinking ThinkingConfig) {
+func applyAnthropicThinkingParams(params *anthropic.MessageNewParams, thinking ThinkingConfig) {
 	if !thinking.Enabled {
 		return
 	}
 	if thinking.Adaptive {
-		body["thinking"] = map[string]any{"type": "adaptive"}
+		params.Thinking = anthropic.ThinkingConfigParamUnion{
+			OfAdaptive: &anthropic.ThinkingConfigAdaptiveParam{},
+		}
 		if thinking.AdaptiveEffort != "" {
-			body["output_config"] = map[string]any{"effort": thinking.AdaptiveEffort}
+			params.OutputConfig = anthropic.OutputConfigParam{
+				Effort: anthropic.OutputConfigEffort(thinking.AdaptiveEffort),
+			}
 		}
 		return
 	}
 	if thinking.BudgetTokens > 0 {
-		body["thinking"] = map[string]any{
-			"type":          "enabled",
-			"budget_tokens": thinking.BudgetTokens,
-		}
+		params.Thinking = anthropic.ThinkingConfigParamOfEnabled(int64(thinking.BudgetTokens))
 	}
-}
-
-func (p *Anthropic) requestHeaders() map[string]string {
-	headers := make(map[string]string, len(p.Headers)+2)
-	for key, value := range p.Headers {
-		headers[key] = value
-	}
-	if headers["x-api-key"] == "" {
-		headers["x-api-key"] = p.APIKey
-	}
-	if headers["anthropic-version"] == "" {
-		headers["anthropic-version"] = anthropicVersion
-	}
-	return headers
 }

@@ -18,7 +18,7 @@ func TestOpenAICompatibleCompleteToolCalls(t *testing.T) {
 		require.True(t, ok)
 		require.Len(t, tools, 1)
 
-		_ = json.NewEncoder(w).Encode(map[string]any{
+		writeJSONResponse(w, map[string]any{
 			"choices": []map[string]any{{
 				"finish_reason": "tool_calls",
 				"message": map[string]any{

@@ -9,7 +9,9 @@ require (
 	charm.land/bubbletea/v2 v2.0.7
 	charm.land/glamour/v2 v2.0.1
 	charm.land/lipgloss/v2 v2.0.4
+	github.com/anthropics/anthropic-sdk-go v1.50.1
 	github.com/go-git/go-git/v5 v5.19.1
+	github.com/openai/openai-go/v3 v3.39.0
 	github.com/sergi/go-diff v1.3.2-0.20230802210424-5b0b94c5c0d3
 	github.com/spf13/cobra v1.10.2
 	github.com/stretchr/testify v1.11.1
@@ -18,14 +20,13 @@ require (
 )
 
 require (
-	charm.land/huh/v2 v2.0.3 // indirect
+	charm.land/huh/v2 v2.0.3
 	dario.cat/mergo v1.0.0 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/ProtonMail/go-crypto v1.1.6 // indirect
 	github.com/alecthomas/chroma/v2 v2.14.0 // indirect
 	github.com/aymerick/douceur v0.2.0 // indirect
 	github.com/catppuccin/go v0.2.0 // indirect
-	github.com/charmbracelet/harmonica v0.2.0 // indirect
 	github.com/charmbracelet/x/exp/ordered v0.1.0 // indirect
 	github.com/charmbracelet/x/exp/slice v0.0.0-20250327172914-2fdc97757edf // indirect
 	github.com/charmbracelet/x/exp/strings v0.0.0-20240722160745-212f7b056ed0 // indirect
@@ -45,6 +46,10 @@ require (
 	github.com/mitchellh/hashstructure/v2 v2.0.2 // indirect
 	github.com/pjbgf/sha1cd v0.6.0 // indirect
 	github.com/skeema/knownhosts v1.3.1 // indirect
+	github.com/tidwall/gjson v1.18.0 // indirect
+	github.com/tidwall/match v1.1.1 // indirect
+	github.com/tidwall/pretty v1.2.1 // indirect
+	github.com/tidwall/sjson v1.2.5 // indirect
 	github.com/xanzy/ssh-agent v0.3.3 // indirect
 	github.com/yuin/goldmark v1.7.8 // indirect
 	github.com/yuin/goldmark-emoji v1.0.5 // indirect
@@ -58,7 +63,7 @@ require (
 	github.com/charmbracelet/colorprofile v0.4.3 // indirect
 	github.com/charmbracelet/ultraviolet v0.0.0-20260525132238-948f4557a654
 	github.com/charmbracelet/x/ansi v0.11.7
-	github.com/charmbracelet/x/term v0.2.2 // indirect
+	github.com/charmbracelet/x/term v0.2.2
 	github.com/charmbracelet/x/termios v0.1.1 // indirect
 	github.com/charmbracelet/x/windows v0.2.2 // indirect
 	github.com/clipperhouse/displaywidth v0.11.0 // indirect
@@ -78,3 +83,7 @@ require (
 	golang.org/x/text v0.38.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1
 )
+
+replace github.com/openai/openai-go/v3 => github.com/charmbracelet/openai-go/v3 v3.0.0-20260317175248-6723d0b464f1
+
+replace github.com/anthropics/anthropic-sdk-go => github.com/charmbracelet/anthropic-sdk-go v0.0.0-20260219224349-4d669338f204

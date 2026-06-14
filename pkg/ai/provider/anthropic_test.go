@@ -18,11 +18,16 @@ func TestAnthropicComplete(t *testing.T) {
 
 		var body map[string]any
 		require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
-		require.Equal(t, "sys", body["system"])
+		system, ok := body["system"].([]any)
+		require.True(t, ok)
+		require.Len(t, system, 1)
+		block, ok := system[0].(map[string]any)
+		require.True(t, ok)
+		require.Equal(t, "sys", block["text"])
 		require.Equal(t, 0.4, body["temperature"])
 		require.Equal(t, 1.0, body["top_p"])
 
-		_ = json.NewEncoder(w).Encode(map[string]any{
+		writeJSONResponse(w, map[string]any{
 			"content": []map[string]string{{"type": "text", "text": "hello from claude"}},
 		})
 	}))
@@ -57,7 +62,7 @@ func TestAnthropicCompleteThinkingBudget(t *testing.T) {
 		require.Equal(t, "enabled", thinking["type"])
 		require.Equal(t, float64(4096), thinking["budget_tokens"])
 
-		_ = json.NewEncoder(w).Encode(map[string]any{
+		writeJSONResponse(w, map[string]any{
 			"content": []map[string]string{{"type": "text", "text": "done"}},
 		})
 	}))
@@ -90,7 +95,7 @@ func TestAnthropicCompleteAdaptiveThinking(t *testing.T) {
 		require.True(t, ok)
 		require.Equal(t, "high", output["effort"])
 
-		_ = json.NewEncoder(w).Encode(map[string]any{
+		writeJSONResponse(w, map[string]any{
 			"content": []map[string]string{{"type": "text", "text": "done"}},
 		})
 	}))
@@ -115,7 +120,7 @@ func TestAnthropicCompleteAdaptiveThinking(t *testing.T) {
 
 func TestAnthropicCompleteThinking(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_ = json.NewEncoder(w).Encode(map[string]any{
+		writeJSONResponse(w, map[string]any{
 			"content": []map[string]string{
 				{"type": "thinking", "thinking": "let me think"},
 				{"type": "text", "text": "final answer"},

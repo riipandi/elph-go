@@ -23,7 +23,7 @@ func TestOpenAICompatibleComplete(t *testing.T) {
 		require.Equal(t, 0.7, body["temperature"])
 		require.Equal(t, 0.95, body["top_p"])
 
-		_ = json.NewEncoder(w).Encode(map[string]any{
+		writeJSONResponse(w, map[string]any{
 			"choices": []map[string]any{{
 				"message": map[string]string{"content": "hello from gpt"},
 			}},
@@ -57,7 +57,7 @@ func TestOpenAICompatibleCompleteReasoningEffort(t *testing.T) {
 		require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
 		require.Equal(t, "medium", body["reasoning_effort"])
 
-		_ = json.NewEncoder(w).Encode(map[string]any{
+		writeJSONResponse(w, map[string]any{
 			"choices": []map[string]any{{
 				"message": map[string]string{"content": "done"},
 			}},
@@ -90,7 +90,7 @@ func TestOpenAICompatibleCompleteOpenRouterReasoning(t *testing.T) {
 		require.True(t, ok)
 		require.Equal(t, "high", reasoning["effort"])
 
-		_ = json.NewEncoder(w).Encode(map[string]any{
+		writeJSONResponse(w, map[string]any{
 			"choices": []map[string]any{{
 				"message": map[string]string{"content": "done"},
 			}},
@@ -118,7 +118,7 @@ func TestOpenAICompatibleCompleteOpenRouterReasoning(t *testing.T) {
 
 func TestOpenAICompatibleCompleteReasoning(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_ = json.NewEncoder(w).Encode(map[string]any{
+		writeJSONResponse(w, map[string]any{
 			"choices": []map[string]any{{
 				"message": map[string]string{
 					"reasoning_content": "thinking step",
@@ -147,7 +147,7 @@ func TestOpenAICompatibleStreamThinking(t *testing.T) {
 		require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
 		require.Equal(t, true, body["stream"])
 
-		w.Header().Set("Content-Type", "text/event-stream")
+		writeEventStreamResponse(w)
 		_, _ = fmt.Fprintf(w, "data: %s\n\n", `{"choices":[{"delta":{"reasoning_content":"think "}}]}`)
 		_, _ = fmt.Fprintf(w, "data: %s\n\n", `{"choices":[{"delta":{"content":"answer"}}]}`)
 		_, _ = fmt.Fprintf(w, "data: [DONE]\n\n")

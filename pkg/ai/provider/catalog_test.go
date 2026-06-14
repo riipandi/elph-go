@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -13,7 +12,7 @@ import (
 func TestNewProviderOpenAI(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		require.Equal(t, "Bearer secret", r.Header.Get("Authorization"))
-		_ = json.NewEncoder(w).Encode(map[string]any{
+		writeJSONResponse(w, map[string]any{
 			"choices": []map[string]any{{
 				"message": map[string]string{"content": "ok"},
 			}},

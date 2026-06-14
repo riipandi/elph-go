@@ -3,45 +3,96 @@ package provider
 import (
 	"encoding/json"
 	"strings"
+
+	"github.com/openai/openai-go/v3"
+	"github.com/openai/openai-go/v3/packages/respjson"
+	"github.com/openai/openai-go/v3/shared"
 )
 
-type openAIMessage struct {
-	Role             string              `json:"role"`
-	Content          string              `json:"content"`
-	ReasoningContent string              `json:"reasoning_content"`
-	ToolCalls        []openAIToolCallRef `json:"tool_calls"`
-}
-
-type openAIToolCallRef struct {
-	ID       string `json:"id"`
-	Type     string `json:"type"`
-	Function struct {
-		Name      string `json:"name"`
-		Arguments string `json:"arguments"`
-	} `json:"function"`
-}
-
-type openAIChoice struct {
-	Message      openAIMessage `json:"message"`
-	FinishReason string        `json:"finish_reason"`
-}
-
-func parseOpenAIChoice(choice openAIChoice) TurnResult {
-	result := TurnResult{
-		Thinking: strings.TrimSpace(choice.Message.ReasoningContent),
-		Content:  strings.TrimSpace(choice.Message.Content),
+func openAIChatTools(tools []ToolDefinition) []openai.ChatCompletionToolUnionParam {
+	if len(tools) == 0 {
+		return nil
 	}
-	for _, call := range choice.Message.ToolCalls {
-		if strings.TrimSpace(call.ID) == "" || strings.TrimSpace(call.Function.Name) == "" {
+	out := make([]openai.ChatCompletionToolUnionParam, 0, len(tools))
+	for _, tool := range tools {
+		params := shared.FunctionParameters{}
+		for key, value := range tool.Parameters {
+			params[key] = value
+		}
+		out = append(out, openai.ChatCompletionFunctionTool(shared.FunctionDefinitionParam{
+			Name:        tool.Name,
+			Description: openai.String(tool.Description),
+			Parameters:  params,
+		}))
+	}
+	return out
+}
+
+func openAIChatMessages(systemPrompt string, messages []ChatMessage, thinking ThinkingConfig, compat Compat) []openai.ChatCompletionMessageParamUnion {
+	capacity := len(messages)
+	if strings.TrimSpace(systemPrompt) != "" {
+		capacity++
+	}
+	out := make([]openai.ChatCompletionMessageParamUnion, 0, capacity)
+	if strings.TrimSpace(systemPrompt) != "" {
+		if thinking.Enabled && compat.supportsDeveloperRole() {
+			out = append(out, openai.DeveloperMessage(systemPrompt))
+		} else {
+			out = append(out, openai.SystemMessage(systemPrompt))
+		}
+	}
+	for _, msg := range messages {
+		switch msg.Role {
+		case "assistant":
+			asst := openai.ChatCompletionAssistantMessageParam{}
+			if strings.TrimSpace(msg.Content) != "" {
+				asst.Content = openai.ChatCompletionAssistantMessageParamContentUnion{
+					OfString: openai.String(msg.Content),
+				}
+			}
+			for _, call := range msg.ToolCalls {
+				args := string(call.Arguments)
+				if args == "" {
+					args = "{}"
+				}
+				asst.ToolCalls = append(asst.ToolCalls, openai.ChatCompletionMessageToolCallUnionParam{
+					OfFunction: &openai.ChatCompletionMessageFunctionToolCallParam{
+						ID: call.ID,
+						Function: openai.ChatCompletionMessageFunctionToolCallFunctionParam{
+							Name:      call.Name,
+							Arguments: args,
+						},
+					},
+				})
+			}
+			out = append(out, openai.ChatCompletionMessageParamUnion{OfAssistant: &asst})
+		case "tool":
+			out = append(out, openai.ToolMessage(msg.Content, msg.ToolCallID))
+		default:
+			out = append(out, openai.UserMessage(msg.Content))
+		}
+	}
+	return out
+}
+
+func turnResultFromChatChoice(choice openai.ChatCompletionChoice) TurnResult {
+	message := choice.Message
+	result := TurnResult{
+		Thinking: strings.TrimSpace(openAIReasoningText(message.JSON.ExtraFields, message.RawJSON())),
+		Content:  strings.TrimSpace(message.Content),
+	}
+	for _, call := range message.ToolCalls {
+		fn := call.AsFunction()
+		if strings.TrimSpace(fn.ID) == "" || strings.TrimSpace(fn.Function.Name) == "" {
 			continue
 		}
-		args := json.RawMessage(call.Function.Arguments)
+		args := json.RawMessage(fn.Function.Arguments)
 		if len(args) == 0 {
 			args = json.RawMessage("{}")
 		}
 		result.ToolCalls = append(result.ToolCalls, ToolCall{
-			ID:        call.ID,
-			Name:      call.Function.Name,
+			ID:        fn.ID,
+			Name:      fn.Function.Name,
 			Arguments: args,
 		})
 	}
@@ -62,14 +113,50 @@ func openAIResultValid(result TurnResult) bool {
 	return result.Thinking != "" || result.Content != "" || len(result.ToolCalls) > 0
 }
 
-type openAIStreamToolCall struct {
-	Index    int    `json:"index"`
-	ID       string `json:"id"`
-	Type     string `json:"type"`
-	Function struct {
-		Name      string `json:"name"`
-		Arguments string `json:"arguments"`
-	} `json:"function"`
+func extraFieldString(fields map[string]respjson.Field, key string) string {
+	if len(fields) == 0 {
+		return ""
+	}
+	field, ok := fields[key]
+	if !ok || !field.Valid() {
+		return ""
+	}
+	return decodeJSONString(field.Raw())
+}
+
+func openAIReasoningText(extra map[string]respjson.Field, rawJSON string) string {
+	if text := extraFieldString(extra, "reasoning_content"); text != "" {
+		return text
+	}
+	if text := extraFieldString(extra, "reasoning"); text != "" {
+		return text
+	}
+	var vendor struct {
+		ReasoningContent string `json:"reasoning_content"`
+		Reasoning        string `json:"reasoning"`
+	}
+	if err := json.Unmarshal([]byte(rawJSON), &vendor); err != nil {
+		return ""
+	}
+	if vendor.ReasoningContent != "" {
+		return vendor.ReasoningContent
+	}
+	return vendor.Reasoning
+}
+
+func openAIStreamReasoningText(extra map[string]respjson.Field, rawJSON string) string {
+	return openAIReasoningText(extra, rawJSON)
+}
+
+func decodeJSONString(raw string) string {
+	if raw == "" || raw == "null" {
+		return ""
+	}
+	var value string
+	if err := json.Unmarshal([]byte(raw), &value); err == nil {
+		return value
+	}
+	return raw
 }
 
 type openAIStreamToolAccumulator struct {
@@ -80,12 +167,13 @@ func newOpenAIStreamToolAccumulator() *openAIStreamToolAccumulator {
 	return &openAIStreamToolAccumulator{calls: make(map[int]*ToolCall)}
 }
 
-func (a *openAIStreamToolAccumulator) absorb(delta []openAIStreamToolCall) {
+func (a *openAIStreamToolAccumulator) absorbSDK(delta []openai.ChatCompletionChunkChoiceDeltaToolCall) {
 	for _, item := range delta {
-		call := a.calls[item.Index]
+		idx := int(item.Index)
+		call := a.calls[idx]
 		if call == nil {
 			call = &ToolCall{Arguments: json.RawMessage("{}")}
-			a.calls[item.Index] = call
+			a.calls[idx] = call
 		}
 		if item.ID != "" {
 			call.ID = item.ID

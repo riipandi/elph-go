@@ -2,72 +2,120 @@ package provider
 
 import (
 	"encoding/json"
+	"strings"
+
+	"github.com/anthropics/anthropic-sdk-go"
 )
 
-type anthropicToolUseBlock struct {
-	Type  string         `json:"type"`
-	ID    string         `json:"id"`
-	Name  string         `json:"name"`
-	Input map[string]any `json:"input"`
+func anthropicTools(tools []ToolDefinition) []anthropic.ToolUnionParam {
+	if len(tools) == 0 {
+		return nil
+	}
+	out := make([]anthropic.ToolUnionParam, 0, len(tools))
+	for _, tool := range tools {
+		variant := anthropic.ToolUnionParamOfTool(anthropicToolInputSchema(tool.Parameters), tool.Name)
+		if variant.OfTool != nil && tool.Description != "" {
+			variant.OfTool.Description = anthropic.String(tool.Description)
+		}
+		out = append(out, variant)
+	}
+	return out
 }
 
-type anthropicResponse struct {
-	Content    []json.RawMessage `json:"content"`
-	StopReason string            `json:"stop_reason"`
-}
-
-func parseAnthropicResponse(raw anthropicResponse) TurnResult {
-	var result TurnResult
-	for _, blockRaw := range raw.Content {
-		var kind struct {
-			Type string `json:"type"`
-		}
-		if err := json.Unmarshal(blockRaw, &kind); err != nil {
-			continue
-		}
-		switch kind.Type {
-		case "thinking":
-			var block struct {
-				Thinking string `json:"thinking"`
+func anthropicToolInputSchema(params map[string]any) anthropic.ToolInputSchemaParam {
+	schema := anthropic.ToolInputSchemaParam{
+		ExtraFields: make(map[string]any),
+	}
+	if props, ok := params["properties"]; ok {
+		schema.Properties = props
+	}
+	if req, ok := params["required"]; ok {
+		switch v := req.(type) {
+		case []string:
+			schema.Required = v
+		case []any:
+			for _, item := range v {
+				if s, ok := item.(string); ok {
+					schema.Required = append(schema.Required, s)
+				}
 			}
-			_ = json.Unmarshal(blockRaw, &block)
-			if block.Thinking != "" {
+		}
+	}
+	for key, value := range params {
+		switch key {
+		case "properties", "required", "type":
+			continue
+		default:
+			schema.ExtraFields[key] = value
+		}
+	}
+	return schema
+}
+
+func anthropicMessages(messages []ChatMessage) []anthropic.MessageParam {
+	out := make([]anthropic.MessageParam, 0, len(messages))
+	for _, msg := range messages {
+		switch msg.Role {
+		case "assistant":
+			blocks := make([]anthropic.ContentBlockParamUnion, 0, 1+len(msg.ToolCalls))
+			if strings.TrimSpace(msg.Content) != "" {
+				blocks = append(blocks, anthropic.NewTextBlock(msg.Content))
+			}
+			for _, call := range msg.ToolCalls {
+				var input map[string]any
+				_ = json.Unmarshal(call.Arguments, &input)
+				if input == nil {
+					input = map[string]any{}
+				}
+				blocks = append(blocks, anthropic.NewToolUseBlock(call.ID, input, call.Name))
+			}
+			out = append(out, anthropic.NewAssistantMessage(blocks...))
+		case "tool":
+			out = append(out, anthropic.NewUserMessage(
+				anthropic.NewToolResultBlock(msg.ToolCallID, msg.Content, false),
+			))
+		default:
+			out = append(out, anthropic.NewUserMessage(anthropic.NewTextBlock(msg.Content)))
+		}
+	}
+	return out
+}
+
+func turnResultFromAnthropicMessage(msg *anthropic.Message) TurnResult {
+	var result TurnResult
+	for _, block := range msg.Content {
+		switch variant := block.AsAny().(type) {
+		case anthropic.ThinkingBlock:
+			if variant.Thinking != "" {
 				if result.Thinking != "" {
 					result.Thinking += "\n"
 				}
-				result.Thinking += block.Thinking
+				result.Thinking += variant.Thinking
 			}
-		case "text":
-			var block struct {
-				Text string `json:"text"`
-			}
-			_ = json.Unmarshal(blockRaw, &block)
-			if block.Text != "" {
+		case anthropic.TextBlock:
+			if variant.Text != "" {
 				if result.Content != "" {
 					result.Content += "\n"
 				}
-				result.Content += block.Text
+				result.Content += variant.Text
 			}
-		case "tool_use":
-			var block anthropicToolUseBlock
-			_ = json.Unmarshal(blockRaw, &block)
-			if block.ID == "" || block.Name == "" {
+		case anthropic.ToolUseBlock:
+			if variant.ID == "" || variant.Name == "" {
 				continue
 			}
-			input := block.Input
-			if input == nil {
-				input = map[string]any{}
+			args := variant.Input
+			if len(args) == 0 {
+				args = json.RawMessage("{}")
 			}
-			args, _ := json.Marshal(input)
 			result.ToolCalls = append(result.ToolCalls, ToolCall{
-				ID:        block.ID,
-				Name:      block.Name,
+				ID:        variant.ID,
+				Name:      variant.Name,
 				Arguments: args,
 			})
 		}
 	}
-	switch raw.StopReason {
-	case "tool_use":
+	switch msg.StopReason {
+	case anthropic.StopReasonToolUse:
 		result.StopReason = StopReasonToolUse
 	default:
 		if len(result.ToolCalls) > 0 {

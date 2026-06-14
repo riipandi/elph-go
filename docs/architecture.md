@@ -46,14 +46,14 @@ elph/
 
 ## `pkg/` packages
 
-| Package       | Responsibility                                                                                                 |
-|---------------|----------------------------------------------------------------------------------------------------------------|
-| `ai`          | Facade: `LoadProviders`, `ResolveProvider`                                                                     |
-| `ai/provider` | Provider catalog, OpenAI/Anthropic adapters, models.dev sync/preview, `TrimCatalogForRuntime`, thinking/compat |
-| `ai/utils`    | HTTP and stream helpers                                                                                        |
-| `core/agent`  | Turn loop, events, text-markup tool parser, native tool loop, history/tool truncation limits                   |
-| `core/fuzzy`  | Subsequence fuzzy matching                                                                                     |
-| `tool`        | Built-in tool catalog, provider schemas, `IsProviderExposed`                                                   |
+| Package       | Responsibility                                                                                                                                                                                                                                     |
+|---------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `ai`          | Facade: `LoadProviders`, `ResolveProvider`                                                                                                                                                                                                         |
+| `ai/provider` | Provider catalog, OpenAI ([openai-go](https://github.com/charmbracelet/openai-go)) / Anthropic ([anthropic-sdk-go](https://github.com/charmbracelet/anthropic-sdk-go)) adapters, models.dev sync/preview, `TrimCatalogForRuntime`, thinking/compat |
+| `ai/utils`    | HTTP and stream helpers                                                                                                                                                                                                                            |
+| `core/agent`  | Turn loop, events, text-markup tool parser, native tool loop, history/tool truncation limits                                                                                                                                                       |
+| `core/fuzzy`  | Subsequence fuzzy matching                                                                                                                                                                                                                         |
+| `tool`        | Built-in tool catalog, provider schemas, `IsProviderExposed`                                                                                                                                                                                       |
 
 ## Runtime data flow
 

@@ -2,11 +2,12 @@ package provider
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"net/http"
 	"strings"
 
+	"github.com/openai/openai-go/v3"
+	"github.com/openai/openai-go/v3/option"
+	"github.com/openai/openai-go/v3/shared"
 	"github.com/riipandi/elph/pkg/ai/utils"
 )
 
@@ -25,7 +26,7 @@ type OpenAIOptions struct {
 	TopP         float64
 }
 
-// OpenAICompatible calls an OpenAI-style chat completions endpoint.
+// OpenAICompatible calls an OpenAI-style chat completions endpoint via openai-go.
 type OpenAICompatible struct {
 	IDName       string
 	APIKey       string
@@ -36,7 +37,7 @@ type OpenAICompatible struct {
 	MaxTokens    int
 	Temperature  float64
 	TopP         float64
-	client       *http.Client
+	client       openai.Client
 }
 
 // NewOpenAICompatible builds a provider for a compatible HTTP API.
@@ -51,6 +52,21 @@ func NewOpenAICompatible(opts OpenAIOptions) *OpenAICompatible {
 	if maxTokens == 0 {
 		maxTokens = defaultMaxTokens
 	}
+
+	clientOpts := []option.RequestOption{
+		option.WithBaseURL(baseURL),
+		option.WithHTTPClient(utils.NewHTTPClient()),
+	}
+	if opts.APIKey != "" {
+		clientOpts = append(clientOpts, option.WithAPIKey(opts.APIKey))
+	}
+	for key, value := range opts.Headers {
+		clientOpts = append(clientOpts, option.WithHeader(key, value))
+	}
+	if opts.AuthHeader && opts.APIKey == "" && !hasHeader(opts.Headers, "Authorization") {
+		clientOpts = append(clientOpts, option.WithHeader("Authorization", "Bearer "))
+	}
+
 	return &OpenAICompatible{
 		IDName:       opts.ID,
 		APIKey:       opts.APIKey,
@@ -61,8 +77,17 @@ func NewOpenAICompatible(opts OpenAIOptions) *OpenAICompatible {
 		MaxTokens:    maxTokens,
 		Temperature:  opts.Temperature,
 		TopP:         opts.TopP,
-		client:       utils.NewHTTPClient(),
+		client:       openai.NewClient(clientOpts...),
 	}
+}
+
+func hasHeader(headers map[string]string, key string) bool {
+	for k := range headers {
+		if strings.EqualFold(k, key) {
+			return true
+		}
+	}
+	return false
 }
 
 func (p *OpenAICompatible) ID() string {
@@ -83,25 +108,17 @@ func (p *OpenAICompatible) Complete(ctx context.Context, req TurnRequest) (TurnR
 }
 
 func (p *OpenAICompatible) completeOnce(ctx context.Context, req TurnRequest) (TurnResult, error) {
-	type response struct {
-		Choices []openAIChoice `json:"choices"`
-	}
-
-	body, err := p.buildRequest(req, false)
+	params := p.buildParams(req, false)
+	resp, err := p.client.Chat.Completions.New(ctx, params)
 	if err != nil {
 		return TurnResult{}, err
 	}
-
-	var out response
-	url := p.BaseURL + "/chat/completions"
-	if err := utils.PostJSON(ctx, p.client, url, p.requestHeaders(), body, &out); err != nil {
-		return TurnResult{}, err
-	}
-	if len(out.Choices) == 0 {
+	if len(resp.Choices) == 0 {
 		return TurnResult{}, fmt.Errorf("%s: empty response", p.ID())
 	}
 
-	result := parseOpenAIChoice(out.Choices[0])
+	result := turnResultFromChatChoice(resp.Choices[0])
+	result.Usage = turnUsageFromCompletion(resp.Usage)
 	if !openAIResultValid(result) {
 		return TurnResult{}, fmt.Errorf("%s: empty response", p.ID())
 	}
@@ -109,50 +126,41 @@ func (p *OpenAICompatible) completeOnce(ctx context.Context, req TurnRequest) (T
 }
 
 func (p *OpenAICompatible) completeStream(ctx context.Context, req TurnRequest) (TurnResult, error) {
-	body, err := p.buildRequest(req, true)
-	if err != nil {
-		return TurnResult{}, err
-	}
+	params := p.buildParams(req, true)
+	stream := p.client.Chat.Completions.NewStreaming(ctx, params)
 
 	var thinking, content strings.Builder
 	var usage TurnUsage
 	toolAcc := newOpenAIStreamToolAccumulator()
 	var finishReason string
-	err = utils.PostSSE(ctx, p.client, p.BaseURL+"/chat/completions", p.requestHeaders(), body, func(data []byte) error {
-		var chunk openAIStreamChunk
-		if err := json.Unmarshal(data, &chunk); err != nil {
-			return nil
-		}
-		if chunk.Usage != nil {
-			usage.InputTokens = chunk.Usage.PromptTokens
-			usage.OutputTokens = chunk.Usage.CompletionTokens
+
+	for stream.Next() {
+		chunk := stream.Current()
+		if chunk.Usage.JSON.TotalTokens.Valid() {
+			usage.InputTokens = int(chunk.Usage.PromptTokens)
+			usage.OutputTokens = int(chunk.Usage.CompletionTokens)
 		}
 		if len(chunk.Choices) == 0 {
-			return nil
+			continue
 		}
 		choice := chunk.Choices[0]
 		if choice.FinishReason != "" {
 			finishReason = choice.FinishReason
 		}
 		delta := choice.Delta
-		if delta.ReasoningContent != "" {
-			thinking.WriteString(delta.ReasoningContent)
-			req.Stream.emitThinking(delta.ReasoningContent)
-		}
-		if delta.Reasoning != "" {
-			thinking.WriteString(delta.Reasoning)
-			req.Stream.emitThinking(delta.Reasoning)
+		if rc := openAIStreamReasoningText(delta.JSON.ExtraFields, delta.RawJSON()); rc != "" {
+			thinking.WriteString(rc)
+			req.Stream.emitThinking(rc)
 		}
 		if delta.Content != "" {
 			content.WriteString(delta.Content)
 			req.Stream.emitContent(delta.Content)
 		}
 		if len(delta.ToolCalls) > 0 {
-			toolAcc.absorb(delta.ToolCalls)
+			toolAcc.absorbSDK(delta.ToolCalls)
 		}
-		return nil
-	})
-	if err != nil {
+	}
+	if err := stream.Err(); err != nil {
 		return TurnResult{}, err
 	}
 
@@ -173,86 +181,75 @@ func (p *OpenAICompatible) completeStream(ctx context.Context, req TurnRequest) 
 	return result, nil
 }
 
-type openAIStreamUsage struct {
-	PromptTokens     int `json:"prompt_tokens"`
-	CompletionTokens int `json:"completion_tokens"`
-}
-
-type openAIStreamDelta struct {
-	Content          string                 `json:"content"`
-	ReasoningContent string                 `json:"reasoning_content"`
-	Reasoning        string                 `json:"reasoning"`
-	ToolCalls        []openAIStreamToolCall `json:"tool_calls"`
-}
-
-type openAIStreamChoice struct {
-	Delta        openAIStreamDelta `json:"delta"`
-	FinishReason string            `json:"finish_reason"`
-}
-
-type openAIStreamChunk struct {
-	Choices []openAIStreamChoice `json:"choices"`
-	Usage   *openAIStreamUsage   `json:"usage,omitempty"`
-}
-
-func (p *OpenAICompatible) buildRequest(req TurnRequest, stream bool) (map[string]any, error) {
+func (p *OpenAICompatible) buildParams(req TurnRequest, stream bool) openai.ChatCompletionNewParams {
 	model := req.Model
 	if model == "" {
 		model = p.DefaultModel
 	}
 
-	body := map[string]any{
-		"model":       model,
-		"messages":    OpenAIMessages(req.SystemPrompt, BuildMessages(req), req.Thinking, req.Compat),
-		"temperature": p.Temperature,
-		"top_p":       p.TopP,
+	params := openai.ChatCompletionNewParams{
+		Model:    shared.ChatModel(model),
+		Messages: openAIChatMessages(req.SystemPrompt, BuildMessages(req), req.Thinking, req.Compat),
 	}
+	if p.Temperature != 0 {
+		params.Temperature = openai.Float(p.Temperature)
+	}
+	if p.TopP != 0 {
+		params.TopP = openai.Float(p.TopP)
+	}
+
 	maxField := "max_tokens"
 	if req.Compat.MaxTokensField != "" {
 		maxField = req.Compat.MaxTokensField
 	}
 	if p.MaxTokens > 0 {
-		body[maxField] = p.MaxTokens
-	}
-	applyOpenAIThinking(body, req.Thinking, req.Compat)
-	if tools := OpenAITools(req.Tools); len(tools) > 0 {
-		body["tools"] = tools
-		body["tool_choice"] = "auto"
-	}
-	if stream {
-		body["stream"] = true
-		if req.Compat.supportsUsageInStreaming() {
-			body["stream_options"] = map[string]any{"include_usage": true}
+		switch maxField {
+		case "max_completion_tokens":
+			params.MaxCompletionTokens = openai.Int(int64(p.MaxTokens))
+		default:
+			params.MaxTokens = openai.Int(int64(p.MaxTokens))
 		}
 	}
-	return body, nil
+
+	applyOpenAIThinkingParams(&params, req.Thinking, req.Compat)
+
+	if tools := openAIChatTools(req.Tools); len(tools) > 0 {
+		params.Tools = tools
+		params.ToolChoice = openai.ChatCompletionToolChoiceOptionUnionParam{
+			OfAuto: openai.String(string(openai.ChatCompletionToolChoiceOptionAutoAuto)),
+		}
+	}
+	if stream && req.Compat.supportsUsageInStreaming() {
+		params.StreamOptions = openai.ChatCompletionStreamOptionsParam{
+			IncludeUsage: openai.Bool(true),
+		}
+	}
+	return params
 }
 
-func applyOpenAIThinking(body map[string]any, thinking ThinkingConfig, compat Compat) {
+func applyOpenAIThinkingParams(params *openai.ChatCompletionNewParams, thinking ThinkingConfig, compat Compat) {
 	if !thinking.Enabled {
 		return
 	}
 	switch thinking.ThinkingFormat {
 	case ThinkingFormatOpenRouter:
 		if thinking.ReasoningEffort != "" {
-			body["reasoning"] = map[string]any{"effort": thinking.ReasoningEffort}
+			params.SetExtraFields(map[string]any{
+				"reasoning": map[string]any{"effort": thinking.ReasoningEffort},
+			})
 		}
 	case ThinkingFormatQwen:
-		body["enable_thinking"] = thinking.EnableThinking
+		params.SetExtraFields(map[string]any{"enable_thinking": thinking.EnableThinking})
 	default:
 		if compat.supportsReasoningEffort() && thinking.ReasoningEffort != "" {
-			body["reasoning_effort"] = thinking.ReasoningEffort
+			params.ReasoningEffort = shared.ReasoningEffort(thinking.ReasoningEffort)
 		}
 	}
 }
 
-func (p *OpenAICompatible) requestHeaders() map[string]string {
-	headers := make(map[string]string, len(p.Headers)+1)
-	for key, value := range p.Headers {
-		headers[key] = value
+func turnUsageFromCompletion(usage openai.CompletionUsage) TurnUsage {
+	return TurnUsage{
+		InputTokens:  int(usage.PromptTokens),
+		OutputTokens: int(usage.CompletionTokens),
 	}
-	if p.AuthHeader || (p.APIKey != "" && headers["Authorization"] == "") {
-		headers["Authorization"] = "Bearer " + p.APIKey
-	}
-	return headers
 }

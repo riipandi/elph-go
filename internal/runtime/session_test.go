@@ -3,8 +3,8 @@ package runtime
 import (
 	"context"
 	"testing"
-	"time"
 
+	"github.com/riipandi/elph/pkg/ai/provider"
 	"github.com/riipandi/elph/pkg/core/agent"
 	"github.com/stretchr/testify/require"
 )
@@ -20,16 +20,33 @@ func TestNewSessionBuildsSystemPrompt(t *testing.T) {
 	require.Contains(t, s.SystemPrompt, "## Available Tools")
 }
 
+type stubProvider struct{}
+
+func (stubProvider) ID() string { return "stub" }
+
+func (stubProvider) Complete(ctx context.Context, req provider.TurnRequest) (provider.TurnResult, error) {
+	if req.Stream != nil {
+		if req.Stream.OnThinking != nil {
+			req.Stream.OnThinking("hidden-thought")
+		}
+		req.Stream.OnContent("stub reply")
+	}
+	return provider.TurnResult{Content: "stub reply", Thinking: "hidden-thought"}, nil
+}
+
 func TestSessionStartTurnStreamsEvents(t *testing.T) {
 	s := NewSession(t.TempDir())
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
+	s.Provider = stubProvider{}
+	ctx := context.Background()
 
 	var events []agent.Event
-	for evt := range s.StartTurn(ctx, "hello", true) { // placeholder when no API key
+	for evt := range s.StartTurn(ctx, "hello", true) {
 		events = append(events, evt)
 	}
 
-	require.NotEmpty(t, events)
+	require.GreaterOrEqual(t, len(events), 3)
+	require.Equal(t, agent.ActivityConnecting, events[0].Activity)
+	require.Equal(t, agent.ActivityThinking, events[1].Activity)
 	require.Equal(t, agent.EventTurnDone, events[len(events)-1].Kind)
+	require.Equal(t, "stub reply", events[len(events)-1].Response)
 }

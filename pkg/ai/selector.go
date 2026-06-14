@@ -3,8 +3,8 @@ package ai
 import (
 	"strings"
 
-	"github.com/riipandi/elph/internal/fuzzy"
 	"github.com/riipandi/elph/pkg/ai/provider"
+	"github.com/riipandi/elph/pkg/core/fuzzy"
 )
 
 // SelectorGroup is a provider bucket in the model picker.

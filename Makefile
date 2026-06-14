@@ -78,8 +78,8 @@ vet: ## Analyzes code for suspicious patterns
 # ─── Maintenance ─────────────────────────────────────────────────────────────
 
 prepare: ## Install required toolchain
-	$(GO) install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest
-	$(GO) install github.com/pressly/goose/v3/cmd/goose@latest
+	$(GO) install github.com/golangci/golangci-lint/v2/cmd/coding-agent/golangci-lint@latest
+	$(GO) install github.com/pressly/goose/v3/cmd/coding-agent/goose@latest
 	$(GO) install gotest.tools/gotestsum@latest
 
 deps: ## Download dependencies

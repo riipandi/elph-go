@@ -4,7 +4,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/riipandi/elph/internal/fuzzy"
+	"github.com/riipandi/elph/pkg/core/fuzzy"
 )
 
 const maxSuggestions = 8

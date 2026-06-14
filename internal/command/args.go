@@ -4,7 +4,7 @@ import (
 	"strings"
 
 	"github.com/riipandi/elph/internal/align"
-	"github.com/riipandi/elph/internal/fuzzy"
+	"github.com/riipandi/elph/pkg/core/fuzzy"
 )
 
 // ArgChoice describes one accepted argument for a slash command.

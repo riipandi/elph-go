@@ -1,7 +1,7 @@
 package command
 
 import (
-	"github.com/riipandi/elph/internal/fuzzy"
+	"github.com/riipandi/elph/pkg/core/fuzzy"
 )
 
 func commandScore(query string, cmd SlashCommand) int {

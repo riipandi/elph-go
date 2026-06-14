@@ -32,14 +32,14 @@ func TestMentionPaletteAppearsForAtQuery(t *testing.T) {
 func TestMentionPaletteHiddenForSlashInput(t *testing.T) {
 	m := testInputModel(t)
 	m = seedMentionIndex(m, []mention.Entry{{Path: "internal/renderer/input.go"}})
-	m.input.SetValue("/help")
+	m.input.SetValue("/hel")
 
 	m = m.syncSlashSuggestions()
 	require.False(t, m.mentionPaletteActive())
 	require.True(t, m.commandPaletteActive())
 }
 
-func TestTabCyclesMentionPreview(t *testing.T) {
+func TestTabConfirmsFirstMentionPreview(t *testing.T) {
 	m := testInputModel(t)
 	m = seedMentionIndex(m, []mention.Entry{
 		{Path: "internal/renderer/input.go"},
@@ -50,20 +50,62 @@ func TestTabCyclesMentionPreview(t *testing.T) {
 
 	updated, consumed := m.handleInputPaletteKey(keyTab())
 	require.True(t, consumed)
-	require.Equal(t, "see @internal/renderer/input.go", updated.input.Value())
-	require.Equal(t, 0, updated.suggest.MentionSuggestIndex)
+	require.Equal(t, "see @internal/renderer/input.go ", updated.input.Value())
+	require.False(t, updated.mentionPaletteActive())
+}
+
+func TestTabConfirmsCursorSelectedMention(t *testing.T) {
+	m := testInputModel(t)
+	m = seedMentionIndex(m, []mention.Entry{
+		{Path: "internal/renderer/input.go"},
+		{Path: "internal/command/args.go"},
+	})
+	m.input.SetValue("see @")
+	m = m.syncSlashSuggestions()
+
+	updated, consumed := m.handleInputPaletteKey(keyDown())
+	require.True(t, consumed)
+	require.True(t, updated.suggest.MentionUserSelected)
 
 	updated, consumed = updated.handleInputPaletteKey(keyTab())
 	require.True(t, consumed)
-	require.Equal(t, "see @internal/command/args.go", updated.input.Value())
-	require.Equal(t, 1, updated.suggest.MentionSuggestIndex)
+	require.Equal(t, "see @internal/command/args.go ", updated.input.Value())
+	require.False(t, updated.mentionPaletteActive())
+}
 
-	updated = updated.syncSlashSuggestions()
-	require.Equal(t, 1, updated.suggest.MentionSuggestIndex)
+func TestShiftTabCyclesMentionPreview(t *testing.T) {
+	m := testInputModel(t)
+	m = seedMentionIndex(m, []mention.Entry{
+		{Path: "internal/renderer/input.go"},
+		{Path: "internal/command/args.go"},
+	})
+	m.input.SetValue("see @internal/renderer/input.go")
+	m = m.syncSlashSuggestions()
 
-	updated, consumed = updated.handleInputPaletteKey(keyShiftTab())
+	updated, consumed := m.handleInputPaletteKey(keyShiftTab())
 	require.True(t, consumed)
-	require.Equal(t, "see @internal/renderer/input.go", updated.input.Value())
+	require.Equal(t, "see @internal/command/args.go", updated.input.Value())
+	require.True(t, updated.mentionPaletteActive())
+}
+
+func TestTabConfirmMentionSyncsLayout(t *testing.T) {
+	m := testInputModel(t)
+	m = seedMentionIndex(m, []mention.Entry{
+		{Path: "internal/renderer/input.go"},
+		{Path: "internal", IsDir: true},
+	})
+	m.input.SetValue("see @input")
+	m, _ = m.syncInputSuggestions()
+	m = m.syncLayout(false)
+	require.True(t, m.mentionPaletteActive())
+
+	updated, _ := m.Update(keyTab())
+	m = updated.(Model)
+
+	require.False(t, m.mentionPaletteActive())
+	require.Equal(t, m.chromeHeight(), m.layout.ChromeH)
+	require.LessOrEqual(t, m.content.Height()+m.layout.ChromeH, m.height)
+	require.LessOrEqual(t, m.renderedViewHeight(), m.height)
 }
 
 func TestTabAppliesFirstMatchForPartialQuery(t *testing.T) {
@@ -77,7 +119,8 @@ func TestTabAppliesFirstMatchForPartialQuery(t *testing.T) {
 
 	updated, consumed := m.handleInputPaletteKey(keyTab())
 	require.True(t, consumed)
-	require.Equal(t, "see @internal/renderer/input.go", updated.input.Value())
+	require.Equal(t, "see @internal/renderer/input.go ", updated.input.Value())
+	require.False(t, updated.mentionPaletteActive())
 }
 
 func TestEnterConfirmsMentionWithoutSubmit(t *testing.T) {

@@ -34,6 +34,7 @@ type SuggestState struct {
 	MentionIndexLoading bool
 	MentionActiveQuery  string
 	MentionFilterQuery  string
+	MentionUserSelected bool
 }
 
 // LayoutCache stores derived layout measurements for the TUI.

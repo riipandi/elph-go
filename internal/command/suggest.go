@@ -13,6 +13,27 @@ type scoredCommand struct {
 	idx   int
 }
 
+// SlashQuery extracts the command portion of slash input for suggestion matching.
+func SlashQuery(input string) string {
+	val := strings.TrimLeft(input, " \t")
+	if !strings.HasPrefix(val, "/") {
+		return ""
+	}
+	query := strings.TrimPrefix(val, "/")
+	if idx := strings.Index(query, " "); idx >= 0 {
+		query = query[:idx]
+	}
+	return normalizeSuggestQuery(query)
+}
+
+// SuggestVisible returns slash command suggestions for input, omitting exact matches.
+func SuggestVisible(input string, ctx Context) []SlashCommand {
+	if CommandExactMatch(input, ctx) {
+		return nil
+	}
+	return Suggest(SlashQuery(input), ctx)
+}
+
 // Suggest returns slash commands that fuzzy-match query, best matches first.
 // An empty query returns the first maxSuggestions commands in catalog order.
 func Suggest(query string, ctx Context) []SlashCommand {

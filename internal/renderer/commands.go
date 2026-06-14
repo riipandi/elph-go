@@ -133,7 +133,7 @@ func (m Model) syncSlashSuggestionsOnly() Model {
 
 	m.suggest.ArgSuggestions = nil
 	m.suggest.ArgSuggestIndex = 0
-	m.suggest.CmdSuggestions = command.Suggest(m.slashQuery(), ctx)
+	m.suggest.CmdSuggestions = command.SuggestVisible(m.input.Value(), ctx)
 	if m.suggest.CmdSuggestIndex >= len(m.suggest.CmdSuggestions) {
 		m.suggest.CmdSuggestIndex = 0
 	}
@@ -157,9 +157,8 @@ func (m Model) syncInputPlaceholder() Model {
 	placeholder := ""
 	ctx := m.commandContext()
 	cmd, argQuery, ok := command.ResolveInput(m.input.Value(), ctx)
-	args := command.EffectiveArgs(cmd, ctx)
-	if ok && len(args) > 0 && argQuery == "" && m.argInputReady(cmd) {
-		placeholder = command.ArgsHint(args)
+	if ok && argQuery == "" && m.argInputReady(cmd) {
+		placeholder = command.InputPlaceholderHint(cmd, ctx)
 	}
 	m.input.Placeholder = placeholder
 	return m

@@ -55,6 +55,7 @@ func (m Model) syncMentionSuggestions() (Model, tea.Cmd) {
 		m.suggest.MentionSuggestIndex = 0
 		m.suggest.MentionActiveQuery = ""
 		m.suggest.MentionFilterQuery = ""
+		m.suggest.MentionUserSelected = false
 		return m, nil
 	}
 
@@ -64,6 +65,7 @@ func (m Model) syncMentionSuggestions() (Model, tea.Cmd) {
 		m.suggest.MentionSuggestIndex = 0
 		m.suggest.MentionActiveQuery = ""
 		m.suggest.MentionFilterQuery = ""
+		m.suggest.MentionUserSelected = false
 		return m, nil
 	}
 
@@ -83,6 +85,7 @@ func (m Model) syncMentionSuggestions() (Model, tea.Cmd) {
 
 		m.suggest.MentionSuggestions = mention.Suggest(filterQuery, m.suggest.MentionIndex)
 		if query != m.suggest.MentionActiveQuery {
+			m.suggest.MentionUserSelected = false
 			if idx, matched := mention.MatchSuggestionIndex(m.suggest.MentionSuggestions, query); matched {
 				m.suggest.MentionSuggestIndex = idx
 			} else {
@@ -139,8 +142,35 @@ func (m Model) confirmMention() Model {
 	m.suggest.MentionSuggestIndex = 0
 	m.suggest.MentionActiveQuery = ""
 	m.suggest.MentionFilterQuery = ""
+	m.suggest.MentionUserSelected = false
 	m = m.syncPromptPrefix()
 	m = m.syncInputWidth()
+	return m
+}
+
+func (m Model) shouldConfirmMention() bool {
+	if len(m.suggest.MentionSuggestions) == 0 {
+		return false
+	}
+	query, _, ok := m.activeMention()
+	if !ok {
+		return false
+	}
+	if m.suggest.MentionUserSelected {
+		return true
+	}
+	_, matched := mention.MatchSuggestionIndex(m.suggest.MentionSuggestions, query)
+	return matched
+}
+
+func (m Model) mentionTab(delta int) Model {
+	if m.shouldConfirmMention() {
+		return m.confirmMention()
+	}
+	m = m.cycleMentionSelection(delta)
+	if m.shouldConfirmMention() {
+		return m.confirmMention()
+	}
 	return m
 }
 
@@ -150,6 +180,7 @@ func (m Model) moveMentionSelection(delta int) Model {
 	}
 	n := len(m.suggest.MentionSuggestions)
 	m.suggest.MentionSuggestIndex = (m.suggest.MentionSuggestIndex + delta%n + n) % n
+	m.suggest.MentionUserSelected = true
 	return m
 }
 
@@ -189,7 +220,7 @@ func (m Model) handleMentionPaletteKey(msg tea.KeyPressMsg) (Model, bool) {
 	case "enter":
 		return m.confirmMention(), true
 	case "tab", "right":
-		return m.cycleMentionSelection(1), true
+		return m.mentionTab(1), true
 	case "shift+tab":
 		return m.cycleMentionSelection(-1), true
 	case "up":

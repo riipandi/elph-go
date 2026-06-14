@@ -224,7 +224,7 @@ func TestSubmitSlashCommandExitExits(t *testing.T) {
 
 func TestSuggestFuzzyQuitInPalette(t *testing.T) {
 	m := testInputModel(t)
-	m.input.SetValue("/quit")
+	m.input.SetValue("/qui")
 	m = m.syncSlashSuggestions()
 
 	require.True(t, m.commandPaletteActive())

@@ -50,7 +50,7 @@ func TestCommandPaletteTwoColumnLayout(t *testing.T) {
 
 func TestTabCompletesSelectedCommand(t *testing.T) {
 	m := testInputModel(t)
-	m.input.SetValue("/help")
+	m.input.SetValue("/hel")
 	m = m.syncSlashSuggestions()
 
 	updated, consumed := m.handleSlashPaletteKey(keyTab())
@@ -71,7 +71,7 @@ func TestDownCyclesSuggestionSelection(t *testing.T) {
 
 func TestPaletteSitsFlushAboveInput(t *testing.T) {
 	m := testInputModel(t)
-	m.input.SetValue("/help")
+	m.input.SetValue("/hel")
 	m = m.syncSlashSuggestions()
 
 	chromeH := lipgloss.Height(m.inputChromeView())

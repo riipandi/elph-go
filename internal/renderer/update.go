@@ -243,7 +243,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			var consumed bool
 			m, consumed = m.handleInputPaletteKey(msg)
 			if consumed {
-				return m, nil
+				m, finCmd := m.finalizeInputEdit()
+				return m, finCmd
 			}
 		}
 

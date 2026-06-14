@@ -5,17 +5,18 @@ import (
 	"errors"
 )
 
-// TurnRequest is a single non-streaming completion request.
+// TurnRequest is a completion request to an upstream model API.
 type TurnRequest struct {
 	SystemPrompt string
 	UserPrompt   string
 	Model        string
+	Stream       *TurnStream
 }
 
 // Provider completes one agent turn against an upstream model API.
 type Provider interface {
 	ID() string
-	Complete(ctx context.Context, req TurnRequest) (string, error)
+	Complete(ctx context.Context, req TurnRequest) (TurnResult, error)
 }
 
 // ErrMissingAPIKey reports that no provider credentials are configured.

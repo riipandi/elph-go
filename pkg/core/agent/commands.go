@@ -1,5 +1,7 @@
 package agent
 
+import "github.com/riipandi/elph/pkg/ai/provider"
+
 // SetActivity returns an activity update event.
 func SetActivity(activity Activity) Event {
 	return ActivityEvent(activity)
@@ -12,5 +14,5 @@ func SetActivityForTool(tool string) Event {
 
 // FinishTurn returns a turn-completion event.
 func FinishTurn(response string) Event {
-	return TurnDoneEvent(response)
+	return TurnDoneEvent(provider.TurnResult{Content: response})
 }

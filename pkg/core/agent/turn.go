@@ -29,7 +29,7 @@ func runTurn(ctx context.Context, opts TurnOptions, ch chan<- Event) {
 	defer close(ch)
 
 	if IsShellContextPrompt(opts.UserPrompt) {
-		sendEvent(ctx, ch, TurnDoneEvent(PlaceholderResponse(opts.UserPrompt)))
+		sendEvent(ctx, ch, TurnDoneEvent(provider.TurnResult{Content: PlaceholderResponse(opts.UserPrompt)}))
 		return
 	}
 
@@ -45,19 +45,34 @@ func runTurn(ctx context.Context, opts TurnOptions, ch chan<- Event) {
 		return
 	}
 
-	resp, err := opts.Provider.Complete(ctx, provider.TurnRequest{
+	stream := &provider.TurnStream{
+		OnContent: func(chunk string) {
+			sendEvent(ctx, ch, ResponseDeltaEvent(chunk))
+		},
+	}
+	if opts.ShowThinking {
+		stream.OnThinking = func(chunk string) {
+			sendEvent(ctx, ch, ThinkingDeltaEvent(chunk))
+		}
+	}
+
+	result, err := opts.Provider.Complete(ctx, provider.TurnRequest{
 		SystemPrompt: opts.SystemPrompt,
 		UserPrompt:   opts.UserPrompt,
 		Model:        opts.Model,
+		Stream:       stream,
 	})
 	if ctx.Err() != nil {
 		return
 	}
 	if err != nil {
-		sendEvent(ctx, ch, TurnDoneEvent(fmt.Sprintf("Provider error: %v", err)))
+		sendEvent(ctx, ch, TurnDoneEvent(provider.TurnResult{Content: fmt.Sprintf("Provider error: %v", err)}))
 		return
 	}
-	sendEvent(ctx, ch, TurnDoneEvent(resp))
+	if !opts.ShowThinking {
+		result.Thinking = ""
+	}
+	sendEvent(ctx, ch, TurnDoneEvent(result))
 }
 
 func runPlaceholderTurn(ctx context.Context, prompt string, ch chan<- Event) {
@@ -74,7 +89,7 @@ func runPlaceholderTurn(ctx context.Context, prompt string, ch chan<- Event) {
 	if !waitUntil(ctx, start, PhaseDelay*time.Duration(len(TurnPhases))) {
 		return
 	}
-	sendEvent(ctx, ch, TurnDoneEvent(PlaceholderResponse(prompt)))
+	sendEvent(ctx, ch, TurnDoneEvent(provider.TurnResult{Content: PlaceholderResponse(prompt)}))
 }
 
 func waitUntil(ctx context.Context, start time.Time, target time.Duration) bool {

@@ -17,7 +17,8 @@ const (
 
 // Settings is persisted at ~/.elph/settings.json.
 type Settings struct {
-	Models ModelsSettings `json:"models"`
+	Models       ModelsSettings `json:"models"`
+	ShowThinking *bool          `json:"showThinking,omitempty"`
 }
 
 // ModelsSettings controls periodic models.dev metadata sync.
@@ -54,8 +55,7 @@ func Load() (Settings, error) {
 	if err := json.Unmarshal(raw, &cfg); err != nil {
 		return Settings{}, fmt.Errorf("decode settings %q: %w", path, err)
 	}
-	cfg.Models = cfg.Models.withDefaults()
-	return cfg, nil
+	return cfg.withDefaults(), nil
 }
 
 // Save writes settings to ~/.elph/settings.json.
@@ -68,7 +68,7 @@ func Save(cfg Settings) error {
 		return fmt.Errorf("create settings dir: %w", err)
 	}
 
-	cfg.Models = cfg.Models.withDefaults()
+	cfg = cfg.withDefaults()
 	payload, err := json.MarshalIndent(cfg, "", "  ")
 	if err != nil {
 		return fmt.Errorf("encode settings: %w", err)
@@ -82,11 +82,27 @@ func Save(cfg Settings) error {
 }
 
 func defaultSettings() Settings {
+	showThinking := true
 	return Settings{
 		Models: ModelsSettings{
 			SyncInterval: "24h",
 		},
+		ShowThinking: &showThinking,
 	}
+}
+
+func (s Settings) withDefaults() Settings {
+	s.Models = s.Models.withDefaults()
+	if s.ShowThinking == nil {
+		v := true
+		s.ShowThinking = &v
+	}
+	return s
+}
+
+// ShowThinkingEnabled reports whether reasoning output is streamed in the UI.
+func (s Settings) ShowThinkingEnabled() bool {
+	return *s.withDefaults().ShowThinking
 }
 
 func (m ModelsSettings) withDefaults() ModelsSettings {

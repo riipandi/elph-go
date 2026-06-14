@@ -8,4 +8,5 @@ type TurnOptions struct {
 	UserPrompt   string
 	Model        string
 	Provider     provider.Provider
+	ShowThinking bool
 }

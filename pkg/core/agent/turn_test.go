@@ -17,20 +17,26 @@ type stubProvider struct {
 
 func (s stubProvider) ID() string { return "stub" }
 
-func (s stubProvider) Complete(ctx context.Context, _ provider.TurnRequest) (string, error) {
+func (s stubProvider) Complete(ctx context.Context, req provider.TurnRequest) (provider.TurnResult, error) {
 	if s.delay > 0 {
 		timer := time.NewTimer(s.delay)
 		defer timer.Stop()
 		select {
 		case <-timer.C:
 		case <-ctx.Done():
-			return "", ctx.Err()
+			return provider.TurnResult{}, ctx.Err()
 		}
 	}
 	if s.err != nil {
-		return "", s.err
+		return provider.TurnResult{}, s.err
 	}
-	return s.resp, nil
+	if req.Stream != nil {
+		if req.Stream.OnThinking != nil {
+			req.Stream.OnThinking("hidden-thought")
+		}
+		req.Stream.OnContent(s.resp)
+	}
+	return provider.TurnResult{Content: s.resp, Thinking: "hidden-thought"}, nil
 }
 
 func TestRunTurnEmitsPlaceholderPhasesWithoutProvider(t *testing.T) {
@@ -55,21 +61,41 @@ func TestRunTurnEmitsPlaceholderPhasesWithoutProvider(t *testing.T) {
 	require.Equal(t, len(TurnPhases)-1, activityCount)
 }
 
-func TestRunTurnUsesProvider(t *testing.T) {
+func TestRunTurnOmitsThinkingWhenDisabled(t *testing.T) {
 	ctx := context.Background()
 	var events []Event
 	for evt := range RunTurn(ctx, TurnOptions{
-		UserPrompt: "hello",
-		Provider:   stubProvider{resp: "upstream reply"},
+		UserPrompt:   "hello",
+		Provider:     stubProvider{resp: "upstream reply"},
+		ShowThinking: false,
 	}) {
 		events = append(events, evt)
 	}
 
-	require.Len(t, events, 3)
+	for _, evt := range events {
+		require.NotEqual(t, EventThinkingDelta, evt.Kind)
+	}
+	require.Equal(t, EventTurnDone, events[len(events)-1].Kind)
+	require.Empty(t, events[len(events)-1].Thinking)
+	require.Equal(t, "upstream reply", events[len(events)-1].Response)
+}
+
+func TestRunTurnUsesProvider(t *testing.T) {
+	ctx := context.Background()
+	var events []Event
+	for evt := range RunTurn(ctx, TurnOptions{
+		UserPrompt:   "hello",
+		Provider:     stubProvider{resp: "upstream reply"},
+		ShowThinking: true,
+	}) {
+		events = append(events, evt)
+	}
+
+	require.GreaterOrEqual(t, len(events), 3)
 	require.Equal(t, ActivityConnecting, events[0].Activity)
 	require.Equal(t, ActivityThinking, events[1].Activity)
-	require.Equal(t, EventTurnDone, events[2].Kind)
-	require.Equal(t, "upstream reply", events[2].Response)
+	require.Equal(t, EventTurnDone, events[len(events)-1].Kind)
+	require.Equal(t, "upstream reply", events[len(events)-1].Response)
 }
 
 func TestRunTurnShellContextFastPath(t *testing.T) {

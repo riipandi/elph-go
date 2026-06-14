@@ -42,5 +42,5 @@ func TestNewProviderOpenAI(t *testing.T) {
 		Model:      "opencode-v1",
 	})
 	require.NoError(t, err)
-	require.Equal(t, "ok", got)
+	require.Equal(t, "ok", got.Content)
 }

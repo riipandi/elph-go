@@ -26,7 +26,7 @@ func TestSessionStartTurnStreamsEvents(t *testing.T) {
 	defer cancel()
 
 	var events []agent.Event
-	for evt := range s.StartTurn(ctx, "hello") { // placeholder when no API key
+	for evt := range s.StartTurn(ctx, "hello", true) { // placeholder when no API key
 		events = append(events, evt)
 	}
 

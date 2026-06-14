@@ -2,5 +2,18 @@
 	"$schema": "http://json-schema.org/draft-07/schema#",
 	"title": "Elph settings configuration schema",
 	"type": "object",
-	"properties": {}
+	"properties": {
+		"models": {
+			"type": "object",
+			"properties": {
+				"lastSync": { "type": "string" },
+				"syncInterval": { "type": "string" }
+			}
+		},
+		"showThinking": {
+			"type": "boolean",
+			"description": "Stream and display model reasoning in the chat. Default true.",
+			"default": true
+		}
+	}
 }

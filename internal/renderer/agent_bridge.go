@@ -26,11 +26,20 @@ func (m Model) handleAgentEvent(msg agentEventMsg) (Model, tea.Cmd) {
 	case agent.EventActivity:
 		m.agent.Activity = msg.event.Activity
 		m = m.syncLayout(m.content.AtBottom())
-		if m.agent.Events != nil {
-			return m, waitAgentEvent(m.agent.Events)
+	case agent.EventThinkingDelta:
+		if m.showThinkingEnabled() {
+			m = m.appendAgentThinkingDelta(msg.event.Delta)
+			m = m.syncLayout(m.content.AtBottom())
 		}
+	case agent.EventResponseDelta:
+		m = m.appendAgentResponseDelta(msg.event.Delta)
+		m = m.syncLayout(m.content.AtBottom())
 	case agent.EventTurnDone:
-		m = m.finishAgentTurn(msg.event.Response)
+		m = m.finishAgentTurn(msg.event.Thinking, msg.event.Response)
+		return m, nil
+	}
+	if m.agent.Events != nil {
+		return m, waitAgentEvent(m.agent.Events)
 	}
 	return m, nil
 }

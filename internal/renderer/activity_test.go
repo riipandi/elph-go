@@ -5,6 +5,8 @@ import (
 
 	"charm.land/lipgloss/v2"
 	"github.com/riipandi/elph/internal/constants"
+	"github.com/riipandi/elph/internal/settings"
+	"github.com/riipandi/elph/pkg/ai/provider"
 	"github.com/riipandi/elph/pkg/core/agent"
 	"github.com/stretchr/testify/require"
 )
@@ -33,7 +35,7 @@ func TestActivityViewShowsLabel(t *testing.T) {
 
 	view := m.activityView()
 	require.Contains(t, view, "Writing")
-	require.Equal(t, 1, lipgloss.Height(view), "activity view should be 1 line")
+	require.Equal(t, 2, lipgloss.Height(view), "activity view should include top gap")
 }
 
 func TestInputStaysFocusedDuringAgentTurn(t *testing.T) {
@@ -74,7 +76,7 @@ func TestActivityProgression(t *testing.T) {
 	m = updated.(Model)
 	require.Equal(t, agent.ActivityReading, m.agent.Activity)
 
-	updated, _ = m.Update(agentEventMsg{event: agent.TurnDoneEvent("done")})
+	updated, _ = m.Update(agentEventMsg{event: agent.TurnDoneEvent(provider.TurnResult{Content: "done"})})
 	m = updated.(Model)
 	require.False(t, m.agent.Busy)
 	require.Equal(t, agent.ActivityIdle, m.agent.Activity)
@@ -94,8 +96,46 @@ func TestBeginAgentTurnSwapsInputMarginForActivity(t *testing.T) {
 	busy := idle.beginAgentTurn().syncLayout(true)
 
 	require.NotEmpty(t, busy.activityView())
-	require.Equal(t, idleChrome, busy.layout.ChromeH, "activity line replaces idle input top margin")
-	require.Equal(t, idleVP, busy.content.Height())
+	require.Equal(t, idleChrome+1, busy.layout.ChromeH, "activity line adds one chrome row below content gap")
+	require.Equal(t, idleVP-1, busy.content.Height())
+}
+
+func TestAgentThinkingDeltaHiddenWhenDisabled(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+
+	disabled := false
+	require.NoError(t, settings.Save(settings.Settings{
+		Models:       settings.ModelsSettings{SyncInterval: "24h"},
+		ShowThinking: &disabled,
+	}))
+
+	m := New()
+	m = m.beginAgentTurn()
+	updated, _ := m.Update(agentEventMsg{event: agent.ThinkingDeltaEvent("hidden")})
+	m = updated.(Model)
+	require.Empty(t, m.messages)
+}
+
+func TestAgentThinkingDeltaRendersDimmed(t *testing.T) {
+	m := New()
+	m.width = 80
+	m = m.beginAgentTurn()
+
+	updated, _ := m.Update(agentEventMsg{event: agent.ThinkingDeltaEvent("reasoning chunk")})
+	m = updated.(Model)
+	require.Len(t, m.messages, 1)
+	require.Equal(t, constants.MessageThinking, m.messages[0].kind)
+	require.Equal(t, "reasoning chunk", m.messages[0].text)
+
+	updated, _ = m.Update(agentEventMsg{event: agent.ThinkingDeltaEvent(" more")})
+	m = updated.(Model)
+	require.Equal(t, "reasoning chunk more", m.messages[0].text)
+
+	updated, _ = m.Update(agentEventMsg{event: agent.ResponseDeltaEvent("answer")})
+	m = updated.(Model)
+	require.Len(t, m.messages, 2)
+	require.Equal(t, constants.MessageAI, m.messages[1].kind)
 }
 
 func TestAgentPhaseDelaysAreOrdered(t *testing.T) {

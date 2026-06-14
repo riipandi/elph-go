@@ -43,5 +43,27 @@ func TestAnthropicComplete(t *testing.T) {
 		Model:        "claude-test",
 	})
 	require.NoError(t, err)
-	require.Equal(t, "hello from claude", got)
+	require.Equal(t, "hello from claude", got.Content)
+}
+
+func TestAnthropicCompleteThinking(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"content": []map[string]string{
+				{"type": "thinking", "thinking": "let me think"},
+				{"type": "text", "text": "final answer"},
+			},
+		})
+	}))
+	defer srv.Close()
+
+	p := NewAnthropic(AnthropicOptions{
+		APIKey:  "test-key",
+		BaseURL: srv.URL + "/v1",
+	})
+
+	got, err := p.Complete(context.Background(), TurnRequest{UserPrompt: "hi"})
+	require.NoError(t, err)
+	require.Equal(t, "let me think", got.Thinking)
+	require.Equal(t, "final answer", got.Content)
 }

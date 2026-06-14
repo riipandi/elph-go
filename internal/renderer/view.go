@@ -137,27 +137,33 @@ func (m Model) syncInputWidth() Model {
 	return m.syncInputScroll()
 }
 
+const messageBlockGap = "\n\n"
+
 // contentView is the full scrollable region: banner + message history.
 func (m Model) contentView() string {
 	var b strings.Builder
 
 	b.WriteString(m.bannerView())
 	if len(m.messages) > 0 {
-		b.WriteString("\n\n")
-		for i, msg := range m.messages {
-			if i > 0 {
-				b.WriteString("\n")
-				if msg.kind == constants.MessageUser || msg.kind == constants.MessageSystem {
-					b.WriteString("\n")
-				}
-			}
-			b.WriteString(m.renderMessage(msg))
-			if msg.kind == constants.MessageUser {
-				b.WriteString("\n")
-			}
-		}
+		b.WriteString(messageBlockGap)
+		b.WriteString(m.messagesView())
 	}
 
+	return b.String()
+}
+
+// messagesView renders chat history with one blank line between every block.
+func (m Model) messagesView() string {
+	if len(m.messages) == 0 {
+		return ""
+	}
+	var b strings.Builder
+	for i, msg := range m.messages {
+		if i > 0 {
+			b.WriteString(messageBlockGap)
+		}
+		b.WriteString(m.renderMessage(msg))
+	}
 	return b.String()
 }
 
@@ -165,16 +171,26 @@ func (m Model) renderMessage(msg message) string {
 	return renderStyledMessage(m.messageAreaWidth(), msg.kind, msg.text)
 }
 
-// renderStyledMessage paints each line using the palette for its message kind.
-func renderStyledMessage(width int, kind constants.MessageKind, text string) string {
+func messageBlockPadding(kind constants.MessageKind) (vertical, horizontal int) {
 	switch kind {
 	case constants.MessageUser, constants.MessageTool:
+		return 1, 2
+	default:
+		return 0, 1
+	}
+}
+
+// renderStyledMessage paints each message block. Vertical spacing between blocks
+// comes from messageBlockGap; boxed kinds also get internal vertical padding.
+func renderStyledMessage(width int, kind constants.MessageKind, text string) string {
+	vPad, hPad := messageBlockPadding(kind)
+	if vPad > 0 {
 		return constants.MessageStyle(kind).
-			Padding(1, 2).
+			Padding(vPad, hPad).
 			Width(width).
 			Render(text)
 	}
-	lineStyle := constants.MessageStyle(kind).Padding(0, 1).Width(width)
+	lineStyle := constants.MessageStyle(kind).Padding(0, hPad).Width(width)
 	lines := strings.Split(text, "\n")
 	out := make([]string, len(lines))
 	for i, line := range lines {
@@ -279,6 +295,7 @@ func (m Model) activityView() string {
 	spinner := lipgloss.NewStyle().Foreground(constants.Yellow).Render(frame)
 	label := dimStyle.Render(" " + m.activityLabel() + "...")
 	return lipgloss.NewStyle().
+		MarginTop(1).
 		PaddingLeft(1).
 		Width(m.width).
 		Render(spinner + label)

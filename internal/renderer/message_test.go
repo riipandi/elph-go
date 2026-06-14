@@ -52,22 +52,57 @@ func TestAIMessageRendersText(t *testing.T) {
 	require.Contains(t, rendered, "response from agent")
 }
 
-func TestUserMessageVerticalSpacing(t *testing.T) {
+func TestResponseMessageVerticalSpacing(t *testing.T) {
 	m := testModel()
-	m.messages = []message{
+	messages := []message{
+		{text: "thinking step", kind: constants.MessageThinking},
 		{text: "from agent", kind: constants.MessageAI},
 		{text: "from user", kind: constants.MessageUser},
 		{text: "reply", kind: constants.MessageAI},
 	}
-	content := stripANSI(m.contentView())
-	agentEnd := strings.Index(content, "from agent")
-	userStart := strings.Index(content, "from user")
-	replyStart := strings.Index(content, "reply")
-	require.GreaterOrEqual(t, agentEnd, 0)
-	require.GreaterOrEqual(t, userStart, 0)
-	require.GreaterOrEqual(t, replyStart, 0)
-	require.Contains(t, content[agentEnd:userStart], "\n\n", "blank line between AI and user message")
-	require.Contains(t, content[userStart:replyStart], "\n\n", "blank line between user and AI message")
+	m.messages = messages
+	content := normalizeSpacingLines(stripANSI(m.messagesView()))
+	for i := 1; i < len(messages); i++ {
+		prev, curr := messages[i-1], messages[i]
+		want := expectedBlankLinesBetween(prev.kind, curr.kind)
+		blanks := blankLinesBetweenMarkers(content, prev.text, curr.text)
+		require.Equal(t, want, blanks, "%s -> %s", prev.text, curr.text)
+	}
+}
+
+func TestAIMessageNoExtraVerticalPadding(t *testing.T) {
+	m := testModel()
+	rendered := m.renderMessage(message{text: "line one\nline two", kind: constants.MessageAI})
+	require.Equal(t, 2, lipgloss.Height(rendered))
+}
+
+func TestThinkingMessageNoExtraVerticalPadding(t *testing.T) {
+	m := testModel()
+	rendered := m.renderMessage(message{text: "reasoning", kind: constants.MessageThinking})
+	require.Equal(t, 1, lipgloss.Height(rendered))
+}
+
+func TestBoxedMessageSingleLineHeight(t *testing.T) {
+	m := testModel()
+	rendered := m.renderMessage(message{text: "hello", kind: constants.MessageUser})
+	require.Equal(t, 3, lipgloss.Height(rendered), "user block includes vertical padding")
+}
+
+func TestUserMessageVerticalSpacing(t *testing.T) {
+	m := testModel()
+	messages := []message{
+		{text: "from agent", kind: constants.MessageAI},
+		{text: "from user", kind: constants.MessageUser},
+		{text: "reply", kind: constants.MessageAI},
+	}
+	m.messages = messages
+	content := normalizeSpacingLines(stripANSI(m.messagesView()))
+	for i := 1; i < len(messages); i++ {
+		prev, curr := messages[i-1], messages[i]
+		want := expectedBlankLinesBetween(prev.kind, curr.kind)
+		blanks := blankLinesBetweenMarkers(content, prev.text, curr.text)
+		require.Equal(t, want, blanks, "%s -> %s", prev.text, curr.text)
+	}
 }
 
 func TestSystemMessageVerticalSpacing(t *testing.T) {
@@ -76,13 +111,8 @@ func TestSystemMessageVerticalSpacing(t *testing.T) {
 		{text: "from agent", kind: constants.MessageAI},
 		{text: "Copied to clipboard", kind: constants.MessageSystem},
 	}
-	content := stripANSI(m.contentView())
-	agentEnd := strings.Index(content, "from agent")
-	systemStart := strings.Index(content, "Copied to clipboard")
-	require.GreaterOrEqual(t, agentEnd, 0)
-	require.GreaterOrEqual(t, systemStart, 0)
-	require.Contains(t, content[agentEnd:systemStart], "\n\n",
-		"blank line above system message")
+	content := normalizeSpacingLines(stripANSI(m.messagesView()))
+	require.Contains(t, content, "from agent\n\nCopied to clipboard")
 }
 
 func TestUserMessageMultiline(t *testing.T) {
@@ -147,6 +177,7 @@ func TestMessageWidthUsesContentAreaWidth(t *testing.T) {
 		constants.MessageAI,
 		constants.MessageSystem,
 		constants.MessageTool,
+		constants.MessageThinking,
 	} {
 		renderedW := lipgloss.Width(m.renderMessage(message{text: "hello", kind: kind}))
 		require.Equal(t, msgW, renderedW, "kind %d width", kind)
@@ -177,6 +208,21 @@ func TestUserMsgBgConstant(t *testing.T) {
 	require.NotEqual(t, constants.DimText, constants.UserMsgBg,
 		"user message background should differ from dim text")
 	_ = lipgloss.NewStyle().Background(constants.UserMsgBg).Render("x")
+}
+
+// normalizeSpacingLines collapses whitespace-only lines so spacing assertions
+// are not thrown off by lipgloss width padding.
+func normalizeSpacingLines(s string) string {
+	lines := strings.Split(s, "\n")
+	out := make([]string, 0, len(lines))
+	for _, line := range lines {
+		if strings.TrimSpace(line) == "" {
+			out = append(out, "")
+			continue
+		}
+		out = append(out, strings.TrimSpace(line))
+	}
+	return strings.TrimSpace(strings.Join(out, "\n"))
 }
 
 // stripANSI is a minimal helper for tests; lipgloss output includes sequences.

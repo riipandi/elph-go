@@ -17,6 +17,26 @@ func TestLoadMissingReturnsDefaults(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "24h", cfg.Models.SyncInterval)
 	require.Empty(t, cfg.Models.LastSync)
+	require.True(t, cfg.ShowThinkingEnabled())
+}
+
+func TestShowThinkingDefaultsTrueAndCanDisable(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+
+	cfg, err := Load()
+	require.NoError(t, err)
+	require.True(t, cfg.ShowThinkingEnabled())
+
+	disabled := false
+	require.NoError(t, Save(Settings{
+		Models:       cfg.Models,
+		ShowThinking: &disabled,
+	}))
+
+	cfg, err = Load()
+	require.NoError(t, err)
+	require.False(t, cfg.ShowThinkingEnabled())
 }
 
 func TestSaveAndLoadRoundTrip(t *testing.T) {

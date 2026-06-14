@@ -102,6 +102,23 @@ func waitForShellDone(t *testing.T, m Model, cmd tea.Cmd) Model {
 	return m
 }
 
+func TestShellDetailExpandedByDefault(t *testing.T) {
+	m := testInputModel(t)
+	m.input.SetValue("!!echo hello\nworld")
+
+	updated, cmd := m.Update(keyEnter())
+	m = updated.(Model)
+	require.True(t, m.messages[1].detailExpanded)
+
+	m = waitForShellDone(t, m, cmd)
+	require.True(t, m.messages[1].detailExpanded)
+
+	rendered := stripANSI(m.renderMessageAt(1))
+	require.Contains(t, rendered, "ctrl+o to collapse")
+	require.Contains(t, rendered, "hello")
+	require.Contains(t, rendered, "world")
+}
+
 func TestSubmitShellWithoutContext(t *testing.T) {
 	m := testInputModel(t)
 	m.input.SetValue("!!echo shell-no-ctx")

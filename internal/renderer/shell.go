@@ -44,6 +44,18 @@ func isShellCancelKey(msg tea.KeyPressMsg) bool {
 	return resolveKeyAction(msg) == constants.ActionQuit
 }
 
+func (m Model) addShellDetailMessage(label, body string, status constants.DetailStatus) Model {
+	m.messages = append(m.messages, message{
+		text:           body,
+		kind:           constants.MessageDetail,
+		detailLabel:    label,
+		detailStatus:   status,
+		detailExpanded: true,
+	})
+	m.layout.ContentDirty = true
+	return m
+}
+
 func (m Model) handleShellSubmit(command string, withContext bool) (Model, tea.Cmd, bool) {
 	if m.shell.Running {
 		return m, nil, false
@@ -57,7 +69,7 @@ func (m Model) handleShellSubmit(command string, withContext bool) (Model, tea.C
 	m.shell.WithContext = withContext
 	m.shell.Output = ""
 	m = m.beginShellActivity()
-	m = m.addDetailMessageWithStatus(shellDetailLabel(command), "(running...)", constants.DetailStatusRunning)
+	m = m.addShellDetailMessage(shellDetailLabel(command), "(running...)", constants.DetailStatusRunning)
 	m.shell.DetailMsgID = len(m.messages) - 1
 	m.layout.ContentDirty = true
 	m = m.syncLayout(true)

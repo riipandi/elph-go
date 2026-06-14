@@ -133,6 +133,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.modelsSyncingActive() {
 				m = m.refreshModelsSyncStatus()
 			}
+			if m.needsSpinnerContentRefresh() {
+				m = m.invalidateSpinnerPreviewCaches()
+				m.layout.ContentDirty = true
+				m = m.syncLayout(m.content.AtBottom())
+			}
 			cmds = append(cmds, m.spinnerTickCmd())
 		}
 

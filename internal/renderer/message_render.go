@@ -6,19 +6,23 @@ import "github.com/riipandi/elph/internal/constants"
 // rebuilds. Invalidated automatically when width, source length, or streaming
 // state changes.
 type messageRenderCache struct {
-	width        int
-	sourceLen    int
-	streaming    bool
-	expanded     bool
-	detailStatus constants.DetailStatus
-	output       string
+	width             int
+	sourceLen         int
+	streaming         bool
+	expanded          bool
+	detailStatus      constants.DetailStatus
+	showStatusPreview bool
+	spinnerFrame      int
+	output            string
 }
 
-func (c messageRenderCache) hit(width int, streaming bool, sourceLen int, expanded bool, detailStatus constants.DetailStatus) bool {
+func (c messageRenderCache) hit(width int, streaming bool, sourceLen int, expanded bool, detailStatus constants.DetailStatus, opts collapsibleRenderOpts) bool {
 	return c.output != "" &&
 		c.width == width &&
 		c.streaming == streaming &&
 		c.sourceLen == sourceLen &&
 		c.expanded == expanded &&
-		c.detailStatus == detailStatus
+		c.detailStatus == detailStatus &&
+		c.showStatusPreview == opts.showStatusPreview &&
+		c.spinnerFrame == opts.spinnerFrame
 }

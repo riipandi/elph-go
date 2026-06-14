@@ -193,9 +193,9 @@ func (m Model) renderMessage(msg message) string {
 	case constants.MessageAI:
 		return renderAIMessage(width, msg.text, false, false)
 	case constants.MessageDetail:
-		return renderDetailMessage(width, collapsibleLabel(msg), msg.text, msg.detailExpanded, msg.detailStatus)
+		return renderDetailMessage(width, collapsibleLabel(msg), msg.text, msg.detailExpanded, msg.detailStatus, collapsibleRenderOpts{})
 	case constants.MessageThinking:
-		return renderThinkingMessage(width, collapsibleLabel(msg), msg.text, msg.detailExpanded)
+		return renderThinkingMessage(width, collapsibleLabel(msg), msg.text, msg.detailExpanded, collapsibleRenderOpts{})
 	default:
 		return renderStyledMessage(width, msg.kind, msg.text)
 	}
@@ -206,33 +206,36 @@ func (m *Model) renderMessageAt(index int) string {
 	width := m.messageAreaWidth()
 	streaming := m.isStreamingMessageAt(index)
 
-	if c := msg.renderCache; c.hit(width, streaming, len(msg.text), msg.detailExpanded, msg.detailStatus) {
+	opts := m.collapsibleRenderOpts(msg, index)
+	if c := msg.renderCache; c.hit(width, streaming, len(msg.text), msg.detailExpanded, msg.detailStatus, opts) {
 		return c.output
 	}
 
 	var out string
 	switch {
 	case streaming && msg.kind == constants.MessageThinking:
-		out = renderThinkingMessage(width, collapsibleLabel(msg), msg.text, msg.detailExpanded)
+		out = renderThinkingMessage(width, collapsibleLabel(msg), msg.text, msg.detailExpanded, opts)
 	case streaming:
 		out = renderStreamingMessage(width, msg.kind, msg.text)
 	case msg.kind == constants.MessageAI:
 		out = renderAIMessage(width, msg.text, false, msg.glamourPending)
 	case msg.kind == constants.MessageDetail:
-		out = renderDetailMessage(width, collapsibleLabel(msg), msg.text, msg.detailExpanded, msg.detailStatus)
+		out = renderDetailMessage(width, collapsibleLabel(msg), msg.text, msg.detailExpanded, msg.detailStatus, opts)
 	case msg.kind == constants.MessageThinking:
-		out = renderThinkingMessage(width, collapsibleLabel(msg), msg.text, msg.detailExpanded)
+		out = renderThinkingMessage(width, collapsibleLabel(msg), msg.text, msg.detailExpanded, opts)
 	default:
 		out = renderStyledMessage(width, msg.kind, msg.text)
 	}
 
 	m.messages[index].renderCache = messageRenderCache{
-		width:        width,
-		sourceLen:    len(msg.text),
-		streaming:    streaming,
-		expanded:     msg.detailExpanded,
-		detailStatus: msg.detailStatus,
-		output:       out,
+		width:             width,
+		sourceLen:         len(msg.text),
+		streaming:         streaming,
+		expanded:          msg.detailExpanded,
+		detailStatus:      msg.detailStatus,
+		showStatusPreview: opts.showStatusPreview,
+		spinnerFrame:      opts.spinnerFrame,
+		output:            out,
 	}
 	return out
 }

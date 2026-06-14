@@ -69,3 +69,19 @@ func DetailStatusAccent(status DetailStatus) lipgloss.Style {
 	p := detailPalette(status)
 	return lipgloss.NewStyle().Foreground(p.accent)
 }
+
+// DetailStatusBodyStyle returns foreground-only style for detail body text.
+func DetailStatusBodyStyle(status DetailStatus) lipgloss.Style {
+	p := detailPalette(status)
+	return lipgloss.NewStyle().Foreground(p.bodyFg)
+}
+
+// DetailStatusPreviewLabel returns the collapsed preview label for an active status.
+func DetailStatusPreviewLabel(status DetailStatus) string {
+	switch status {
+	case DetailStatusRunning:
+		return "Running…"
+	default:
+		return ""
+	}
+}

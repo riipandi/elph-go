@@ -1,0 +1,100 @@
+package renderer
+
+import (
+	"testing"
+
+	"github.com/riipandi/elph/internal/constants"
+	"github.com/stretchr/testify/require"
+)
+
+func TestDetailCollapsedShowsRunningStatusPreview(t *testing.T) {
+	m := testModel()
+	m.agent.SpinnerFrame = 2
+	m.messages = []message{{
+		kind:         constants.MessageDetail,
+		detailLabel:  "$ ls",
+		text:         "(running…)\nfile.txt",
+		detailStatus: constants.DetailStatusRunning,
+	}}
+
+	rendered := stripANSI(m.renderMessageAt(0))
+	require.Contains(t, rendered, "Running…")
+	require.NotContains(t, rendered, "file.txt")
+}
+
+func TestDetailCollapsedShowsBodyPreviewWhenIdle(t *testing.T) {
+	m := testModel()
+	m.messages = []message{{
+		kind:         constants.MessageDetail,
+		detailLabel:  "$ ls",
+		text:         "file.txt\nREADME.md",
+		detailStatus: constants.DetailStatusSuccess,
+	}}
+
+	rendered := stripANSI(m.renderMessageAt(0))
+	require.Contains(t, rendered, "file.txt")
+	require.NotContains(t, rendered, "Running…")
+}
+
+func TestThinkingCollapsedShowsStreamingStatusPreview(t *testing.T) {
+	m := testInputModel(t)
+	m.agent.Busy = true
+	m.agent.SpinnerFrame = 1
+	m = m.addThinkingMessage("reasoning step one\nreasoning step two")
+	m.agent.ThinkingMsgID = 0
+
+	rendered := stripANSI(m.renderMessageAt(0))
+	require.Contains(t, rendered, "Thinking…")
+	require.NotContains(t, rendered, "reasoning step one")
+}
+
+func TestThinkingCollapsedShowsBodyWhenNotStreaming(t *testing.T) {
+	m := testInputModel(t)
+	m = m.addThinkingMessage("reasoning step one\nreasoning step two")
+
+	rendered := stripANSI(m.renderMessageAt(0))
+	require.Contains(t, rendered, "reasoning step one")
+	require.NotContains(t, rendered, "Thinking…")
+}
+
+func TestStatusPreviewInsideColoredDetailBox(t *testing.T) {
+	m := testModel()
+	m.agent.SpinnerFrame = 0
+	m.messages = []message{{
+		kind:         constants.MessageDetail,
+		detailLabel:  "$ ls",
+		text:         "(running…)",
+		detailStatus: constants.DetailStatusRunning,
+	}}
+
+	rendered := m.renderMessageAt(0)
+	require.Contains(t, rendered, "\x1b[48", "detail box should keep status background")
+	require.Contains(t, stripANSI(rendered), "Running…")
+
+	boxStyle := constants.DetailStatusStyle(constants.DetailStatusRunning)
+	preview := collapsibleStatusPreview(constants.MessageDetail, constants.DetailStatusRunning, boxStyle, 0, 80)
+	require.Contains(t, preview, "48;2;40;40;50", "status text should inherit running detail box background")
+	require.NotContains(t, preview, "49m", "status text should not reset to parent background")
+	require.NotRegexp(t, `\x1b\[m `, preview, "gap between spinner and label should not be unstyled")
+}
+
+func TestSpinnerTickRefreshesCollapsedStatusPreview(t *testing.T) {
+	m := testInputModel(t)
+	m.shell.Running = true
+	m.shell.Command = "sleep 1"
+	m.agent.SpinnerFrame = 0
+	m.messages = []message{{
+		kind:         constants.MessageDetail,
+		detailLabel:  "$ sleep 1",
+		text:         "(running…)",
+		detailStatus: constants.DetailStatusRunning,
+	}}
+	m = m.syncLayout(false)
+
+	before := m.renderMessageAt(0)
+	updated, cmd := m.Update(spinnerTickMsg{})
+	m = updated.(Model)
+	require.NotNil(t, cmd)
+	after := m.renderMessageAt(0)
+	require.NotEqual(t, before, after)
+}

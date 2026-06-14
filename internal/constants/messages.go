@@ -14,6 +14,7 @@ const (
 	MessageSystem
 	MessageTool
 	MessageThinking
+	MessageDetail
 )
 
 // Stream message colors — foreground + background only (no prefixes).
@@ -31,7 +32,7 @@ var (
 	ToolMsgBg = compat.AdaptiveColor{Light: lipgloss.Color("#ECFEFF"), Dark: lipgloss.Color("#0C1A1D")}
 
 	ThinkingMsgFg = DimText
-	ThinkingMsgBg = lipgloss.NoColor{}
+	ThinkingMsgBg = compat.AdaptiveColor{Light: lipgloss.Color("#F4F4F5"), Dark: lipgloss.Color("#232323")}
 )
 
 // MessageStyle returns the lipgloss style for a stream message kind.
@@ -47,6 +48,8 @@ func MessageStyle(kind MessageKind) lipgloss.Style {
 		return lipgloss.NewStyle().Foreground(ToolMsgFg).Background(ToolMsgBg)
 	case MessageThinking:
 		return lipgloss.NewStyle().Foreground(ThinkingMsgFg).Background(ThinkingMsgBg).Italic(true)
+	case MessageDetail:
+		return DetailStatusStyle(DetailStatusNeutral)
 	default:
 		return lipgloss.NewStyle().Foreground(AIMsgFg)
 	}

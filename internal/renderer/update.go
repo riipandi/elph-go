@@ -45,6 +45,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 
 	if key, ok := msg.(tea.KeyPressMsg); ok {
+		if isToggleDetailKey(key) {
+			var handled bool
+			m, handled = m.handleToggleDetailKey()
+			if handled {
+				return m, nil
+			}
+		}
 		if m.shell.Running && isShellCancelKey(key) {
 			return m.cancelShell()
 		}
@@ -320,6 +327,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case constants.ActionOpenModelSelector:
 			return m.triggerModelSelector()
+
 		}
 
 		m = m.cancelCtrlC()
@@ -353,6 +361,41 @@ func (m Model) addUserMessage(text string) Model {
 	return m
 }
 
+func (m Model) addDetailMessage(label, body string) Model {
+	return m.addDetailMessageWithStatus(label, body, constants.DetailStatusNeutral)
+}
+
+func (m Model) addDetailMessageWithStatus(label, body string, status constants.DetailStatus) Model {
+	m.messages = append(m.messages, message{
+		text:         body,
+		kind:         constants.MessageDetail,
+		detailLabel:  label,
+		detailStatus: status,
+	})
+	m.layout.ContentDirty = true
+	return m
+}
+
+func (m Model) toggleDetailExpandAt(index int) (Model, bool) {
+	if index < 0 || index >= len(m.messages) || !isCollapsibleKind(m.messages[index].kind) {
+		return m, false
+	}
+	m.messages[index].detailExpanded = !m.messages[index].detailExpanded
+	m.messages[index].renderCache = messageRenderCache{}
+	m.layout.ContentDirty = true
+	return m.clearStreamPrefixCache(), true
+}
+
+func (m Model) toggleLastDetailExpand() (Model, bool) {
+	for i := len(m.messages) - 1; i >= 0; i-- {
+		if !isCollapsibleKind(m.messages[i].kind) {
+			continue
+		}
+		return m.toggleDetailExpandAt(i)
+	}
+	return m, false
+}
+
 func (m Model) addAIMessage(text string) Model {
 	m.messages = append(m.messages, message{text: text, kind: constants.MessageAI})
 	m.session.AppendLog("ai", text)
@@ -360,14 +403,25 @@ func (m Model) addAIMessage(text string) Model {
 	return m
 }
 
-func (m Model) addToolMessage(text string) Model {
-	m.messages = append(m.messages, message{text: text, kind: constants.MessageTool})
-	m.layout.ContentDirty = true
-	return m
+func (m Model) addToolDetailMessage(toolName, body string) Model {
+	return m.addDetailMessageWithStatus(toolName, body, constants.DetailStatusSuccess)
+}
+
+func (m Model) thinkingExpandedByDefault() bool {
+	cfg, err := settings.Load()
+	if err != nil {
+		return false
+	}
+	return cfg.AutoExpandThinkingEnabled()
 }
 
 func (m Model) addThinkingMessage(text string) Model {
-	m.messages = append(m.messages, message{text: text, kind: constants.MessageThinking})
+	m.messages = append(m.messages, message{
+		text:           text,
+		kind:           constants.MessageThinking,
+		detailLabel:    "Thinking",
+		detailExpanded: m.thinkingExpandedByDefault(),
+	})
 	m.layout.ContentDirty = true
 	return m
 }

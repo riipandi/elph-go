@@ -18,6 +18,27 @@ func TestLoadMissingReturnsDefaults(t *testing.T) {
 	require.Equal(t, "24h", cfg.Models.SyncInterval)
 	require.Empty(t, cfg.Models.LastSync)
 	require.True(t, cfg.ShowThinkingEnabled())
+	require.False(t, cfg.AutoExpandThinkingEnabled())
+}
+
+func TestAutoExpandThinkingDefaultsFalseAndCanEnable(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+
+	cfg, err := Load()
+	require.NoError(t, err)
+	require.False(t, cfg.AutoExpandThinkingEnabled())
+
+	enabled := true
+	require.NoError(t, Save(Settings{
+		Models:             cfg.Models,
+		ShowThinking:       cfg.ShowThinking,
+		AutoExpandThinking: &enabled,
+	}))
+
+	cfg, err = Load()
+	require.NoError(t, err)
+	require.True(t, cfg.AutoExpandThinkingEnabled())
 }
 
 func TestShowThinkingDefaultsTrueAndCanDisable(t *testing.T) {

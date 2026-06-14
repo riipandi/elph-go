@@ -48,7 +48,23 @@ func (m Model) clearStreamPrefixCache() Model {
 	m.layout.StreamPrefixUpTo = -1
 	m.layout.StreamPrefixWidth = 0
 	m.layout.StreamPrefixBeforeLen = 0
+	m.layout.StreamPrefixDetailSig = 0
 	return m
+}
+
+func (m Model) streamPrefixDetailSig(streamIdx int) uint64 {
+	var sig uint64
+	for i := 0; i < streamIdx && i < len(m.messages); i++ {
+		if !isCollapsibleKind(m.messages[i].kind) {
+			continue
+		}
+		part := uint64(i+1) | uint64(m.messages[i].detailStatus)<<8
+		if m.messages[i].detailExpanded {
+			part |= 1 << 32
+		}
+		sig ^= part * 0x9e3779b97f4a7c15
+	}
+	return sig
 }
 
 func (m Model) refreshStreamPrefixCache() Model {
@@ -59,9 +75,11 @@ func (m Model) refreshStreamPrefixCache() Model {
 
 	width := m.messageAreaWidth()
 	beforeLen := m.messagesBeforeStreamLen(streamIdx)
+	detailSig := m.streamPrefixDetailSig(streamIdx)
 	if m.layout.StreamPrefixUpTo == streamIdx &&
 		m.layout.StreamPrefixWidth == width &&
-		m.layout.StreamPrefixBeforeLen == beforeLen {
+		m.layout.StreamPrefixBeforeLen == beforeLen &&
+		m.layout.StreamPrefixDetailSig == detailSig {
 		return m
 	}
 
@@ -76,6 +94,7 @@ func (m Model) refreshStreamPrefixCache() Model {
 	m.layout.StreamPrefixUpTo = streamIdx
 	m.layout.StreamPrefixWidth = width
 	m.layout.StreamPrefixBeforeLen = beforeLen
+	m.layout.StreamPrefixDetailSig = detailSig
 	return m
 }
 

@@ -134,6 +134,41 @@ func FormatShellContext(command, output string, exitCode int) string {
 	return b.String()
 }
 
+// FormatShellDetailBody returns collapsible detail text for shell output (without the command line).
+func FormatShellDetailBody(output string, exitCode int, runErr error, cancelled bool) string {
+	if cancelled {
+		var b strings.Builder
+		if output != "" {
+			b.WriteString(output)
+		}
+		if b.Len() > 0 {
+			b.WriteByte('\n')
+		}
+		b.WriteString("(cancelled)")
+		return b.String()
+	}
+	if runErr != nil {
+		var b strings.Builder
+		if output != "" {
+			b.WriteString(output)
+			b.WriteByte('\n')
+		}
+		b.WriteString(runErr.Error())
+		return b.String()
+	}
+	var b strings.Builder
+	if output != "" {
+		b.WriteString(output)
+	}
+	if exitCode != 0 {
+		if b.Len() > 0 {
+			b.WriteByte('\n')
+		}
+		fmt.Fprintf(&b, "(exit %d)", exitCode)
+	}
+	return b.String()
+}
+
 // FormatShellDisplay returns UI text for bash execution in the chat stream.
 func FormatShellDisplay(command, output string, exitCode int, runErr error, cancelled bool) string {
 	var b strings.Builder

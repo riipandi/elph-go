@@ -63,6 +63,9 @@ type ctrlCResetMsg struct{}
 type message struct {
 	text           string
 	kind           constants.MessageKind
+	detailLabel    string
+	detailExpanded bool
+	detailStatus   constants.DetailStatus
 	renderCache    messageRenderCache
 	glamourPending bool
 }
@@ -181,7 +184,7 @@ func New() Model {
 		showPromptPrefix: false,
 		mouseEnabled:     true,
 		layout:           LayoutCache{ContentDirty: true},
-		shell:            ShellState{ToolMsgID: -1},
+		shell:            ShellState{DetailMsgID: -1},
 		ctrlCNoticeID:    -1,
 	}
 }

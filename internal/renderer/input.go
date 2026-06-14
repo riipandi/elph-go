@@ -417,9 +417,7 @@ func isSlashCommand(s string) bool {
 }
 
 func (m Model) handleSlashCommand(raw string) (Model, tea.Cmd, bool) {
-	m = m.addUserMessage(strings.TrimSpace(raw))
-	m = m.resetInput()
-
+	trimmed := strings.TrimSpace(raw)
 	result := command.Execute(raw, m.commandContext())
 	if result.OpenModelSelector {
 		m = m.openModelSelector(result.SelectorCatalog, result.SelectorQuery)
@@ -427,12 +425,19 @@ func (m Model) handleSlashCommand(raw string) (Model, tea.Cmd, bool) {
 	}
 	m = m.applyModelSwitch(result.Switch)
 	if prompt := strings.TrimSpace(result.AgentPrompt); prompt != "" {
+		m = m.addUserMessage(trimmed)
+		m = m.addDetailMessage("Prompt", prompt)
+		m.session.AppendLog("prompt", prompt)
+		m = m.resetInput()
 		m = m.beginAgentTurn()
 		m = m.syncLayout(true)
 		var agentCmd tea.Cmd
 		m, agentCmd = m.agentTurnCmds(prompt)
 		return m, agentCmd, true
 	}
+	m = m.addUserMessage(trimmed)
+	m = m.resetInput()
+
 	if result.Quit {
 		m.quitting = true
 		return m, tea.Sequence(disableTerminalFeatures(), tea.Quit), true

@@ -57,8 +57,8 @@ func (m Model) handleShellSubmit(command string, withContext bool) (Model, tea.C
 	m.shell.WithContext = withContext
 	m.shell.Output = ""
 	m = m.beginShellActivity()
-	m = m.addToolMessage(shellRunningDisplay(command))
-	m.shell.ToolMsgID = len(m.messages) - 1
+	m = m.addDetailMessageWithStatus(shellDetailLabel(command), "(running…)", constants.DetailStatusRunning)
+	m.shell.DetailMsgID = len(m.messages) - 1
 	m.layout.ContentDirty = true
 	m = m.syncLayout(true)
 
@@ -108,10 +108,6 @@ func (m Model) handleShellSubmit(command string, withContext bool) (Model, tea.C
 	), true
 }
 
-func shellRunningDisplay(command string) string {
-	return "$ " + command
-}
-
 func closeOutCh(ch chan string) {
 	defer func() { _ = recover() }()
 	close(ch)
@@ -147,15 +143,14 @@ func (m Model) cancelShell() (Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m Model) updateShellToolMessage(running bool, result *runtime.ShellResult) Model {
-	if m.shell.ToolMsgID < 0 || m.shell.ToolMsgID >= len(m.messages) {
+func (m Model) updateShellDetailMessage(result *runtime.ShellResult) Model {
+	if m.shell.DetailMsgID < 0 || m.shell.DetailMsgID >= len(m.messages) {
 		return m
 	}
 
 	var text string
 	if result != nil {
-		text = runtime.FormatShellDisplay(
-			m.shell.Command,
+		text = runtime.FormatShellDetailBody(
 			result.Output,
 			result.ExitCode,
 			result.Err,
@@ -163,10 +158,21 @@ func (m Model) updateShellToolMessage(running bool, result *runtime.ShellResult)
 		)
 	} else {
 		output := runtime.TrimStreamOutput(m.shell.Output)
-		text = runtime.FormatShellDisplay(m.shell.Command, output, 0, nil, false)
+		if output == "" {
+			text = "(running…)"
+		} else {
+			text = output
+		}
 	}
 
-	m.messages[m.shell.ToolMsgID].text = text
+	idx := m.shell.DetailMsgID
+	m.messages[idx].text = text
+	if result != nil {
+		m.messages[idx].detailStatus = shellDetailStatus(result, false)
+	} else {
+		m.messages[idx].detailStatus = constants.DetailStatusRunning
+	}
+	m.messages[idx].renderCache = messageRenderCache{}
 	m.layout.ContentDirty = true
 	return m
 }
@@ -177,12 +183,18 @@ func (m Model) finishShellDone(msg shellDoneMsg) (Model, tea.Cmd) {
 	m.shell.DoneCh = nil
 
 	m.shell.Output = msg.result.Output
-	m = m.updateShellToolMessage(false, &msg.result)
+	m = m.updateShellDetailMessage(&msg.result)
 
-	if m.shell.ToolMsgID >= 0 && m.shell.ToolMsgID < len(m.messages) {
-		m.session.AppendLog("shell", m.messages[m.shell.ToolMsgID].text)
+	if m.shell.DetailMsgID >= 0 && m.shell.DetailMsgID < len(m.messages) {
+		m.session.AppendLog("shell", runtime.FormatShellDisplay(
+			m.shell.Command,
+			msg.result.Output,
+			msg.result.ExitCode,
+			msg.result.Err,
+			msg.result.Cancelled,
+		))
 	}
-	m.shell.ToolMsgID = -1
+	m.shell.DetailMsgID = -1
 	m.shell.Command = ""
 	m.shell.Output = ""
 	m.shell.Running = false
@@ -204,7 +216,7 @@ func (m Model) finishShellDone(msg shellDoneMsg) (Model, tea.Cmd) {
 
 func (m Model) handleShellOutput(msg shellOutputMsg) (Model, tea.Cmd) {
 	m.shell.Output += msg.chunk
-	m = m.updateShellToolMessage(true, nil)
+	m = m.updateShellDetailMessage(nil)
 	m = m.syncLayout(true)
 
 	var cmd tea.Cmd

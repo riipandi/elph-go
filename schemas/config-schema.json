@@ -15,6 +15,11 @@
 			"description": "Stream and display model reasoning in the chat. Default true.",
 			"default": true
 		},
+		"autoExpandThinking": {
+			"type": "boolean",
+			"description": "Start thinking blocks expanded in the chat. Default false.",
+			"default": false
+		},
 		"session": {
 			"type": "object",
 			"properties": {

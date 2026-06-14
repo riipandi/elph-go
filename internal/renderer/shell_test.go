@@ -119,9 +119,10 @@ func TestSubmitShellWithoutContext(t *testing.T) {
 	require.Len(t, m.messages, 2)
 	require.Equal(t, constants.MessageUser, m.messages[0].kind)
 	require.Equal(t, "echo shell-no-ctx", m.messages[0].text)
-	require.Equal(t, constants.MessageTool, m.messages[1].kind)
-	require.Contains(t, m.messages[1].text, "$ echo shell-no-ctx")
+	require.Equal(t, constants.MessageDetail, m.messages[1].kind)
+	require.Equal(t, "$ echo shell-no-ctx", m.messages[1].detailLabel)
 	require.Contains(t, m.messages[1].text, "shell-no-ctx")
+	require.NotContains(t, m.messages[1].text, "$ echo shell-no-ctx")
 
 	content := stripANSI(m.contentView())
 	require.Contains(t, content, "shell-no-ctx")
@@ -141,7 +142,8 @@ func TestSubmitShellWithContext(t *testing.T) {
 	require.False(t, m.agent.Busy)
 	require.Equal(t, constants.MessageUser, m.messages[0].kind)
 	require.Equal(t, "echo shell-with-ctx", m.messages[0].text)
-	require.Equal(t, constants.MessageTool, m.messages[1].kind)
+	require.Equal(t, constants.MessageDetail, m.messages[1].kind)
+	require.Equal(t, "$ echo shell-with-ctx", m.messages[1].detailLabel)
 	require.Contains(t, m.messages[1].text, "shell-with-ctx")
 	require.Contains(t, stripANSI(m.contentView()), "shell-with-ctx")
 	require.NotContains(t, stripANSI(m.contentView()), "Received:")
@@ -177,7 +179,7 @@ func TestCancelShellWithEscape(t *testing.T) {
 	m, _ = dispatchTeaMsg(t, m, doneCmd())
 
 	require.False(t, m.shell.Running)
-	require.Equal(t, constants.MessageTool, m.messages[1].kind)
+	require.Equal(t, constants.MessageDetail, m.messages[1].kind)
 	require.Contains(t, m.messages[1].text, "running")
 	require.Contains(t, m.messages[1].text, "(cancelled)")
 }

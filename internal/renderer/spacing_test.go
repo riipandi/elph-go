@@ -22,6 +22,9 @@ func expectedBlankLinesBetween(prev, curr constants.MessageKind) int {
 	if boxedMessageKind(curr) {
 		blanks++
 	}
+	if prev == constants.MessageDetail || prev == constants.MessageThinking {
+		blanks += 6
+	}
 	return blanks
 }
 
@@ -34,6 +37,7 @@ func TestMessageSpacingMatrixConsistent(t *testing.T) {
 		{"thinking", constants.MessageThinking, "[[thinking]]"},
 		{"ai", constants.MessageAI, "[[ai]]"},
 		{"user", constants.MessageUser, "[[user]]"},
+		{"detail", constants.MessageDetail, "detail body"},
 		{"tool", constants.MessageTool, "[[tool]]"},
 		{"system", constants.MessageSystem, "[[system]]"},
 	}
@@ -42,11 +46,15 @@ func TestMessageSpacingMatrixConsistent(t *testing.T) {
 		for _, curr := range kinds {
 			m := testModel()
 			m.messages = []message{
-				{text: prev.text, kind: prev.kind},
-				{text: curr.text, kind: curr.kind},
+				promptSpacingMessage(prev.text, prev.kind),
+				promptSpacingMessage(curr.text, curr.kind),
 			}
 			content := normalizeSpacingLines(stripANSI(m.messagesView()))
-			blanks := blankLinesBetweenMarkers(content, prev.text, curr.text)
+			blanks := blankLinesBetweenMarkers(
+				content,
+				spacingMarker(prev.text, prev.kind),
+				spacingMarker(curr.text, curr.kind),
+			)
 			want := expectedBlankLinesBetween(prev.kind, curr.kind)
 			require.Equal(t, want, blanks, "%s -> %s", prev.name, curr.name)
 		}
@@ -56,7 +64,7 @@ func TestMessageSpacingMatrixConsistent(t *testing.T) {
 func TestAssistantTurnSpacingConsistent(t *testing.T) {
 	m := testModel()
 	m.messages = []message{
-		{text: "[[think]]", kind: constants.MessageThinking},
+		promptSpacingMessage("[[think]]", constants.MessageThinking),
 		{text: "[[answer]]", kind: constants.MessageAI},
 		{text: "[[prompt]]", kind: constants.MessageUser},
 		{text: "[[reply]]", kind: constants.MessageAI},
@@ -65,18 +73,29 @@ func TestAssistantTurnSpacingConsistent(t *testing.T) {
 	}
 	content := normalizeSpacingLines(stripANSI(m.messagesView()))
 
-	pairs := [][2]string{
-		{"[[think]]", "[[answer]]"},
-		{"[[answer]]", "[[prompt]]"},
-		{"[[prompt]]", "[[reply]]"},
-		{"[[reply]]", "[[shell]]"},
-		{"[[shell]]", "[[note]]"},
+	for i := 1; i < len(m.messages); i++ {
+		prev, curr := m.messages[i-1], m.messages[i]
+		left := spacingMarker(prev.text, prev.kind)
+		right := spacingMarker(curr.text, curr.kind)
+		blanks := blankLinesBetweenMarkers(content, left, right)
+		want := expectedBlankLinesBetween(prev.kind, curr.kind)
+		require.Equal(t, want, blanks, "%s -> %s", left, right)
 	}
-	for _, pair := range pairs {
-		blanks := blankLinesBetweenMarkers(content, pair[0], pair[1])
-		want := expectedBlankLinesBetween(kindForMarker(pair[0]), kindForMarker(pair[1]))
-		require.Equal(t, want, blanks, "%s -> %s", pair[0], pair[1])
+}
+
+func spacingMarker(text string, kind constants.MessageKind) string {
+	if kind == constants.MessageDetail || kind == constants.MessageThinking {
+		return "[[collapsible-block]]"
 	}
+	return text
+}
+
+func promptSpacingMessage(text string, kind constants.MessageKind) message {
+	msg := message{text: text, kind: kind}
+	if kind == constants.MessageDetail || kind == constants.MessageThinking {
+		msg.detailLabel = "[[collapsible-block]]"
+	}
+	return msg
 }
 
 func kindForMarker(marker string) constants.MessageKind {
@@ -113,8 +132,10 @@ func TestActiveTurnMessageSpacingConsistent(t *testing.T) {
 	m = updated.(Model)
 
 	content := normalizeSpacingLines(stripANSI(m.messagesView()))
-	require.Equal(t, 2, blankLinesBetweenMarkers(content, "[[prompt]]", "[[think]]"))
-	require.Equal(t, 1, blankLinesBetweenMarkers(content, "[[think]]", "[[answer]]"))
+	require.Equal(t, expectedBlankLinesBetween(constants.MessageUser, constants.MessageThinking),
+		blankLinesBetweenMarkers(content, "[[prompt]]", "Thinking"))
+	require.Equal(t, expectedBlankLinesBetween(constants.MessageThinking, constants.MessageAI),
+		blankLinesBetweenMarkers(content, "Thinking", "[[answer]]"))
 }
 
 func TestActivityChromeGapMatchesIdleInputMargin(t *testing.T) {

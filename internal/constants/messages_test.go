@@ -16,3 +16,16 @@ func TestThinkingUsesDimText(t *testing.T) {
 	require.Equal(t, DimText, MessageStyle(MessageThinking).GetForeground(),
 		"thinking messages should use dim gray foreground")
 }
+
+func TestThinkingBackgroundDiffersFromDetail(t *testing.T) {
+	thinking := MessageStyle(MessageThinking).GetBackground()
+	detail := MessageStyle(MessageDetail).GetBackground()
+	require.NotEqual(t, thinking, detail)
+}
+
+func TestDetailNeutralUsesSoftPalette(t *testing.T) {
+	detail := MessageStyle(MessageDetail)
+	neutral := DetailStatusStyle(DetailStatusNeutral)
+	require.Equal(t, neutral.GetForeground(), detail.GetForeground())
+	require.Equal(t, neutral.GetBackground(), detail.GetBackground())
+}

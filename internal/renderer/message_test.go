@@ -55,7 +55,7 @@ func TestAIMessageRendersText(t *testing.T) {
 func TestResponseMessageVerticalSpacing(t *testing.T) {
 	m := testModel()
 	messages := []message{
-		{text: "thinking step", kind: constants.MessageThinking},
+		promptSpacingMessage("thinking step", constants.MessageThinking),
 		{text: "from agent", kind: constants.MessageAI},
 		{text: "from user", kind: constants.MessageUser},
 		{text: "reply", kind: constants.MessageAI},
@@ -65,7 +65,7 @@ func TestResponseMessageVerticalSpacing(t *testing.T) {
 	for i := 1; i < len(messages); i++ {
 		prev, curr := messages[i-1], messages[i]
 		want := expectedBlankLinesBetween(prev.kind, curr.kind)
-		blanks := blankLinesBetweenMarkers(content, prev.text, curr.text)
+		blanks := blankLinesBetweenMarkers(content, spacingMarker(prev.text, prev.kind), spacingMarker(curr.text, curr.kind))
 		require.Equal(t, want, blanks, "%s -> %s", prev.text, curr.text)
 	}
 }
@@ -76,10 +76,15 @@ func TestAIMessageNoExtraVerticalPadding(t *testing.T) {
 	require.Equal(t, 2, lipgloss.Height(rendered))
 }
 
-func TestThinkingMessageNoExtraVerticalPadding(t *testing.T) {
+func TestThinkingMessageUsesCollapsibleBox(t *testing.T) {
 	m := testModel()
-	rendered := m.renderMessage(message{text: "reasoning", kind: constants.MessageThinking})
-	require.Equal(t, 1, lipgloss.Height(rendered))
+	rendered := m.renderMessage(message{
+		text:        "reasoning",
+		kind:        constants.MessageThinking,
+		detailLabel: "Thinking",
+	})
+	require.GreaterOrEqual(t, lipgloss.Height(rendered), 3)
+	require.Contains(t, stripANSI(rendered), "ctrl+o to expand")
 }
 
 func TestBoxedMessageSingleLineHeight(t *testing.T) {

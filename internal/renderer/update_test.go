@@ -284,8 +284,12 @@ func TestSubmitPromptTemplateStartsAgentTurn(t *testing.T) {
 
 	require.NotNil(t, cmd)
 	require.True(t, m.agent.Busy)
-	require.Len(t, m.messages, 1)
+	require.Len(t, m.messages, 2)
+	require.Equal(t, constants.MessageUser, m.messages[0].kind)
 	require.Equal(t, "/identify auth", m.messages[0].text)
+	require.Equal(t, constants.MessageDetail, m.messages[1].kind)
+	require.Equal(t, "Prompt", m.messages[1].detailLabel)
+	require.Contains(t, m.messages[1].text, "focusing on auth")
 }
 
 func TestSubmitSlashCommandUnknown(t *testing.T) {
@@ -410,12 +414,13 @@ func TestWithMessageAppendsSystemMessage(t *testing.T) {
 	require.Equal(t, constants.MessageSystem, m.messages[0].kind)
 }
 
-func TestAddToolAndThinkingMessages(t *testing.T) {
+func TestAddToolDetailAndThinkingMessages(t *testing.T) {
 	m := New()
-	m = m.addToolMessage("tool output")
+	m = m.addToolDetailMessage("Read", "file contents")
 	m = m.addThinkingMessage("thinking...")
 	require.Len(t, m.messages, 2)
-	require.Equal(t, constants.MessageTool, m.messages[0].kind)
+	require.Equal(t, constants.MessageDetail, m.messages[0].kind)
+	require.Equal(t, "Read", m.messages[0].detailLabel)
 	require.Equal(t, constants.MessageThinking, m.messages[1].kind)
 }
 

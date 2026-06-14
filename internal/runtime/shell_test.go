@@ -55,6 +55,18 @@ func TestFormatShellContext(t *testing.T) {
 	require.Contains(t, got, "(exit 1)")
 }
 
+func TestFormatShellDetailBody(t *testing.T) {
+	got := FormatShellDetailBody("out", 0, nil, false)
+	require.Equal(t, "out", got)
+
+	got = FormatShellDetailBody("", 2, nil, false)
+	require.Equal(t, "(exit 2)", got)
+
+	got = FormatShellDetailBody("partial", 0, nil, true)
+	require.Contains(t, got, "partial")
+	require.Contains(t, got, "(cancelled)")
+}
+
 func TestFormatShellDisplay(t *testing.T) {
 	got := FormatShellDisplay("ls", "out", 0, nil, false)
 	require.Equal(t, "$ ls\nout", got)

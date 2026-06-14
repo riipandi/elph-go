@@ -15,7 +15,7 @@ type ShellState struct {
 	Command     string
 	Output      string
 	WithContext bool
-	ToolMsgID   int
+	DetailMsgID int
 	Cancel      context.CancelFunc
 	OutputCh    chan string
 	DoneCh      chan runtime.ShellResult
@@ -49,6 +49,7 @@ type LayoutCache struct {
 	StreamPrefixUpTo      int
 	StreamPrefixWidth     int
 	StreamPrefixBeforeLen int
+	StreamPrefixDetailSig uint64
 	StreamFlushPending    bool
 }
 

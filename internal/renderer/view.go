@@ -189,43 +189,57 @@ func (m Model) messagesView() string {
 
 func (m Model) renderMessage(msg message) string {
 	width := m.messageAreaWidth()
-	if msg.kind == constants.MessageAI {
+	switch msg.kind {
+	case constants.MessageAI:
 		return renderAIMessage(width, msg.text, false, false)
+	case constants.MessageDetail:
+		return renderDetailMessage(width, collapsibleLabel(msg), msg.text, msg.detailExpanded, msg.detailStatus)
+	case constants.MessageThinking:
+		return renderThinkingMessage(width, collapsibleLabel(msg), msg.text, msg.detailExpanded)
+	default:
+		return renderStyledMessage(width, msg.kind, msg.text)
 	}
-	return renderStyledMessage(width, msg.kind, msg.text)
 }
 
-func (m Model) renderMessageAt(index int) string {
+func (m *Model) renderMessageAt(index int) string {
 	msg := m.messages[index]
 	width := m.messageAreaWidth()
 	streaming := m.isStreamingMessageAt(index)
 
-	if c := msg.renderCache; c.hit(width, streaming, len(msg.text)) {
+	if c := msg.renderCache; c.hit(width, streaming, len(msg.text), msg.detailExpanded, msg.detailStatus) {
 		return c.output
 	}
 
 	var out string
 	switch {
+	case streaming && msg.kind == constants.MessageThinking:
+		out = renderThinkingMessage(width, collapsibleLabel(msg), msg.text, msg.detailExpanded)
 	case streaming:
 		out = renderStreamingMessage(width, msg.kind, msg.text)
 	case msg.kind == constants.MessageAI:
 		out = renderAIMessage(width, msg.text, false, msg.glamourPending)
+	case msg.kind == constants.MessageDetail:
+		out = renderDetailMessage(width, collapsibleLabel(msg), msg.text, msg.detailExpanded, msg.detailStatus)
+	case msg.kind == constants.MessageThinking:
+		out = renderThinkingMessage(width, collapsibleLabel(msg), msg.text, msg.detailExpanded)
 	default:
 		out = renderStyledMessage(width, msg.kind, msg.text)
 	}
 
 	m.messages[index].renderCache = messageRenderCache{
-		width:     width,
-		sourceLen: len(msg.text),
-		streaming: streaming,
-		output:    out,
+		width:        width,
+		sourceLen:    len(msg.text),
+		streaming:    streaming,
+		expanded:     msg.detailExpanded,
+		detailStatus: msg.detailStatus,
+		output:       out,
 	}
 	return out
 }
 
 func messageBlockPadding(kind constants.MessageKind) (vertical, horizontal int) {
 	switch kind {
-	case constants.MessageUser, constants.MessageTool:
+	case constants.MessageUser, constants.MessageTool, constants.MessageDetail, constants.MessageThinking:
 		return 1, 2
 	default:
 		return 0, 1

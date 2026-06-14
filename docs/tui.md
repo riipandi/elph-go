@@ -126,7 +126,13 @@ Inputs starting with `/` invoke slash commands. Built-in commands (for example `
 `/exit`) are always available. Custom prompt templates are loaded from `~/.elph/prompts/*.md` and
 `<workDir>/.elph/prompts/*.md` — each file becomes a slash command named after the filename.
 
-When a prompt template is submitted, the expanded content is sent to the agent as the user prompt.
+Detail blocks (prompt templates, shell output, tool results) and thinking blocks are shown
+separately from user input. They are dimmed, collapsible, and collapsed by default (thinking
+respects `autoExpandThinking`). Click a thinking header or any block hint to expand or collapse that specific block.
+Detail titles are plain text (no background); only the hint row is clickable for detail
+blocks. `Ctrl+O` always toggles the most recent collapsible block in the session.
+Detail box colors reflect status: neutral, running, success, warning, or error.
+
 See [prompt-templates.md](./prompt-templates.md) for format, argument placeholders, and examples.
 
 ---
@@ -215,6 +221,8 @@ project_dir [session_id] mode             turn: 0 | branch [+N -N]
 | `Ctrl+J`      | Insert newline in input |
 | `Shift+Enter` | Insert newline in input |
 | `Shift+Tab`   | Cycle thinking level    |
+| `Ctrl+O`      | Expand/collapse newest collapsible block |
+| Click header/footer | Expand/collapse that specific block |
 | `:q` / `:q!`  | Quit (vim-style)        |
 
 ## Stream Messages
@@ -224,3 +232,5 @@ project_dir [session_id] mode             turn: 0 | branch [+N -N]
 | User   | `\|`   | `userPipeCol` |
 | AI     | `\|`   | `aiPipeCol`   |
 | System | `> `   | `highlight`   |
+| Detail   | —      | Soft status-colored box — neutral, running, success, warning, error |
+| Thinking | —      | Neutral dim gray box; `autoExpandThinking` in settings (default false) |

@@ -17,9 +17,10 @@ const (
 
 // Settings is persisted at ~/.elph/settings.json.
 type Settings struct {
-	Models       ModelsSettings  `json:"models"`
-	ShowThinking *bool           `json:"showThinking,omitempty"`
-	Session      SessionSettings `json:"session,omitempty"`
+	Models             ModelsSettings  `json:"models"`
+	ShowThinking       *bool           `json:"showThinking,omitempty"`
+	AutoExpandThinking *bool           `json:"autoExpandThinking,omitempty"`
+	Session            SessionSettings `json:"session,omitempty"`
 }
 
 // ModelsSettings controls periodic models.dev metadata sync.
@@ -98,12 +99,21 @@ func (s Settings) withDefaults() Settings {
 		v := true
 		s.ShowThinking = &v
 	}
+	if s.AutoExpandThinking == nil {
+		v := false
+		s.AutoExpandThinking = &v
+	}
 	return s
 }
 
 // ShowThinkingEnabled reports whether reasoning output is streamed in the UI.
 func (s Settings) ShowThinkingEnabled() bool {
 	return *s.withDefaults().ShowThinking
+}
+
+// AutoExpandThinkingEnabled reports whether thinking blocks start expanded.
+func (s Settings) AutoExpandThinkingEnabled() bool {
+	return *s.withDefaults().AutoExpandThinking
 }
 
 func (m ModelsSettings) withDefaults() ModelsSettings {

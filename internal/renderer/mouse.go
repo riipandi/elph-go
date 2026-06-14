@@ -46,6 +46,16 @@ func (m Model) handleMouse(msg tea.MouseMsg) (Model, []tea.Cmd) {
 		return m, nil
 	}
 
+	if click, ok := msg.(tea.MouseClickMsg); ok && click.Button == tea.MouseLeft && !click.Mod.Contains(tea.ModShift) {
+		if idx, ok := m.collapsibleToggleAtViewportY(click.Y); ok {
+			m, toggled := m.toggleDetailExpandAt(idx)
+			if toggled {
+				m = m.syncLayout(false)
+				return m, nil
+			}
+		}
+	}
+
 	if m.shouldReleaseMouseForSelection(msg) {
 		return m.beginTextSelection()
 	}

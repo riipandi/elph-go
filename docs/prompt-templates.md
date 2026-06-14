@@ -3,8 +3,9 @@
 Prompt templates are Markdown snippets that expand into full prompts. Type `/name` in the TUI input
 to invoke a template, where `name` is the filename without `.md`.
 
-When submitted, the expanded prompt is sent to the agent as a normal user turn. The original slash
-input (for example `/identify auth`) is shown in the chat history.
+When submitted, the expanded prompt is sent to the agent as a normal user turn. The slash input
+(for example `/identify auth`) appears as a normal user message. The expanded prompt content is
+shown separately in a collapsible detail block. Press `Ctrl+O` to expand or collapse it.
 
 ## Locations
 
@@ -106,3 +107,15 @@ templates. Each template entry shows:
 ```
 
 Use `Tab`, `Up`, or `Down` to select a suggestion, then continue typing arguments before pressing `Enter`.
+
+## Display
+
+Prompt templates use the shared **detail block** UI (also used for shell output and tool results):
+
+1. **User message** — the slash input, for example `/identify auth`
+2. **Detail block** — collapsed by default, labeled `Prompt`, with a dimmed one-line preview
+
+Detail and thinking blocks use a muted background so they are visually distinct from AI responses.
+They start collapsed by default (thinking respects `autoExpandThinking` in `~/.elph/settings.json`).
+Click the block header/footer or press `Ctrl+O` to expand or collapse a specific block. The hint
+at the bottom of each block shows `click or ctrl+o to expand` or `click or ctrl+o to collapse`.

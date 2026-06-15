@@ -32,12 +32,14 @@ type toolInteractBridge struct {
 	inbox               chan toolInteractOffer
 	skipSessionApproval bool // set after "allow for session" within the current turn
 	deniedApprovals     map[string]struct{}
+	resolvedAskUsers    *map[string]askUserResolution
 }
 
 const (
 	approvalChoiceOnce    = "once"
 	approvalChoiceSession = "session"
 	approvalChoiceDeny    = "deny"
+	dialogChoiceCancel    = "cancel"
 
 	// Cap description lines so huh does not wrap unbounded text and blow past the terminal.
 	maxApprovalDescriptionLines = 6
@@ -48,6 +50,11 @@ func newToolInteractBridge() *toolInteractBridge {
 }
 
 func (b *toolInteractBridge) Interact(ctx context.Context, req agent.ToolInteractRequest) (agent.ToolInteractResponse, error) {
+	if req.Kind == agent.ToolInteractAskUser {
+		if resp, ok := lookupResolvedAskUser(b.resolvedAskUsers, req); ok {
+			return resp, nil
+		}
+	}
 	if b.skipSessionApproval && req.Kind == agent.ToolInteractApproval {
 		return agent.ToolInteractResponse{Approved: true}, nil
 	}
@@ -92,6 +99,17 @@ func (m Model) toolInteractFormWidth() int {
 }
 
 func (m Model) offerToolInteract(msg toolInteractOfferMsg) (Model, tea.Cmd) {
+	if msg.offer.Req.Kind == agent.ToolInteractAskUser {
+		if resp, ok := m.lookupResolvedAskUser(msg.offer.Req); ok {
+			if msg.offer.FromMarkup {
+				return m, nil
+			}
+			if msg.offer.RespCh != nil {
+				msg.offer.RespCh <- resp
+			}
+			return m.finalizeToolInteractComplete()
+		}
+	}
 	m.input.Blur()
 	m.showPromptPrefix = true
 	m.toolInteractPending = msg.offer
@@ -162,10 +180,11 @@ func newAskUserForm(req agent.ToolInteractRequest, width int) *huh.Form {
 
 	if len(options) > 0 {
 		var selected string
-		opts := make([]huh.Option[string], len(options))
+		opts := make([]huh.Option[string], len(options)+1)
 		for i, opt := range options {
 			opts[i] = huh.NewOption(opt, opt)
 		}
+		opts[len(options)] = huh.NewOption("Cancel", dialogChoiceCancel)
 		selectField := huh.NewSelect[string]().
 			Key("choice").
 			Options(opts...).
@@ -191,6 +210,7 @@ func newAskUserForm(req agent.ToolInteractRequest, width int) *huh.Form {
 	}
 
 	var answer string
+	var choice string
 	return huh.NewForm(
 		huh.NewGroup(
 			huh.NewInput().
@@ -198,6 +218,10 @@ func newAskUserForm(req agent.ToolInteractRequest, width int) *huh.Form {
 				Title(question).
 				Placeholder("Your answer…").
 				Value(&answer),
+			huh.NewSelect[string]().
+				Key("choice").
+				Options(huh.NewOption("Cancel", dialogChoiceCancel)).
+				Value(&choice),
 		),
 	).
 		WithWidth(width).
@@ -219,6 +243,7 @@ func newToolApprovalForm(req agent.ToolInteractRequest, width int) *huh.Form {
 					huh.NewOption("Allow once", approvalChoiceOnce),
 					huh.NewOption("Allow for session", approvalChoiceSession),
 					huh.NewOption("Deny", approvalChoiceDeny),
+					huh.NewOption("Cancel", dialogChoiceCancel),
 				).
 				Value(&choice),
 		),
@@ -371,13 +396,22 @@ func (m Model) toolInteractShortcutResponse(msg tea.KeyPressMsg) (agent.ToolInte
 			return agent.ToolInteractResponse{Approved: true, AllowSession: true}, true
 		case "3":
 			return agent.ToolInteractResponse{Approved: false}, true
+		case "4", "c":
+			return agent.ToolInteractResponse{Cancelled: true}, true
 		}
 	case agent.ToolInteractAskUser:
-		opts := parseAskUserArgs(req.Args).options
+		fields := parseAskUserArgs(req.Args)
+		opts := fields.options
 		if len(opts) > 0 && len(msg.Text) == 1 {
-			if n, err := strconv.Atoi(msg.Text); err == nil && n >= 1 && n <= len(opts) {
+			if n, err := strconv.Atoi(msg.Text); err == nil && n >= 1 && n <= len(opts)+1 {
+				if n == len(opts)+1 {
+					return agent.ToolInteractResponse{Cancelled: true}, true
+				}
 				return agent.ToolInteractResponse{Answer: opts[n-1]}, true
 			}
+		}
+		if strings.ToLower(msg.String()) == "c" && len(opts) > 0 {
+			return agent.ToolInteractResponse{Cancelled: true}, true
 		}
 	}
 	return agent.ToolInteractResponse{}, false
@@ -403,6 +437,9 @@ func (m Model) askUserChoiceEnterResponse(msg tea.KeyPressMsg) (agent.ToolIntera
 	choice := askUserChoiceSelection(m.toolInteractForm, fields.options)
 	if choice == "" {
 		return agent.ToolInteractResponse{}, false
+	}
+	if isDialogCancelChoice(choice) {
+		return agent.ToolInteractResponse{Cancelled: true}, true
 	}
 	return agent.ToolInteractResponse{Answer: choice}, true
 }
@@ -437,6 +474,9 @@ func (m Model) completeToolInteractWith(resp agent.ToolInteractResponse) (Model,
 	if offer.FromMarkup && offer.Req.Kind == agent.ToolInteractAskUser {
 		return m.completeMarkupAskUser(offer.Req, resp)
 	}
+	if offer.Req.Kind == agent.ToolInteractAskUser {
+		m = m.recordAskUserResolution(offer.Req, resp)
+	}
 	m = m.applyApprovalInteractUI(resp, offer.Req)
 	m = m.applySessionToolApproval(resp)
 	m = m.recordToolApprovalDenial(resp, offer.Req)
@@ -453,6 +493,9 @@ func (m Model) abortToolInteract(resp agent.ToolInteractResponse) Model {
 	m.toolInteractForm = nil
 	m.toolInteractPending = toolInteractOffer{}
 	m.showPromptPrefix = false
+	if offer.Req.Kind == agent.ToolInteractAskUser {
+		m = m.recordAskUserResolution(offer.Req, resp)
+	}
 	if offer.RespCh != nil {
 		offer.RespCh <- resp
 	}
@@ -477,6 +520,9 @@ func (m Model) completeToolInteractForm() (Model, tea.Cmd) {
 	}
 	if offer.FromMarkup && offer.Req.Kind == agent.ToolInteractAskUser {
 		return m.completeMarkupAskUser(offer.Req, resp)
+	}
+	if offer.Req.Kind == agent.ToolInteractAskUser {
+		m = m.recordAskUserResolution(offer.Req, resp)
 	}
 	if offer.RespCh != nil {
 		m = m.applyApprovalInteractUI(resp, offer.Req)
@@ -512,6 +558,9 @@ func (m Model) askUserFormResponse(form *huh.Form) agent.ToolInteractResponse {
 	if form.State == huh.StateAborted {
 		return agent.ToolInteractResponse{Cancelled: true}
 	}
+	if isDialogCancelChoice(askUserFormFieldString(form, "choice")) {
+		return agent.ToolInteractResponse{Cancelled: true}
+	}
 	return agent.ToolInteractResponse{Answer: resolveAskUserFormAnswer(form)}
 }
 
@@ -545,13 +594,15 @@ func askUserFormFieldString(form *huh.Form, key string) string {
 
 func (m Model) approvalFormResponse(form *huh.Form) agent.ToolInteractResponse {
 	if form.State == huh.StateAborted {
-		return agent.ToolInteractResponse{Approved: false}
+		return agent.ToolInteractResponse{Cancelled: true}
 	}
 	switch parseApprovalChoice(form) {
 	case approvalChoiceSession:
 		return agent.ToolInteractResponse{Approved: true, AllowSession: true}
 	case approvalChoiceDeny:
 		return agent.ToolInteractResponse{Approved: false}
+	case dialogChoiceCancel:
+		return agent.ToolInteractResponse{Cancelled: true}
 	default:
 		return agent.ToolInteractResponse{Approved: true}
 	}
@@ -615,6 +666,8 @@ func normalizeApprovalChoice(raw string) string {
 		return approvalChoiceSession
 	case approvalChoiceDeny:
 		return approvalChoiceDeny
+	case dialogChoiceCancel:
+		return dialogChoiceCancel
 	default:
 		if raw == "" {
 			return approvalChoiceOnce
@@ -719,19 +772,104 @@ func toolInteractDialogAccent(req agent.ToolInteractRequest) (string, color.Colo
 	}
 }
 
+func (m Model) ensureResolvedAskUsers() *map[string]askUserResolution {
+	if m.agent.ResolvedAskUsers == nil {
+		m.agent.ResolvedAskUsers = make(map[string]askUserResolution)
+	}
+	return &m.agent.ResolvedAskUsers
+}
+
+func lookupResolvedAskUser(store *map[string]askUserResolution, req agent.ToolInteractRequest) (agent.ToolInteractResponse, bool) {
+	if store == nil || *store == nil || req.Kind != agent.ToolInteractAskUser {
+		return agent.ToolInteractResponse{}, false
+	}
+	res, ok := (*store)[toolInteractAskUserSignature(req)]
+	if !ok {
+		return agent.ToolInteractResponse{}, false
+	}
+	if res.Cancelled {
+		return agent.ToolInteractResponse{Cancelled: true}, true
+	}
+	return agent.ToolInteractResponse{Answer: res.Answer}, true
+}
+
+func (m Model) lookupResolvedAskUser(req agent.ToolInteractRequest) (agent.ToolInteractResponse, bool) {
+	return lookupResolvedAskUser(m.ensureResolvedAskUsers(), req)
+}
+
+func (m Model) recordAskUserResolution(req agent.ToolInteractRequest, resp agent.ToolInteractResponse) Model {
+	if req.Kind != agent.ToolInteractAskUser {
+		return m
+	}
+	store := m.ensureResolvedAskUsers()
+	(*store)[toolInteractAskUserSignature(req)] = askUserResolution{
+		Answer:    strings.TrimSpace(resp.Answer),
+		Cancelled: resp.Cancelled,
+	}
+	if pending := m.agent.MarkupAskUserPending; pending != nil {
+		if markupAskUserSignature(pending) == toolInteractAskUserSignature(req) {
+			m.agent.MarkupAskUserPending = nil
+		}
+	}
+	return m
+}
+
+func toolInteractAskUserSignature(req agent.ToolInteractRequest) string {
+	params := make(map[string]string)
+	for key := range req.Args {
+		if val, ok := stringArgAny(req.Args, key); ok {
+			params[key] = val
+		}
+	}
+	return (Model{}).toolCallSignature(agent.ParsedToolCall{
+		Name:       req.Name,
+		Parameters: params,
+	})
+}
+
+func markupAskUserSignature(offer *markupAskUserOffer) string {
+	if offer == nil {
+		return ""
+	}
+	return (Model{}).toolCallSignature(agent.ParsedToolCall{
+		Name:       offer.Name,
+		Parameters: offer.Parameters,
+	})
+}
+
+func (m Model) parsedAskUserResolved(call agent.ParsedToolCall) bool {
+	if m.agent.ResolvedAskUsers == nil {
+		return false
+	}
+	_, ok := m.agent.ResolvedAskUsers[(Model{}).toolCallSignature(call)]
+	return ok
+}
+
+func isDialogCancelChoice(raw string) bool {
+	return normalizeDialogChoice(raw) == dialogChoiceCancel
+}
+
+func normalizeDialogChoice(raw string) string {
+	if strings.EqualFold(strings.TrimSpace(raw), dialogChoiceCancel) {
+		return dialogChoiceCancel
+	}
+	return strings.TrimSpace(raw)
+}
+
 func toolInteractFooterHint(req agent.ToolInteractRequest) string {
 	switch req.Kind {
 	case agent.ToolInteractAskUser:
 		fields := parseAskUserArgs(req.Args)
 		if len(fields.options) > 0 {
+			cancelNum := len(fields.options) + 1
 			if fields.allowCustom {
-				return "↑/↓ · 1-9 · or type below · Enter · Esc"
+				return fmt.Sprintf("↑/↓ · 1-%d · c cancel · or type below · Enter · Esc", cancelNum)
 			}
-			return "↑/↓ · 1-9 · Enter · Esc"
+			return fmt.Sprintf("↑/↓ · 1-%d · c cancel · Enter · Esc", cancelNum)
 		}
-		return "Enter · Esc"
+		return "Enter · ↑/↓ Cancel · c · Esc"
 	case agent.ToolInteractApproval:
-		return "y once · a session · n deny · 1-3 · ↑/↓ · Enter · Esc"
+		return "y once · a session · n deny · c cancel · 1-4 · ↑/↓ · Enter · Esc"
 	default:
 		return "Enter · Esc"
 	}

@@ -76,6 +76,14 @@ type AgentState struct {
 	TodoListBefore       []todolist.Todo
 	SessionAllowTools    bool // skip approval dialogs until the TUI session ends
 	MarkupAskUserPending *markupAskUserOffer
+	ResolvedAskUsers     map[string]askUserResolution
+}
+
+// askUserResolution records a completed AskUser gate so native and markup paths
+// do not reopen the same question in one user-initiated turn chain.
+type askUserResolution struct {
+	Answer    string
+	Cancelled bool
 }
 
 type markupAskUserOffer struct {

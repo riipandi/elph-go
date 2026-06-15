@@ -109,6 +109,7 @@ func (m Model) agentTurnCmds(prompt string, images []provider.ImageAttachment) (
 	ctx, cancel := context.WithCancel(context.Background())
 	m.agent.Cancel = cancel
 	bridge := newToolInteractBridge()
+	bridge.resolvedAskUsers = m.ensureResolvedAskUsers()
 	m.agent.ToolInteractBridge = bridge
 	if m.thinkingTurnEnabled() && m.agent.ThinkingMsgID < 0 {
 		m = m.addThinkingMessage("")
@@ -127,8 +128,13 @@ func (m Model) agentTurnCmds(prompt string, images []provider.ImageAttachment) (
 
 func (m Model) cancelAgentTurn() (Model, tea.Cmd) {
 	m = m.cancelCtrlC()
-	if m.toolInteractDialogActive() || m.toolInteractPending.RespCh != nil {
-		m = m.abortToolInteract(agent.ToolInteractResponse{Cancelled: true})
+	if m.toolInteractDialogActive() {
+		offer := m.toolInteractPending
+		cancelled := agent.ToolInteractResponse{Cancelled: true}
+		if offer.FromMarkup && offer.Req.Kind == agent.ToolInteractAskUser {
+			return m.completeMarkupAskUser(offer.Req, cancelled)
+		}
+		m = m.abortToolInteract(cancelled)
 	}
 	if m.agent.Cancel != nil {
 		m.agent.Cancel()

@@ -19,6 +19,7 @@ const (
 
 	modelsSyncChoiceUpdate = "update"
 	modelsSyncChoiceSkip   = "skip"
+	modelsSyncChoiceCancel = "cancel"
 )
 
 type modelsSyncOfferMsg struct {
@@ -84,6 +85,7 @@ func newModelsSyncForm(providers []string, width int) *huh.Form {
 				Options(
 					huh.NewOption("Update", modelsSyncChoiceUpdate),
 					huh.NewOption("Skip", modelsSyncChoiceSkip),
+					huh.NewOption("Cancel", modelsSyncChoiceCancel),
 				).
 				Value(&choice),
 		),
@@ -99,6 +101,8 @@ func normalizeModelsSyncChoice(raw string) string {
 		return modelsSyncChoiceUpdate
 	case modelsSyncChoiceSkip:
 		return modelsSyncChoiceSkip
+	case modelsSyncChoiceCancel:
+		return modelsSyncChoiceCancel
 	default:
 		if raw == "" {
 			return modelsSyncChoiceUpdate
@@ -152,9 +156,9 @@ func (m Model) updateModelsSyncForm(msg tea.Msg) (Model, tea.Cmd) {
 
 	case tea.KeyPressMsg:
 		switch strings.ToLower(msg.String()) {
-		case "y":
+		case "y", "1":
 			return m.resolveModelsSyncConfirm(true)
-		case "n":
+		case "n", "2", "3", "c":
 			return m.resolveModelsSyncConfirm(false)
 		}
 	}
@@ -217,7 +221,7 @@ func (m Model) declineModelsSync() Model {
 func (m Model) modelsSyncDialogBody() string {
 	formView := trimTrailingLineSpaces(strings.TrimSuffix(m.modelsSyncForm.View(), "\n\n"))
 	labelLine := lipgloss.NewStyle().Foreground(constants.Yellow).Bold(true).Render(modelsSyncDialogLabel)
-	hintLine := lipgloss.NewStyle().Foreground(constants.DimText).Render("y update · n skip · ↑/↓ · Enter · Esc")
+	hintLine := lipgloss.NewStyle().Foreground(constants.DimText).Render("y update · n skip · c cancel · 1-3 · ↑/↓ · Enter · Esc")
 	return lipgloss.JoinVertical(lipgloss.Left, labelLine, "", formView, "", hintLine)
 }
 

@@ -12,6 +12,9 @@ import (
 type markupAskUserCmdMsg struct{}
 
 func (m Model) tryQueueMarkupAskUser(call agent.ParsedToolCall) (Model, bool) {
+	if m.parsedAskUserResolved(call) {
+		return m, false
+	}
 	name := agent.SanitizeParsedToolName(call.Name)
 	canonical, ok := tools.ResolveName(name)
 	if !ok {
@@ -41,12 +44,16 @@ func (m Model) handleMarkupAskUserCmd() (Model, tea.Cmd) {
 		return m, nil
 	}
 	m.agent.MarkupAskUserPending = nil
+	req := agent.ToolInteractRequest{
+		Kind: agent.ToolInteractAskUser,
+		Name: pending.Name,
+		Args: parsedToolParamsToAny(pending.Parameters),
+	}
+	if _, ok := m.lookupResolvedAskUser(req); ok {
+		return m, nil
+	}
 	return m.offerToolInteract(toolInteractOfferMsg{offer: toolInteractOffer{
-		Req: agent.ToolInteractRequest{
-			Kind: agent.ToolInteractAskUser,
-			Name: pending.Name,
-			Args: parsedToolParamsToAny(pending.Parameters),
-		},
+		Req:        req,
 		FromMarkup: true,
 	}})
 }
@@ -63,6 +70,7 @@ func parsedToolParamsToAny(params map[string]string) map[string]any {
 }
 
 func (m Model) completeMarkupAskUser(req agent.ToolInteractRequest, resp agent.ToolInteractResponse) (Model, tea.Cmd) {
+	m = m.recordAskUserResolution(req, resp)
 	fields := parseAskUserArgs(req.Args)
 	var body strings.Builder
 	body.WriteString(fields.question)

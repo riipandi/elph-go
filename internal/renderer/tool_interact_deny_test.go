@@ -94,7 +94,7 @@ func TestRecordToolApprovalDenialCachesSignature(t *testing.T) {
 	require.Contains(t, bridge.deniedApprovals, toolApprovalSignature(req))
 }
 
-func TestApprovalFormAbortCountsAsDeny(t *testing.T) {
+func TestApprovalFormAbortCountsAsCancel(t *testing.T) {
 	form := newToolApprovalForm(agent.ToolInteractRequest{
 		Kind: agent.ToolInteractApproval,
 		Name: "Bash",
@@ -104,5 +104,5 @@ func TestApprovalFormAbortCountsAsDeny(t *testing.T) {
 	m := testInputModel(t)
 	resp := m.approvalFormResponse(form)
 	require.False(t, resp.Approved)
-	require.False(t, resp.Cancelled)
+	require.True(t, resp.Cancelled)
 }

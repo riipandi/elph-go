@@ -438,6 +438,7 @@ func (m Model) handleSlashCommand(raw string) (Model, tea.Cmd, bool) {
 			return m, cmd, true
 		}
 		at := time.Now()
+		m.agent.ResolvedAskUsers = nil
 		m = m.addUserMessageAt(trimmed, at)
 		detailLabel := strings.TrimSpace(result.DetailLabel)
 		detailBody := strings.TrimSpace(result.DetailBody)
@@ -523,6 +524,7 @@ func (m Model) trySubmitInput() (Model, tea.Cmd, bool) {
 	}
 	userImages := m.userImagesForTurn()
 	prompt := m.promptForSubmit(val)
+	m.agent.ResolvedAskUsers = nil
 	m = m.addUserMessage(display)
 	m = m.clearPendingAttachments()
 	m = m.resetInput()

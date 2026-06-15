@@ -180,8 +180,10 @@ func TestApprovalFormShowsSessionOption(t *testing.T) {
 	require.Contains(t, view, "Allow once")
 	require.Contains(t, view, "Allow for session")
 	require.Contains(t, view, "Deny")
+	require.Contains(t, view, "Cancel")
 	require.Contains(t, view, "y once")
 	require.Contains(t, view, "a session")
+	require.Contains(t, view, "c cancel")
 }
 
 func TestApprovalFormSpacingAboveOptions(t *testing.T) {
@@ -346,7 +348,86 @@ func TestNormalizeApprovalChoice(t *testing.T) {
 	require.Equal(t, approvalChoiceOnce, normalizeApprovalChoice("Allow once"))
 	require.Equal(t, approvalChoiceSession, normalizeApprovalChoice("Allow for session"))
 	require.Equal(t, approvalChoiceDeny, normalizeApprovalChoice("Deny"))
+	require.Equal(t, dialogChoiceCancel, normalizeApprovalChoice("Cancel"))
 	require.Equal(t, approvalChoiceOnce, normalizeApprovalChoice(""))
+}
+
+func TestAskUserFormShowsCancelOption(t *testing.T) {
+	form := newAskUserForm(agent.ToolInteractRequest{
+		Kind: agent.ToolInteractAskUser,
+		Args: map[string]any{
+			"question": "Pick one",
+			"options":  []any{"A", "B"},
+		},
+	}, 60)
+	if updated, _ := form.Update(tea.WindowSizeMsg{Width: 100, Height: 40}); updated != nil {
+		if f, ok := updated.(*huh.Form); ok {
+			form = f
+		}
+	}
+
+	m := testInputModel(t)
+	m.toolInteractForm = form
+	m.toolInteractPending = toolInteractOffer{
+		Req: agent.ToolInteractRequest{
+			Kind: agent.ToolInteractAskUser,
+			Args: map[string]any{
+				"question": "Pick one",
+				"options":  []any{"A", "B"},
+			},
+		},
+	}
+	view := stripANSI(m.toolInteractChromeView())
+	require.Contains(t, view, "Cancel")
+	require.Contains(t, view, "1-3")
+}
+
+func TestAskUserCancelShortcut(t *testing.T) {
+	m := testInputModel(t)
+	respCh := make(chan agent.ToolInteractResponse, 1)
+	m.toolInteractForm = newAskUserForm(agent.ToolInteractRequest{
+		Kind: agent.ToolInteractAskUser,
+		Args: map[string]any{
+			"question": "Pick",
+			"options":  []any{"A", "B"},
+		},
+	}, 60)
+	m.toolInteractPending = toolInteractOffer{
+		Req: agent.ToolInteractRequest{
+			Kind: agent.ToolInteractAskUser,
+			Args: map[string]any{"options": []any{"A", "B"}},
+		},
+		RespCh: respCh,
+	}
+
+	resp, ok := m.toolInteractShortcutResponse(tea.KeyPressMsg{Code: '3', Text: "3"})
+	require.True(t, ok)
+	require.True(t, resp.Cancelled)
+
+	updated, _ := m.completeToolInteractWith(resp)
+	require.Nil(t, updated.toolInteractForm)
+	require.True(t, (<-respCh).Cancelled)
+}
+
+func TestApprovalCancelShortcut(t *testing.T) {
+	m := testInputModel(t)
+	respCh := make(chan agent.ToolInteractResponse, 1)
+	m.toolInteractForm = newToolApprovalForm(agent.ToolInteractRequest{
+		Kind: agent.ToolInteractApproval,
+		Name: "Bash",
+	}, 60)
+	m.toolInteractPending = toolInteractOffer{
+		Req:    agent.ToolInteractRequest{Kind: agent.ToolInteractApproval, Name: "Bash"},
+		RespCh: respCh,
+	}
+
+	resp, ok := m.toolInteractShortcutResponse(tea.KeyPressMsg{Code: 'c', Text: "c"})
+	require.True(t, ok)
+	require.True(t, resp.Cancelled)
+
+	updated, _ := m.completeToolInteractWith(resp)
+	require.Nil(t, updated.toolInteractForm)
+	require.True(t, (<-respCh).Cancelled)
 }
 
 func TestToolInteractApprovalYShortcut(t *testing.T) {
@@ -547,6 +628,7 @@ func TestToolInteractDialogPolishedLayout(t *testing.T) {
 	view := stripANSI(m.toolInteractChromeView())
 	require.Contains(t, view, "Question")
 	require.Contains(t, view, "Pick one")
-	require.Contains(t, view, "↑/↓ · 1-9")
+	require.Contains(t, view, "↑/↓ · 1-3")
+	require.Contains(t, view, "c cancel")
 	require.NotContains(t, view, "↑ up")
 }

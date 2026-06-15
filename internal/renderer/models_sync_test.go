@@ -86,7 +86,9 @@ func TestModelsSyncDialogMatchesAskUserLayout(t *testing.T) {
 	require.NotContains(t, view, "models.dev has updates")
 	require.Contains(t, view, "Update")
 	require.Contains(t, view, "Skip")
+	require.Contains(t, view, "Cancel")
 	require.Contains(t, view, "y update")
+	require.Contains(t, view, "c cancel")
 	require.Contains(t, view, "↑/↓")
 	require.NotContains(t, view, "↑ up")
 }

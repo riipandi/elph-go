@@ -5,6 +5,8 @@ import (
 	"time"
 
 	"charm.land/lipgloss/v2"
+	"github.com/charmbracelet/x/ansi"
+	"github.com/riipandi/elph/internal/align"
 	"github.com/riipandi/elph/internal/constants"
 )
 
@@ -128,16 +130,63 @@ func (m Model) renderUserSticky(msgIndex int) string {
 	return renderUserSticky(m.messageAreaWidth(), msg.text, msg.at)
 }
 
+func userMessageStickyTitle(text string, maxW int) string {
+	if maxW <= 0 {
+		return ""
+	}
+	title := ""
+	if userMessageCollapsible(text) {
+		title = userMessageBody(text, false, maxW)
+	} else {
+		title = ansi.Truncate(strings.TrimSpace(text), maxW, "...")
+	}
+	if title == "" {
+		return ""
+	}
+	return constants.StickyUserTitleStyle().Render(title)
+}
+
+func userMessageStickyLine(text string, innerW int, at time.Time) string {
+	ts := formatMessageTimestamp(at)
+	if ts == "" {
+		return userMessageStickyTitle(text, innerW)
+	}
+
+	right := constants.StickyUserTimestampStyle().Render(ts)
+	rightW := lipgloss.Width(right)
+	leftColW := max(innerW-rightW, 1)
+	titleW := max(leftColW-align.ColumnGap, 1)
+	left := userMessageStickyTitle(text, titleW)
+	return stickyUserFooterRow(innerW, left, right)
+}
+
+// stickyUserFooterRow lays out the sticky title and timestamp on one line. The left
+// column is width-fixed with UserStickyMsgBg so padded gap before the timestamp
+// matches the sticky header backdrop.
+func stickyUserFooterRow(contentW int, left, right string) string {
+	rightW := lipgloss.Width(right)
+	if rightW >= contentW {
+		return stickyUserLineStyle(contentW).Render(clampLine(contentW, right))
+	}
+	leftW := max(contentW-rightW, 0)
+	leftPart := stickyUserLineStyle(leftW).Render(left)
+	row := lipgloss.JoinHorizontal(lipgloss.Top, leftPart, right)
+	return stickyUserLineStyle(contentW).Render(row)
+}
+
+func stickyUserLineStyle(width int) lipgloss.Style {
+	return lipgloss.NewStyle().
+		Background(constants.UserStickyMsgBg).
+		Width(width).
+		MaxHeight(1)
+}
+
 func renderUserSticky(blockWidth int, text string, at time.Time) string {
 	vPad, hPad := messageBlockPadding(constants.MessageUser)
-	style := constants.MessageStyle(constants.MessageUser)
+	style := constants.StickyUserStyle()
 	innerW := max(blockWidth-2*hPad, 1)
 
-	body := userMessageBody(text, false, innerW)
-	content := body
-	if footer := userMessageFooterLine(at, false, false); footer != "" {
-		content = body + "\n\n" + footer
-	}
+	content := userMessageStickyLine(text, innerW, at)
 	return style.Padding(vPad, hPad).Width(blockWidth).Render(content)
 }
 

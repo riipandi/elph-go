@@ -23,6 +23,26 @@ func TestThinkingBackgroundDiffersFromDetail(t *testing.T) {
 	require.NotEqual(t, thinking, detail)
 }
 
+func TestStickyUserUsesNeutralBackground(t *testing.T) {
+	user := MessageStyle(MessageUser).GetBackground()
+	sticky := StickyUserStyle().GetBackground()
+	require.NotEqual(t, user, sticky)
+	require.Equal(t, UserStickyMsgBg, sticky)
+}
+
+func TestStickyUserTitleUsesNeutralForeground(t *testing.T) {
+	title := StickyUserTitleStyle().GetForeground()
+	require.Equal(t, DimText, title)
+	require.NotEqual(t, UserStickyTimestampFg, title)
+}
+
+func TestStickyUserTimestampUsesSoftGreenForeground(t *testing.T) {
+	ts := StickyUserTimestampStyle().GetForeground()
+	require.Equal(t, UserStickyTimestampFg, ts)
+	require.NotEqual(t, DimText, ts)
+	require.NotEqual(t, BrightText, ts)
+}
+
 func TestDetailNeutralUsesSoftPalette(t *testing.T) {
 	detail := MessageStyle(MessageDetail)
 	neutral := DetailStatusStyle(DetailStatusNeutral)

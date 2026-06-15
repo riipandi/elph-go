@@ -22,6 +22,10 @@ var (
 	UserMsgFg = BrightText
 	// UserMsgBg uses the pi-style green tint (aligned with DetailStatusSuccess).
 	UserMsgBg = compat.AdaptiveColor{Light: lipgloss.Color("#E8F0E8"), Dark: lipgloss.Color("#283228")}
+	// UserStickyMsgBg is a neutral backdrop for the pinned user prompt header.
+	UserStickyMsgBg = compat.AdaptiveColor{Light: lipgloss.Color("#EEEEEE"), Dark: lipgloss.Color("#232323")}
+	// UserStickyTimestampFg is a soft green accent for the pinned prompt timestamp.
+	UserStickyTimestampFg = compat.AdaptiveColor{Light: lipgloss.Color("#588458"), Dark: lipgloss.Color("#8FB88F")}
 
 	AIMsgFg = BrightText
 	AIMsgBg = lipgloss.NoColor{}
@@ -35,6 +39,21 @@ var (
 	ThinkingMsgFg = DimText
 	ThinkingMsgBg = compat.AdaptiveColor{Light: lipgloss.Color("#EEEEEE"), Dark: lipgloss.Color("#232323")}
 )
+
+// StickyUserStyle returns the box style for the pinned user prompt header.
+func StickyUserStyle() lipgloss.Style {
+	return lipgloss.NewStyle().Background(UserStickyMsgBg)
+}
+
+// StickyUserTitleStyle returns the neutral dim foreground for the sticky prompt preview.
+func StickyUserTitleStyle() lipgloss.Style {
+	return lipgloss.NewStyle().Foreground(DimText).Background(UserStickyMsgBg)
+}
+
+// StickyUserTimestampStyle returns the soft green style for the sticky prompt timestamp.
+func StickyUserTimestampStyle() lipgloss.Style {
+	return lipgloss.NewStyle().Foreground(UserStickyTimestampFg).Background(UserStickyMsgBg)
+}
 
 // MessageStyle returns the lipgloss style for a stream message kind.
 func MessageStyle(kind MessageKind) lipgloss.Style {

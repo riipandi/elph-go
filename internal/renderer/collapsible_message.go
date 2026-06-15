@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"charm.land/lipgloss/v2"
+	"charm.land/lipgloss/v2/compat"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/riipandi/elph/internal/constants"
 )
@@ -380,10 +381,10 @@ func userMessageCollapsible(text string) bool {
 	return userMessageLineCount(text) > 1
 }
 
-func userMessageFooterDimStyle() lipgloss.Style {
+func userMessageFooterDimStyle(bg compat.AdaptiveColor) lipgloss.Style {
 	return lipgloss.NewStyle().
 		Foreground(constants.DimText).
-		Background(constants.UserMsgBg)
+		Background(bg)
 }
 
 func userMessageBody(text string, expanded bool, innerW int) string {
@@ -395,13 +396,13 @@ func userMessageBody(text string, expanded bool, innerW int) string {
 	return prefix + preview
 }
 
-func userMessageFooterLine(at time.Time, expanded, showHint bool) string {
+func userMessageFooterLine(at time.Time, expanded, showHint bool, footerBg compat.AdaptiveColor) string {
 	ts := formatMessageTimestamp(at)
 	hint := ""
 	if showHint {
 		hint = collapsibleExpandHint(expanded)
 	}
-	dim := userMessageFooterDimStyle()
+	dim := userMessageFooterDimStyle(footerBg)
 	hintStyle := dim.Copy().Italic(true)
 
 	switch {
@@ -424,7 +425,7 @@ func renderUserCollapsible(blockWidth int, text string, expanded bool, at time.T
 
 	body := userMessageBody(text, expanded, innerW)
 	content := body
-	if footer := userMessageFooterLine(at, expanded, collapsible); footer != "" {
+	if footer := userMessageFooterLine(at, expanded, collapsible, constants.UserMsgBg); footer != "" {
 		content = body + "\n\n" + footer
 	}
 	return style.Padding(vPad, hPad).Width(blockWidth).Render(content)

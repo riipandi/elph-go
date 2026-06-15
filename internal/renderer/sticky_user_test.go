@@ -7,6 +7,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	"github.com/riipandi/elph/internal/align"
 	"github.com/riipandi/elph/internal/constants"
 	"github.com/stretchr/testify/require"
 )
@@ -138,12 +139,79 @@ func TestRenderUserStickyIsCompactCollapsed(t *testing.T) {
 	require.Contains(t, full, "click or ctrl+o to expand")
 }
 
-func TestRenderUserStickyPaddingMatchesCollapsedBody(t *testing.T) {
+func TestRenderUserStickyTitleAndTimestampUseDistinctStyles(t *testing.T) {
+	at := time.Date(2026, 6, 15, 9, 30, 0, 0, time.Local)
+	raw := renderUserSticky(60, "hello\nworld", at)
+
+	require.Contains(t, raw, constants.StickyUserTitleStyle().Render("▸ hello"))
+	require.Contains(t, raw, constants.StickyUserTimestampStyle().Render("09:30:00"))
+	require.NotContains(t, raw, constants.StickyUserTimestampStyle().Render("hello"))
+}
+
+func TestRenderUserStickyTimestampOnTitleLine(t *testing.T) {
+	at := time.Date(2026, 6, 15, 9, 30, 0, 0, time.Local)
+	sticky := stripANSI(renderUserSticky(60, "alpha\nbeta", at))
+
+	var titleLine string
+	for _, line := range strings.Split(sticky, "\n") {
+		if strings.Contains(line, "▸") {
+			titleLine = line
+			break
+		}
+	}
+	require.Contains(t, titleLine, "alpha")
+	require.Contains(t, titleLine, "09:30:00")
+}
+
+func TestRenderUserStickyTruncatesTitleForTimestamp(t *testing.T) {
+	at := time.Date(2026, 6, 15, 9, 30, 0, 0, time.Local)
+	long := strings.Repeat("x", 80) + "\nsecond"
+	sticky := stripANSI(renderUserSticky(36, long, at))
+	require.Contains(t, sticky, "09:30:00")
+	require.NotContains(t, sticky, strings.Repeat("x", 20))
+}
+
+func TestStickyUserFooterRowPadsGapWithStickyBackground(t *testing.T) {
+	left := constants.StickyUserTitleStyle().Render("▸ " + strings.Repeat("x", 8) + "...")
+	right := constants.StickyUserTimestampStyle().Render("14:25:49")
+	contentW := 40
+
+	row := stickyUserFooterRow(contentW, left, right)
+	require.Equal(t, contentW, lipgloss.Width(row))
+
+	leftW := contentW - lipgloss.Width(right)
+	gap := leftW - lipgloss.Width(left)
+	require.GreaterOrEqual(t, gap, align.ColumnGap)
+
+	expectedPad := constants.StickyUserStyle().Render(strings.Repeat(" ", gap))
+	require.Contains(t, row, expectedPad)
+}
+
+func TestRenderUserStickyTruncatedTitleHasGapBeforeTimestamp(t *testing.T) {
+	at := time.Date(2026, 6, 15, 9, 30, 0, 0, time.Local)
+	long := strings.Repeat("x", 80) + "\nsecond"
+	sticky := stripANSI(renderUserSticky(36, long, at))
+
+	var titleLine string
+	for _, line := range strings.Split(sticky, "\n") {
+		if strings.Contains(line, "...") && strings.Contains(line, "09:30:00") {
+			titleLine = line
+			break
+		}
+	}
+	require.NotEmpty(t, titleLine)
+
+	ellipsis := strings.Index(titleLine, "...")
+	timeIdx := strings.Index(titleLine, "09:30:00")
+	require.Greater(t, timeIdx, ellipsis+3)
+	require.GreaterOrEqual(t, timeIdx-(ellipsis+3), align.ColumnGap)
+}
+
+func TestRenderUserStickyIsShorterThanCollapsedFooter(t *testing.T) {
 	at := time.Date(2026, 6, 15, 9, 30, 0, 0, time.Local)
 	width := 60
 
 	sticky := renderUserSticky(width, "alpha\nbeta", at)
 	collapsed := renderUserCollapsible(width, "alpha\nbeta", false, at)
-	require.Equal(t, lipgloss.Height(collapsed), lipgloss.Height(sticky),
-		"sticky should use the same vertical padding and body/footer spacing as collapsed user blocks")
+	require.Less(t, lipgloss.Height(sticky), lipgloss.Height(collapsed))
 }

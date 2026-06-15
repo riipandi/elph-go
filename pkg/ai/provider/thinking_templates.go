@@ -43,6 +43,10 @@ func gatewayThinkingCompat(providerID string, cfg FileConfig) (Compat, bool) {
 			ThinkingFormat:          string(ThinkingFormatQwen),
 			SupportsReasoningEffort: compatBool(false),
 		}, true
+	case "deepseek", "kimi":
+		return Compat{
+			SupportsDeveloperRole: compatBool(false),
+		}, true
 	default:
 		base := strings.ToLower(strings.TrimSpace(cfg.BaseURL))
 		if strings.Contains(base, "opencode.ai/") {

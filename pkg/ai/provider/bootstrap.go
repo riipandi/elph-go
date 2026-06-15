@@ -204,6 +204,9 @@ func primaryTemplates() []bootstrapTemplate {
 				API:        APIOpenAICompletions,
 				APIKey:     "env.DEEPSEEK_API_KEY",
 				AuthHeader: true,
+				Compat: Compat{
+					SupportsDeveloperRole: compatBool(false),
+				},
 				Models: []ModelConfig{
 					{
 						ID:            "deepseek-chat",
@@ -261,6 +264,9 @@ func primaryTemplates() []bootstrapTemplate {
 				API:        APIOpenAICompletions,
 				APIKey:     "env.MOONSHOT_API_KEY",
 				AuthHeader: true,
+				Compat: Compat{
+					SupportsDeveloperRole: compatBool(false),
+				},
 				Models: []ModelConfig{
 					{
 						ID:            "kimi-k2.5",

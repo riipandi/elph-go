@@ -13,6 +13,32 @@ func writeProviderFile(t *testing.T, dir, name, body string) {
 	require.NoError(t, os.WriteFile(filepath.Join(dir, name), []byte(body), 0o644))
 }
 
+func TestLoadCatalogAppliesDeepSeekDeveloperRoleCompat(t *testing.T) {
+	dir := t.TempDir()
+	writeProviderFile(t, dir, "deepseek.json", `{
+		"name": "DeepSeek",
+		"baseUrl": "https://api.deepseek.com",
+		"api": "openai-completions",
+		"apiKey": "env.DEEPSEEK_API_KEY",
+		"authHeader": true,
+		"models": [
+			{
+				"id": "deepseek-reasoner",
+				"name": "DeepSeek Reasoner",
+				"reasoning": true
+			}
+		]
+	}`)
+
+	catalog, err := LoadCatalog(dir)
+	require.NoError(t, err)
+	require.Len(t, catalog.Providers, 1)
+
+	model := catalog.Providers[0].Models[0]
+	require.NotNil(t, model.Compat.SupportsDeveloperRole)
+	require.False(t, *model.Compat.SupportsDeveloperRole)
+}
+
 func TestLoadCatalogAppliesOpenCodeGatewayThinkingCompat(t *testing.T) {
 	dir := t.TempDir()
 	writeProviderFile(t, dir, "opencode-go.json", `{

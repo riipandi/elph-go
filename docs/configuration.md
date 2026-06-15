@@ -58,7 +58,7 @@ Common key env vars: `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `OPENCODE_API_KEY`, 
 elph --env-file .env.local
 ```
 
-Loads variables with `gotenv.OverLoad` before any subcommand (`cmd/coding-agent/root.go`).
+Loads variables with `gotenv.OverLoad` before any subcommand (`cmd/elph/root.go`).
 
 ## JSON and JSONC
 

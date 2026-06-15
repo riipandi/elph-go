@@ -1,12 +1,12 @@
 # Architecture
 
-High-level map of the Elph codebase. Module: `github.com/riipandi/elph` (Go 1.26). Binary: `elph` from `cmd/coding-agent`.
+High-level map of the Elph codebase. Module: `github.com/riipandi/elph` (Go 1.26). Binary: `elph` from `cmd/elph`.
 
 ## Repository layout
 
 ```
 elph/
-├── cmd/coding-agent/     CLI entry (Cobra): TUI, provider management, version
+├── cmd/elph/     CLI entry (Cobra): TUI, provider management, version
 ├── internal/             Application-private packages (not importable externally)
 ├── pkg/                  Reusable libraries (agent, tools, AI providers)
 ├── docs/                 Documentation
@@ -14,7 +14,7 @@ elph/
 └── Makefile              build, test, lint, install
 ```
 
-## `cmd/coding-agent`
+## `cmd/elph`
 
 | File / area             | Role                                                   |
 |-------------------------|--------------------------------------------------------|

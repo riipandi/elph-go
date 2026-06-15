@@ -10,6 +10,12 @@ You will need [`Go >= 1.26`][golang] installed. Optional: `gotestsum` and `golan
 
 Read the [CONTRIBUTING.md](./CONTRIBUTING.md) for detailed guidelines on contributing to this project.
 
+### Installation
+
+```sh
+go install github.com/riipandi/elph/cmd/elph@latest
+```
+
 ### Up and Running
 
 ```sh

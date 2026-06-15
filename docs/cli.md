@@ -72,7 +72,7 @@ elph provider model disable openai gpt-4o-mini
 
 ## `elph doctor`
 
-Currently prints that the command is not yet implemented (`cmd/coding-agent/doctor.go`).
+Currently prints that the command is not yet implemented (`cmd/elph/doctor.go`).
 
 ## Development commands
 
@@ -82,7 +82,7 @@ From the repository root:
 make prepare    # Install golangci-lint, gotestsum
 make deps       # go mod download
 make build      # build/release/elph
-make run        # go run ./cmd/coding-agent
+make run        # go run ./cmd/elph
 make test       # gotestsum
 make install    # copy binary to ~/.local/bin
 ```

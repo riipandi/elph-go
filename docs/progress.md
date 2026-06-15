@@ -56,7 +56,7 @@ connecting, tool work).
 | Tests                        | `internal/renderer/activity_stopwatch_test.go`        |
 
 Provider bootstrap/update flows also use a stopwatch in
-`cmd/coding-agent/provider_progress.go`.
+`cmd/elph/provider_progress.go`.
 
 ---
 
@@ -364,7 +364,7 @@ At the time of this log, the following passed:
 
 ```sh
 go test ./...
-go build -o elph ./cmd/coding-agent
+go build -o elph ./cmd/elph
 ```
 
 ---

@@ -1,9 +1,10 @@
 package command
 
 import (
+	"github.com/riipandi/elph/internal/runtime/log"
+	"github.com/riipandi/elph/internal/runtime/session"
 	"testing"
 
-	"github.com/riipandi/elph/internal/runtime"
 	inttools "github.com/riipandi/elph/internal/tools"
 	"github.com/riipandi/elph/pkg/ai/provider"
 	"github.com/riipandi/elph/pkg/tools"
@@ -115,9 +116,9 @@ func TestDiagnosticSystemPromptEmpty(t *testing.T) {
 
 func TestDiagnosticOpenLogSystem(t *testing.T) {
 	dir := t.TempDir()
-	session := runtime.NewSession(dir)
-	require.NoError(t, runtime.AppendLog(session.LogPath, "user", "hello"))
-	require.NoError(t, runtime.AppendLog(session.LogPath, "system", "notice"))
+	session := session.NewSession(dir)
+	require.NoError(t, log.AppendLog(session.LogPath, "user", "hello"))
+	require.NoError(t, log.AppendLog(session.LogPath, "system", "notice"))
 
 	result := Execute("/diagnostic:open-log system", Context{LogPath: session.LogPath})
 	require.True(t, result.OK)
@@ -131,8 +132,8 @@ func TestDiagnosticOpenLogSystem(t *testing.T) {
 
 func TestDiagnosticOpenLogRequests(t *testing.T) {
 	dir := t.TempDir()
-	session := runtime.NewSession(dir)
-	require.NoError(t, runtime.AppendLog(session.RequestsLogPath, "requests", "POST /v1/messages"))
+	session := session.NewSession(dir)
+	require.NoError(t, log.AppendLog(session.RequestsLogPath, "requests", "POST /v1/messages"))
 
 	result := Execute("/diagnostic:open-log requests", Context{RequestsLogPath: session.RequestsLogPath})
 	require.True(t, result.OK)
@@ -145,7 +146,7 @@ func TestDiagnosticOpenLogRequests(t *testing.T) {
 
 func TestDiagnosticOpenLogRequestsEmptyFile(t *testing.T) {
 	dir := t.TempDir()
-	session := runtime.NewSession(dir)
+	session := session.NewSession(dir)
 	require.FileExists(t, session.RequestsLogPath)
 
 	result := Execute("/diagnostic:open-log requests", Context{RequestsLogPath: session.RequestsLogPath})
@@ -159,8 +160,8 @@ func TestDiagnosticOpenLogRequestsEmptyFile(t *testing.T) {
 
 func TestDiagnosticOpenLogThinkingDelta(t *testing.T) {
 	dir := t.TempDir()
-	session := runtime.NewSession(dir)
-	require.NoError(t, runtime.AppendLog(session.RequestsLogPath, "thinking_delta", "step one"))
+	session := session.NewSession(dir)
+	require.NoError(t, log.AppendLog(session.RequestsLogPath, "thinking_delta", "step one"))
 
 	result := Execute("/diagnostic:open-log thinking_delta", Context{RequestsLogPath: session.RequestsLogPath})
 	require.True(t, result.OK)
@@ -172,9 +173,9 @@ func TestDiagnosticOpenLogThinkingDelta(t *testing.T) {
 
 func TestDiagnosticOpenLogThinking(t *testing.T) {
 	dir := t.TempDir()
-	session := runtime.NewSession(dir)
-	require.NoError(t, runtime.AppendLog(session.LogPath, "thinking", "step one"))
-	require.NoError(t, runtime.AppendLog(session.LogPath, "ai", "answer"))
+	session := session.NewSession(dir)
+	require.NoError(t, log.AppendLog(session.LogPath, "thinking", "step one"))
+	require.NoError(t, log.AppendLog(session.LogPath, "ai", "answer"))
 
 	result := Execute("/diagnostic:open-log thinking", Context{LogPath: session.LogPath})
 	require.True(t, result.OK)

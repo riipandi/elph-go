@@ -5,7 +5,7 @@ import (
 
 	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
-	"github.com/riipandi/elph/internal/constants"
+	"github.com/riipandi/elph/internal/uiconst"
 )
 
 type contentLineZone int
@@ -83,7 +83,7 @@ func collapsibleToggleRows(msg message, rows []string, blockH int) (headerRow, f
 		return -1, -1
 	}
 	switch msg.kind {
-	case constants.MessageUser:
+	case uiconst.MessageUser:
 		for i, row := range rows {
 			if rowContainsCollapsibleHint(row) {
 				footerRow = i
@@ -130,9 +130,9 @@ func (m Model) collapsibleToggleAtViewportY(y int) (int, bool) {
 			if ref.messageIndex >= 0 && ref.messageIndex < len(m.messages) {
 				msg := m.messages[ref.messageIndex]
 				switch msg.kind {
-				case constants.MessageThinking:
+				case uiconst.MessageThinking:
 					found = ref.messageIndex
-				case constants.MessageUser:
+				case uiconst.MessageUser:
 					if userMessageCollapsible(msg.text) {
 						found = ref.messageIndex
 					}
@@ -163,7 +163,7 @@ func (m Model) collapsibleFooterViewportY(msgIndex int) (int, bool) {
 }
 
 func aiCopyHintRow(rows []string, msg message, streaming bool) int {
-	if msg.kind != constants.MessageAI || streaming {
+	if msg.kind != uiconst.MessageAI || streaming {
 		return -1
 	}
 	for i, row := range rows {

@@ -1,6 +1,6 @@
 package agent
 
-import "github.com/riipandi/elph/pkg/ai/provider"
+import "github.com/riipandi/elph/pkg/ai/protocol"
 
 // EventKind identifies agent runtime events emitted during a turn.
 type EventKind int
@@ -22,10 +22,10 @@ type Event struct {
 	Delta       string
 	Thinking    string
 	Response    string
-	Usage       provider.TurnUsage
-	ToolCall    provider.ToolCall
+	Usage       protocol.TurnUsage
+	ToolCall    protocol.ToolCall
 	ToolResult  ToolRunResult
-	History     []provider.ChatMessage
+	History     []protocol.ChatMessage
 	ProviderErr error
 }
 
@@ -45,22 +45,22 @@ func ResponseDeltaEvent(delta string) Event {
 }
 
 // ToolCallStartEvent announces a provider-native tool invocation.
-func ToolCallStartEvent(call provider.ToolCall) Event {
+func ToolCallStartEvent(call protocol.ToolCall) Event {
 	return Event{Kind: EventToolCallStart, ToolCall: call}
 }
 
 // ToolCallOutputDeltaEvent streams incremental tool output to the host UI.
-func ToolCallOutputDeltaEvent(call provider.ToolCall, delta string) Event {
+func ToolCallOutputDeltaEvent(call protocol.ToolCall, delta string) Event {
 	return Event{Kind: EventToolCallOutputDelta, ToolCall: call, Delta: delta}
 }
 
 // ToolCallDoneEvent reports a completed tool invocation.
-func ToolCallDoneEvent(call provider.ToolCall, result ToolRunResult) Event {
+func ToolCallDoneEvent(call protocol.ToolCall, result ToolRunResult) Event {
 	return Event{Kind: EventToolCallDone, ToolCall: call, ToolResult: result}
 }
 
 // TurnDoneEvent returns a completed turn with the final assistant response.
-func TurnDoneEvent(result provider.TurnResult) Event {
+func TurnDoneEvent(result protocol.TurnResult) Event {
 	return Event{
 		Kind:     EventTurnDone,
 		Thinking: result.Thinking,
@@ -70,7 +70,7 @@ func TurnDoneEvent(result provider.TurnResult) Event {
 }
 
 // TurnDoneWithHistoryEvent returns a completed turn and updated conversation history.
-func TurnDoneWithHistoryEvent(result provider.TurnResult, history []provider.ChatMessage) Event {
+func TurnDoneWithHistoryEvent(result protocol.TurnResult, history []protocol.ChatMessage) Event {
 	return Event{
 		Kind:     EventTurnDone,
 		Thinking: result.Thinking,
@@ -81,10 +81,10 @@ func TurnDoneWithHistoryEvent(result provider.TurnResult, history []provider.Cha
 }
 
 // TurnDoneProviderErrorEvent returns a failed turn with provider error details.
-func TurnDoneProviderErrorEvent(err error, history []provider.ChatMessage) Event {
+func TurnDoneProviderErrorEvent(err error, history []protocol.ChatMessage) Event {
 	return Event{
 		Kind:        EventTurnDone,
-		Response:    provider.ProviderErrorSummary(err),
+		Response:    protocol.ProviderErrorSummary(err),
 		History:     history,
 		ProviderErr: err,
 	}

@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"charm.land/lipgloss/v2"
-	"github.com/riipandi/elph/internal/constants"
+	"github.com/riipandi/elph/internal/uiconst"
 	"github.com/stretchr/testify/require"
 )
 
@@ -18,7 +18,7 @@ func TestUserMessageLinesFitContentViewportWithScrollbar(t *testing.T) {
 	for i := range 25 {
 		m.messages = append(m.messages, message{
 			text: fmt.Sprintf("user message %d with enough text to matter", i),
-			kind: constants.MessageUser,
+			kind: uiconst.MessageUser,
 		})
 	}
 	m.layout.ContentDirty = true

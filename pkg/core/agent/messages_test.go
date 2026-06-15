@@ -3,7 +3,7 @@ package agent
 import (
 	"testing"
 
-	"github.com/riipandi/elph/pkg/ai/provider"
+	"github.com/riipandi/elph/pkg/ai/protocol"
 	"github.com/stretchr/testify/require"
 )
 
@@ -12,7 +12,7 @@ func TestPrepareTurnMessagesAppendsNewUserPromptToHistory(t *testing.T) {
 
 	got := prepareTurnMessages(TurnOptions{
 		UserPrompt: "second question",
-		Messages: []provider.ChatMessage{
+		Messages: []protocol.ChatMessage{
 			{Role: "user", Content: "first question"},
 			{Role: "assistant", Content: "first answer"},
 		},
@@ -26,7 +26,7 @@ func TestPrepareTurnMessagesAppendsNewUserPromptToHistory(t *testing.T) {
 func TestPrepareTurnMessagesDoesNotDuplicateTrailingUser(t *testing.T) {
 	t.Parallel()
 
-	history := []provider.ChatMessage{
+	history := []protocol.ChatMessage{
 		{Role: "user", Content: "only question"},
 	}
 	got := prepareTurnMessages(TurnOptions{
@@ -48,7 +48,7 @@ func TestPrepareTurnMessagesAppendsImageOnlyTurn(t *testing.T) {
 	t.Parallel()
 
 	got := prepareTurnMessages(TurnOptions{
-		UserImages: []provider.ImageAttachment{{MIME: "image/png", Data: []byte{1, 2, 3}}},
+		UserImages: []protocol.ImageAttachment{{MIME: "image/png", Data: []byte{1, 2, 3}}},
 	})
 	require.Len(t, got, 1)
 	require.Empty(t, got[0].Content)

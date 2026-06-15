@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/riipandi/elph/internal/constants"
+	"github.com/riipandi/elph/internal/uiconst"
 	"github.com/riipandi/elph/pkg/ai/provider"
 	"github.com/riipandi/elph/pkg/core/agent"
 	"github.com/stretchr/testify/require"
@@ -32,7 +32,7 @@ func TestBashApprovalDrainsToolCallDone(t *testing.T) {
 
 	idx := m.agent.NativeToolMsgIDs["call_ping"]
 	require.Contains(t, m.messages[idx].text, "(running...)")
-	require.Equal(t, constants.DetailStatusRunning, m.messages[idx].detailStatus)
+	require.Equal(t, uiconst.DetailStatusRunning, m.messages[idx].detailStatus)
 
 	respCh := make(chan agent.ToolInteractResponse, 1)
 	offer := toolInteractOffer{
@@ -43,7 +43,7 @@ func TestBashApprovalDrainsToolCallDone(t *testing.T) {
 		},
 		RespCh: respCh,
 	}
-	updated, _ := m.Update(toolInteractOfferMsg{offer: offer})
+	updated, _ := m.Update(toolInteractOfferMsg{Offer: offer})
 	m = updated.(Model)
 
 	m, approveCmd := m.completeToolInteractWith(agent.ToolInteractResponse{Approved: true})
@@ -56,5 +56,5 @@ func TestBashApprovalDrainsToolCallDone(t *testing.T) {
 	m, doneCmd := m.handleAgentEvent(agentEventMsg{event: done})
 	require.NotNil(t, doneCmd)
 	require.Equal(t, "PING 1.1.1.1", m.messages[idx].text)
-	require.NotEqual(t, constants.DetailStatusRunning, m.messages[idx].detailStatus)
+	require.NotEqual(t, uiconst.DetailStatusRunning, m.messages[idx].detailStatus)
 }

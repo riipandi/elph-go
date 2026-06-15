@@ -2,59 +2,60 @@ package renderer
 
 import (
 	"errors"
+	"github.com/riipandi/elph/internal/runtime/shell"
+	"github.com/riipandi/elph/internal/runtime/toolresult"
 
-	"github.com/riipandi/elph/internal/constants"
-	"github.com/riipandi/elph/internal/runtime"
+	"github.com/riipandi/elph/internal/uiconst"
 )
 
-func bashToolDetailStatus(result runtime.ToolResult) constants.DetailStatus {
+func bashToolDetailStatus(result toolresult.ToolResult) uiconst.DetailStatus {
 	if result.Cancelled {
-		return constants.DetailStatusWarning
+		return uiconst.DetailStatusWarning
 	}
 	if result.Err != nil {
-		return constants.DetailStatusError
+		return uiconst.DetailStatusError
 	}
-	if _, exitCode := runtime.SplitShellExitSuffix(result.Output); exitCode != 0 {
-		return constants.DetailStatusError
+	if _, exitCode := shell.SplitShellExitSuffix(result.Output); exitCode != 0 {
+		return uiconst.DetailStatusError
 	}
-	return constants.DetailStatusSuccess
+	return uiconst.DetailStatusSuccess
 }
 
-func toolDetailStatus(result runtime.ToolResult) constants.DetailStatus {
+func toolDetailStatus(result toolresult.ToolResult) uiconst.DetailStatus {
 	if result.Cancelled {
-		return constants.DetailStatusWarning
+		return uiconst.DetailStatusWarning
 	}
 	if result.Err != nil {
 		switch {
-		case errors.Is(result.Err, runtime.ErrToolUnknown):
-			return constants.DetailStatusError
-		case errors.Is(result.Err, runtime.ErrToolUnavailable):
-			return constants.DetailStatusUnavailable
+		case errors.Is(result.Err, toolresult.ErrToolUnknown):
+			return uiconst.DetailStatusError
+		case errors.Is(result.Err, toolresult.ErrToolUnavailable):
+			return uiconst.DetailStatusUnavailable
 		default:
-			return constants.DetailStatusError
+			return uiconst.DetailStatusError
 		}
 	}
-	return constants.DetailStatusSuccess
+	return uiconst.DetailStatusSuccess
 }
 
-func toolRequestDetailStatus(reason runtime.UnavailableReason) constants.DetailStatus {
+func toolRequestDetailStatus(reason toolresult.UnavailableReason) uiconst.DetailStatus {
 	switch reason {
-	case runtime.UnavailableUnknown:
-		return constants.DetailStatusError
+	case toolresult.UnavailableUnknown:
+		return uiconst.DetailStatusError
 	default:
-		return constants.DetailStatusUnavailable
+		return uiconst.DetailStatusUnavailable
 	}
 }
 
-func shellDetailStatus(result *runtime.ShellResult, running bool) constants.DetailStatus {
+func shellDetailStatus(result *shell.ShellResult, running bool) uiconst.DetailStatus {
 	if running || result == nil {
-		return constants.DetailStatusRunning
+		return uiconst.DetailStatusRunning
 	}
 	if result.Cancelled {
-		return constants.DetailStatusWarning
+		return uiconst.DetailStatusWarning
 	}
 	if result.Err != nil || result.ExitCode != 0 {
-		return constants.DetailStatusError
+		return uiconst.DetailStatusError
 	}
-	return constants.DetailStatusSuccess
+	return uiconst.DetailStatusSuccess
 }

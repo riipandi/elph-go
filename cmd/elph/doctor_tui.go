@@ -9,7 +9,7 @@ import (
 	"charm.land/bubbles/v2/stopwatch"
 	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/term"
-	"github.com/riipandi/elph/internal/constants"
+	"github.com/riipandi/elph/internal/uiconst"
 )
 
 type doctorStep struct {
@@ -66,7 +66,7 @@ func runDoctorUI(workDir string) (doctorReport, error) {
 func runDoctorInteractive(workDir string) (doctorReport, error) {
 	spin := spinner.New(
 		spinner.WithSpinner(spinner.MiniDot),
-		spinner.WithStyle(lipgloss.NewStyle().Foreground(constants.Yellow)),
+		spinner.WithStyle(lipgloss.NewStyle().Foreground(uiconst.Yellow)),
 	)
 	clock := stopwatch.New(stopwatch.WithInterval(100 * time.Millisecond))
 	clock = applyStopwatchCmd(clock, clock.Start())

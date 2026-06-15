@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/riipandi/elph/internal/constants"
+	"github.com/riipandi/elph/internal/uiconst"
 	"github.com/stretchr/testify/require"
 )
 
@@ -14,7 +14,7 @@ func TestStreamFlushThrottlesLayoutRebuild(t *testing.T) {
 	m.ready = true
 	m.height = 24
 	m.agent.Busy = true
-	m.messages = []message{{text: "seed", kind: constants.MessageAI}}
+	m.messages = []message{{text: "seed", kind: uiconst.MessageAI}}
 	m.agent.ResponseMsgID = 0
 
 	updated, cmd := m.markStreamDirty()
@@ -36,9 +36,9 @@ func TestStreamPrefixCacheReusesStableHead(t *testing.T) {
 	m.content.SetWidth(80)
 	m.agent.Busy = true
 	m.messages = []message{
-		{text: "user prompt", kind: constants.MessageUser},
-		{text: "thinking", kind: constants.MessageThinking, detailLabel: "Thinking"},
-		{text: "partial", kind: constants.MessageAI},
+		{text: "user prompt", kind: uiconst.MessageUser},
+		{text: "thinking", kind: uiconst.MessageThinking, detailLabel: "Thinking"},
+		{text: "partial", kind: uiconst.MessageAI},
 	}
 	m.agent.ThinkingMsgID = 1
 	m.agent.ResponseMsgID = 2
@@ -57,7 +57,7 @@ func TestThinkingDetailBoxUpdatesDuringResponseStream(t *testing.T) {
 	m := testInputModel(t)
 	m.height = 24
 	m.ready = true
-	m.messages = []message{{text: "prompt", kind: constants.MessageUser}}
+	m.messages = []message{{text: "prompt", kind: uiconst.MessageUser}}
 	m = m.beginAgentTurn()
 	m = m.addThinkingMessage("")
 	m.agent.ThinkingMsgID = 1
@@ -69,7 +69,7 @@ func TestThinkingDetailBoxUpdatesDuringResponseStream(t *testing.T) {
 	m.messages[1].text = "reasoning alpha"
 	m.messages[1].renderCache = messageRenderCache{}
 	m = m.clearStreamPrefixCache()
-	m.messages = append(m.messages, message{text: "answer", kind: constants.MessageAI})
+	m.messages = append(m.messages, message{text: "answer", kind: uiconst.MessageAI})
 	m.agent.ResponseMsgID = 2
 
 	m = m.refreshStreamPrefixCache()
@@ -90,7 +90,7 @@ func TestThinkingDetailBoxUpdatesDuringResponseStream(t *testing.T) {
 func TestStreamingUsesSinglePassRender(t *testing.T) {
 	m := testModel()
 	m.agent.Busy = true
-	m.messages = []message{{text: strings.Repeat("word ", 200), kind: constants.MessageAI}}
+	m.messages = []message{{text: strings.Repeat("word ", 200), kind: uiconst.MessageAI}}
 	m.agent.ResponseMsgID = 0
 
 	start := time.Now()

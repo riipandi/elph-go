@@ -4,7 +4,7 @@ import (
 	"strings"
 
 	"charm.land/lipgloss/v2"
-	"github.com/riipandi/elph/internal/constants"
+	"github.com/riipandi/elph/internal/uiconst"
 )
 
 const (
@@ -13,8 +13,8 @@ const (
 )
 
 var (
-	scrollTrackStyle = lipgloss.NewStyle().Foreground(constants.DimText)
-	scrollThumbStyle = lipgloss.NewStyle().Foreground(constants.Gray)
+	scrollTrackStyle = lipgloss.NewStyle().Foreground(uiconst.DimText)
+	scrollThumbStyle = lipgloss.NewStyle().Foreground(uiconst.Gray)
 )
 
 func (m Model) contentScrollable() bool {

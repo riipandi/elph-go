@@ -1,10 +1,11 @@
 package renderer
 
 import (
+	"github.com/riipandi/elph/internal/runtime/shell"
+	"github.com/riipandi/elph/internal/runtime/toolresult"
 	"strings"
 
-	"github.com/riipandi/elph/internal/constants"
-	"github.com/riipandi/elph/internal/runtime"
+	"github.com/riipandi/elph/internal/uiconst"
 	"github.com/riipandi/elph/pkg/ai/provider"
 	"github.com/riipandi/elph/pkg/core/agent"
 	"github.com/riipandi/elph/pkg/tools"
@@ -68,7 +69,7 @@ func (m Model) beginNativeToolCall(call provider.ToolCall) Model {
 		m.agent.NativeToolMsgIDs[call.ID] = -1
 		return m
 	}
-	m = m.addToolDetailMessageWithStatus(nativeToolDetailLabel(call), "(running...)", constants.DetailStatusRunning)
+	m = m.addToolDetailMessageWithStatus(nativeToolDetailLabel(call), "(running...)", uiconst.DetailStatusRunning)
 	idx := len(m.messages) - 1
 	if m.agent.NativeToolMsgIDs == nil {
 		m.agent.NativeToolMsgIDs = make(map[string]int)
@@ -106,23 +107,23 @@ func (m Model) appendNativeToolOutput(call provider.ToolCall, delta string) Mode
 	if isRunningDetailPlaceholder(m.messages[idx].text) {
 		m.messages[idx].text = ""
 	}
-	m.messages[idx].text = runtime.ApplyStreamChunk(m.messages[idx].text, delta)
+	m.messages[idx].text = shell.ApplyStreamChunk(m.messages[idx].text, delta)
 	m.messages[idx].renderCache = messageRenderCache{}
 	m.layout.ContentDirty = true
 	return m
 }
 
-func nativeToolDetailBody(name string, result runtime.ToolResult, streamed string) string {
+func nativeToolDetailBody(name string, result toolresult.ToolResult, streamed string) string {
 	var body string
 	if name == tools.Bash {
-		body = runtime.FormatBashToolDetailBody(result, streamed)
+		body = shell.FormatBashToolDetailBody(result, streamed)
 	} else {
-		body = runtime.FormatToolDetailBodyFromResult(result)
+		body = toolresult.FormatToolDetailBodyFromResult(result)
 	}
 	return agent.TruncateWithNotice(body, agent.MaxDisplayToolBytes)
 }
 
-func nativeToolDetailStatus(name string, result runtime.ToolResult) constants.DetailStatus {
+func nativeToolDetailStatus(name string, result toolresult.ToolResult) uiconst.DetailStatus {
 	if name == tools.Bash {
 		return bashToolDetailStatus(result)
 	}
@@ -154,7 +155,7 @@ func (m Model) finishNativeToolCall(call provider.ToolCall, result agent.ToolRun
 		m = m.syncLayout(m.content.AtBottom())
 		return m
 	}
-	runtimeResult := runtime.ToolResult{
+	runtimeResult := toolresult.ToolResult{
 		Output:    result.Output,
 		Err:       result.Err,
 		Cancelled: result.Cancelled,

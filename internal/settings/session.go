@@ -3,7 +3,7 @@ package settings
 import (
 	"strings"
 
-	"github.com/riipandi/elph/internal/constants"
+	"github.com/riipandi/elph/internal/appconst"
 )
 
 // SessionSettings stores per-user UI and runtime preferences.
@@ -15,12 +15,12 @@ type SessionSettings struct {
 }
 
 // AgentMode returns the persisted agent mode, defaulting to build.
-func (s Settings) AgentMode() constants.AgentMode {
+func (s Settings) AgentMode() appconst.AgentMode {
 	return normalizeAgentMode(s.Session.AgentMode)
 }
 
 // ThinkingLevel returns the persisted thinking level, defaulting to high.
-func (s Settings) ThinkingLevel() constants.ThinkingLevel {
+func (s Settings) ThinkingLevel() appconst.ThinkingLevel {
 	return normalizeThinkingLevel(s.Session.ThinkingLevel)
 }
 
@@ -53,40 +53,40 @@ func SetActiveModel(providerID, modelID string) error {
 }
 
 // SetAgentMode records the active agent mode.
-func SetAgentMode(mode constants.AgentMode) error {
+func SetAgentMode(mode appconst.AgentMode) error {
 	return Update(func(cfg *Settings) {
 		cfg.Session.AgentMode = string(normalizeAgentMode(string(mode)))
 	})
 }
 
 // SetThinkingLevel records the active thinking level.
-func SetThinkingLevel(level constants.ThinkingLevel) error {
+func SetThinkingLevel(level appconst.ThinkingLevel) error {
 	return Update(func(cfg *Settings) {
 		cfg.Session.ThinkingLevel = string(normalizeThinkingLevel(string(level)))
 	})
 }
 
-func normalizeAgentMode(raw string) constants.AgentMode {
-	mode := constants.AgentMode(strings.TrimSpace(raw))
+func normalizeAgentMode(raw string) appconst.AgentMode {
+	mode := appconst.AgentMode(strings.TrimSpace(raw))
 	switch mode {
-	case constants.ModeBuild, constants.ModePlan, constants.ModeAsk, constants.ModeBrave:
+	case appconst.ModeBuild, appconst.ModePlan, appconst.ModeAsk, appconst.ModeBrave:
 		return mode
 	default:
-		return constants.ModeBuild
+		return appconst.ModeBuild
 	}
 }
 
-func normalizeThinkingLevel(raw string) constants.ThinkingLevel {
-	level := constants.ThinkingLevel(strings.TrimSpace(raw))
+func normalizeThinkingLevel(raw string) appconst.ThinkingLevel {
+	level := appconst.ThinkingLevel(strings.TrimSpace(raw))
 	switch level {
-	case constants.ThinkingOff,
-		constants.ThinkingMinimal,
-		constants.ThinkingLow,
-		constants.ThinkingMedium,
-		constants.ThinkingHigh,
-		constants.ThinkingXHigh:
+	case appconst.ThinkingOff,
+		appconst.ThinkingMinimal,
+		appconst.ThinkingLow,
+		appconst.ThinkingMedium,
+		appconst.ThinkingHigh,
+		appconst.ThinkingXHigh:
 		return level
 	default:
-		return constants.ThinkingHigh
+		return appconst.ThinkingHigh
 	}
 }

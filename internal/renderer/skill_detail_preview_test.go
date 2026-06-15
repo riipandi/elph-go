@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/riipandi/elph/internal/constants"
+	"github.com/riipandi/elph/internal/uiconst"
 	"github.com/riipandi/elph/pkg/skill"
 	"github.com/stretchr/testify/require"
 )
@@ -16,7 +16,7 @@ func TestSkillDetailCollapsedPreviewShowsInstructions(t *testing.T) {
 
 	m := testModel()
 	m.messages = []message{{
-		kind:        constants.MessageDetail,
+		kind:        uiconst.MessageDetail,
 		detailLabel: "Skill: aside",
 		text:        body,
 	}}

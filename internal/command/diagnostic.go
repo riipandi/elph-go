@@ -2,10 +2,10 @@ package command
 
 import (
 	"fmt"
+	"github.com/riipandi/elph/internal/runtime/log"
 	"os"
 	"strings"
 
-	"github.com/riipandi/elph/internal/runtime"
 	inttools "github.com/riipandi/elph/internal/tools"
 	"github.com/riipandi/elph/pkg/tools"
 )
@@ -93,7 +93,7 @@ func displayLogFile(ctx *Context, path, label string, missing func(string) strin
 		return fmt.Sprintf("/%s: %s not available", DiagnosticOpenLog, strings.ToLower(label))
 	}
 
-	content, err := runtime.ReadLogTail(path, 0)
+	content, err := log.ReadLogTail(path, 0)
 	if err != nil {
 		if os.IsNotExist(err) && missing != nil {
 			return missing(path)
@@ -116,7 +116,7 @@ func displayFilteredLog(ctx *Context, path, kind string) string {
 		return fmt.Sprintf("/%s: session log not available", DiagnosticOpenLog)
 	}
 
-	content, err := runtime.FilterLogByKind(path, kind, 0)
+	content, err := log.FilterLogByKind(path, kind, 0)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return fmt.Sprintf("Session log (%s) has not been created yet — send a message to the agent first.", path)

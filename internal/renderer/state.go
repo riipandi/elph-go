@@ -4,9 +4,8 @@ import (
 	"context"
 
 	"charm.land/bubbles/v2/stopwatch"
-	"github.com/riipandi/elph/internal/command"
-	"github.com/riipandi/elph/internal/mention"
-	"github.com/riipandi/elph/internal/runtime"
+	"github.com/riipandi/elph/internal/runtime/shell"
+	"github.com/riipandi/elph/internal/toolinteract"
 	"github.com/riipandi/elph/pkg/core/agent"
 	"github.com/riipandi/elph/pkg/tools/todolist"
 )
@@ -20,23 +19,7 @@ type ShellState struct {
 	DetailMsgID int
 	Cancel      context.CancelFunc
 	OutputCh    chan string
-	DoneCh      chan runtime.ShellResult
-}
-
-// SuggestState tracks slash-command and @-mention palettes.
-type SuggestState struct {
-	CmdSuggestions      []command.SlashCommand
-	CmdSuggestIndex     int
-	ArgSuggestions      []command.ArgChoice
-	ArgSuggestIndex     int
-	MentionSuggestions  []mention.Entry
-	MentionSuggestIndex int
-	MentionIndex        []mention.Entry
-	MentionIndexDir     string
-	MentionIndexLoading bool
-	MentionActiveQuery  string
-	MentionFilterQuery  string
-	MentionUserSelected bool
+	DoneCh      chan shell.ShellResult
 }
 
 // LayoutCache stores derived layout measurements for the TUI.
@@ -68,7 +51,7 @@ type AgentState struct {
 	SeenToolCalls        map[string]struct{}
 	Busy                 bool
 	Events               <-chan agent.Event
-	ToolInteractBridge   *toolInteractBridge
+	ToolInteractBridge   *toolinteract.Bridge
 	Cancel               context.CancelFunc
 	ThinkingMsgID        int
 	ResponseMsgID        int
@@ -76,14 +59,7 @@ type AgentState struct {
 	TodoListBefore       []todolist.Todo
 	SessionAllowTools    bool // skip approval dialogs until the TUI session ends
 	MarkupAskUserPending *markupAskUserOffer
-	ResolvedAskUsers     map[string]askUserResolution
-}
-
-// askUserResolution records a completed AskUser gate so native and markup paths
-// do not reopen the same question in one user-initiated turn chain.
-type askUserResolution struct {
-	Answer    string
-	Cancelled bool
+	ResolvedAskUsers     map[string]toolinteract.AskUserResolution
 }
 
 type markupAskUserOffer struct {

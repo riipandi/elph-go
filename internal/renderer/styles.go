@@ -2,26 +2,27 @@ package renderer
 
 import (
 	"charm.land/lipgloss/v2"
-	"github.com/riipandi/elph/internal/constants"
+	"github.com/riipandi/elph/internal/appconst"
+	"github.com/riipandi/elph/internal/uiconst"
 )
 
-var modeList = []constants.AgentMode{
-	constants.ModeBuild,
-	constants.ModePlan,
-	constants.ModeAsk,
-	constants.ModeBrave,
+var modeList = []appconst.AgentMode{
+	appconst.ModeBuild,
+	appconst.ModePlan,
+	appconst.ModeAsk,
+	appconst.ModeBrave,
 }
 
 var (
-	inputBorderByMode             = make(map[constants.AgentMode]lipgloss.Style, len(modeList))
-	inputBorderAttachedByMode     = make(map[constants.AgentMode]lipgloss.Style, len(modeList))
-	paletteBorderByMode           = make(map[constants.AgentMode]lipgloss.Style, len(modeList))
-	modelSelectorListBorderByMode = make(map[constants.AgentMode]lipgloss.Style, len(modeList))
+	inputBorderByMode             = make(map[appconst.AgentMode]lipgloss.Style, len(modeList))
+	inputBorderAttachedByMode     = make(map[appconst.AgentMode]lipgloss.Style, len(modeList))
+	paletteBorderByMode           = make(map[appconst.AgentMode]lipgloss.Style, len(modeList))
+	modelSelectorListBorderByMode = make(map[appconst.AgentMode]lipgloss.Style, len(modeList))
 )
 
 func init() {
 	for _, mode := range modeList {
-		color := constants.ModeBorderColor(mode)
+		color := uiconst.ModeBorderColor(mode)
 		inputBorderByMode[mode] = lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).
 			BorderForeground(color).
@@ -45,30 +46,30 @@ func init() {
 	}
 }
 
-func cachedInputBorder(mode constants.AgentMode) lipgloss.Style {
+func cachedInputBorder(mode appconst.AgentMode) lipgloss.Style {
 	if style, ok := inputBorderByMode[mode]; ok {
 		return style
 	}
-	return inputBorderByMode[constants.ModeBuild]
+	return inputBorderByMode[appconst.ModeBuild]
 }
 
-func cachedInputBorderAttached(mode constants.AgentMode) lipgloss.Style {
+func cachedInputBorderAttached(mode appconst.AgentMode) lipgloss.Style {
 	if style, ok := inputBorderAttachedByMode[mode]; ok {
 		return style
 	}
-	return inputBorderAttachedByMode[constants.ModeBuild]
+	return inputBorderAttachedByMode[appconst.ModeBuild]
 }
 
-func paletteBorder(mode constants.AgentMode) lipgloss.Style {
+func paletteBorder(mode appconst.AgentMode) lipgloss.Style {
 	if style, ok := paletteBorderByMode[mode]; ok {
 		return style
 	}
-	return paletteBorderByMode[constants.ModeBuild]
+	return paletteBorderByMode[appconst.ModeBuild]
 }
 
-func modelSelectorListBorder(mode constants.AgentMode) lipgloss.Style {
+func modelSelectorListBorder(mode appconst.AgentMode) lipgloss.Style {
 	if style, ok := modelSelectorListBorderByMode[mode]; ok {
 		return style
 	}
-	return modelSelectorListBorderByMode[constants.ModeBuild]
+	return modelSelectorListBorderByMode[appconst.ModeBuild]
 }

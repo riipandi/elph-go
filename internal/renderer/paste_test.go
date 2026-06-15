@@ -132,10 +132,10 @@ func TestPasteEditorOpenSaveUpdatesToken(t *testing.T) {
 
 	m = m.openPasteEditor(0)
 	require.True(t, m.pasteEditorActive())
-	require.Equal(t, long, m.pasteEditor.input.Value())
+	require.Equal(t, long, m.pasteEditor.Input.Value())
 
 	edited := strings.Join([]string{"one", "two", "edited"}, "\n")
-	m.pasteEditor.input.SetValue(edited)
+	m.pasteEditor.Input.SetValue(edited)
 	m = m.closePasteEditor(true)
 
 	require.Equal(t, edited, m.inputPastes[0])
@@ -156,7 +156,7 @@ func TestUpdateCtrlOOpensPasteEditorAfterPasteMsg(t *testing.T) {
 	updated, _ = m.Update(keyCtrl('o'))
 	m = updated.(Model)
 	require.True(t, m.pasteEditorActive())
-	require.Equal(t, long, m.pasteEditor.input.Value())
+	require.Equal(t, long, m.pasteEditor.Input.Value())
 }
 
 func TestHandlePasteToggleKeyOpensEditor(t *testing.T) {
@@ -191,22 +191,22 @@ func testPasteEditorModel(t *testing.T) Model {
 
 func TestPasteEditorCtrlJInsertsNewline(t *testing.T) {
 	m := testPasteEditorModel(t)
-	m.pasteEditor.input.SetValue("hello")
+	m.pasteEditor.Input.SetValue("hello")
 
 	updated, cmd := m.Update(keyCtrlJ())
 	m = updated.(Model)
 	require.Nil(t, cmd)
-	require.GreaterOrEqual(t, m.pasteEditor.input.LineCount(), 2, "value=%q", m.pasteEditor.input.Value())
+	require.GreaterOrEqual(t, m.pasteEditor.Input.LineCount(), 2, "value=%q", m.pasteEditor.Input.Value())
 }
 
 func TestPasteEditorShiftEnterCSIInsertsNewline(t *testing.T) {
 	m := testPasteEditorModel(t)
-	m.pasteEditor.input.SetValue("hello")
+	m.pasteEditor.Input.SetValue("hello")
 
 	updated, cmd := m.Update(csiMsg("27;2;13~"))
 	m = updated.(Model)
 	require.Nil(t, cmd)
-	require.GreaterOrEqual(t, m.pasteEditor.input.LineCount(), 2, "value=%q", m.pasteEditor.input.Value())
+	require.GreaterOrEqual(t, m.pasteEditor.Input.LineCount(), 2, "value=%q", m.pasteEditor.Input.Value())
 }
 
 func TestPasteEditorRestoresCursorOnClose(t *testing.T) {
@@ -242,7 +242,7 @@ func TestPasteEditorEscSaves(t *testing.T) {
 	long := strings.Join([]string{"a", "b", "c", "d"}, "\n")
 	m = m.insertCollapsedPaste(long)
 	m = m.openPasteEditor(0)
-	m.pasteEditor.input.SetValue("saved\nedit\nmore\nlines")
+	m.pasteEditor.Input.SetValue("saved\nedit\nmore\nlines")
 
 	updated, _, handled := m.handlePasteEditorKey(tea.KeyPressMsg{Code: tea.KeyEscape})
 	require.True(t, handled)

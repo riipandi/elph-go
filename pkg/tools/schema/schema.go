@@ -1,24 +1,24 @@
 package schema
 
 import (
-	"github.com/riipandi/elph/pkg/ai/provider"
+	"github.com/riipandi/elph/pkg/ai/protocol"
 	"github.com/riipandi/elph/pkg/tools/catalog"
 	"github.com/riipandi/elph/pkg/tools/exposure"
 )
 
 // ProviderDefinitions returns built-in tools as provider-native schemas for the model API.
 // Results are filtered by IsProviderExposed; see docs/tools.md § Provider API exposure.
-func ProviderDefinitions() []provider.ToolDefinition {
+func ProviderDefinitions() []protocol.ToolDefinition {
 	return FilterProviderTools(collectBuiltinProviderDefinitions())
 }
 
 // FilterProviderTools keeps only definitions that should be sent to the model API
 // (auto-allow, executable, and with a provider schema). See docs/tools.md.
-func FilterProviderTools(tools []provider.ToolDefinition) []provider.ToolDefinition {
+func FilterProviderTools(tools []protocol.ToolDefinition) []protocol.ToolDefinition {
 	if len(tools) == 0 {
 		return nil
 	}
-	out := make([]provider.ToolDefinition, 0, len(tools))
+	out := make([]protocol.ToolDefinition, 0, len(tools))
 	for _, def := range tools {
 		if IsProviderExposed(def.Name) {
 			out = append(out, def)
@@ -43,14 +43,14 @@ func IsProviderExposed(name string) bool {
 	return ok
 }
 
-func collectBuiltinProviderDefinitions() []provider.ToolDefinition {
-	out := make([]provider.ToolDefinition, 0, len(catalog.All()))
+func collectBuiltinProviderDefinitions() []protocol.ToolDefinition {
+	out := make([]protocol.ToolDefinition, 0, len(catalog.All()))
 	for _, def := range catalog.All() {
 		s, ok := ProviderSchema(def.Name)
 		if !ok {
 			continue
 		}
-		out = append(out, provider.ToolDefinition{
+		out = append(out, protocol.ToolDefinition{
 			Name:        def.Name,
 			Description: def.Description,
 			Parameters:  s,

@@ -13,6 +13,7 @@ type (
 	ToolDefinition  = protocol.ToolDefinition
 	ToolCall        = protocol.ToolCall
 	StopReason      = protocol.StopReason
+	ThinkingLevel   = protocol.ThinkingLevel
 	ThinkingConfig  = protocol.ThinkingConfig
 	ThinkingFormat  = protocol.ThinkingFormat
 	Compat          = protocol.Compat
@@ -24,6 +25,13 @@ const (
 	StopReasonToolUse   = protocol.StopReasonToolUse
 	StopReasonMaxTokens = protocol.StopReasonMaxTokens
 
+	ThinkingOff     = protocol.ThinkingOff
+	ThinkingMinimal = protocol.ThinkingMinimal
+	ThinkingLow     = protocol.ThinkingLow
+	ThinkingMedium  = protocol.ThinkingMedium
+	ThinkingHigh    = protocol.ThinkingHigh
+	ThinkingXHigh   = protocol.ThinkingXHigh
+
 	ThinkingFormatReasoningEffort = protocol.ThinkingFormatReasoningEffort
 	ThinkingFormatOpenRouter      = protocol.ThinkingFormatOpenRouter
 	ThinkingFormatQwen            = protocol.ThinkingFormatQwen
@@ -33,6 +41,11 @@ const (
 )
 
 var ErrMissingAPIKey = protocol.ErrMissingAPIKey
+
+var (
+	NextThinkingLevel = protocol.NextThinkingLevel
+	PrevThinkingLevel = protocol.PrevThinkingLevel
+)
 
 var (
 	ParseContextTooLarge             = protocol.ParseContextTooLarge

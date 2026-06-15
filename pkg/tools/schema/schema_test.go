@@ -3,7 +3,7 @@ package schema
 import (
 	"testing"
 
-	"github.com/riipandi/elph/pkg/ai/provider"
+	"github.com/riipandi/elph/pkg/ai/protocol"
 	"github.com/riipandi/elph/pkg/tools/catalog"
 	"github.com/stretchr/testify/require"
 )
@@ -56,7 +56,7 @@ func TestBashAndAskUserSchemas(t *testing.T) {
 }
 
 func TestFilterProviderTools(t *testing.T) {
-	filtered := FilterProviderTools([]provider.ToolDefinition{
+	filtered := FilterProviderTools([]protocol.ToolDefinition{
 		{Name: catalog.Read},
 		{Name: catalog.Grep},
 		{Name: catalog.WebSearch},

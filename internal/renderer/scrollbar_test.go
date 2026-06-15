@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"charm.land/lipgloss/v2"
-	"github.com/riipandi/elph/internal/constants"
+	"github.com/riipandi/elph/internal/uiconst"
 	"github.com/stretchr/testify/require"
 )
 
@@ -32,7 +32,7 @@ func TestScrollBarVisibleWhenOverflow(t *testing.T) {
 	for i := range 30 {
 		m.messages = append(m.messages, message{
 			text: fmt.Sprintf("message line %d with some extra text to wrap nicely", i),
-			kind: constants.MessageUser,
+			kind: uiconst.MessageUser,
 		})
 	}
 	m.layout.ContentDirty = true
@@ -55,7 +55,7 @@ func TestScrollBarThumbMovesDown(t *testing.T) {
 	m.height = 16
 	m.ready = true
 	for i := range 40 {
-		m.messages = append(m.messages, message{text: fmt.Sprintf("msg %d", i), kind: constants.MessageUser})
+		m.messages = append(m.messages, message{text: fmt.Sprintf("msg %d", i), kind: uiconst.MessageUser})
 	}
 	m.layout.ContentDirty = true
 	m = m.syncLayout(false)
@@ -78,7 +78,7 @@ func TestContentAreaWidthMatchesChromeWhenScrollable(t *testing.T) {
 	m.height = 14
 	m.ready = true
 	for i := range 25 {
-		m.messages = append(m.messages, message{text: fmt.Sprintf("overflow %d", i), kind: constants.MessageAI})
+		m.messages = append(m.messages, message{text: fmt.Sprintf("overflow %d", i), kind: uiconst.MessageAI})
 	}
 	m.layout.ContentDirty = true
 	m = m.syncLayout(false)

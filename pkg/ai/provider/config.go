@@ -3,7 +3,7 @@ package provider
 import (
 	"encoding/json"
 
-	"github.com/riipandi/elph/internal/constants"
+	"github.com/riipandi/elph/pkg/ai/protocol"
 )
 
 // API identifies the upstream protocol used to complete a turn.
@@ -64,7 +64,7 @@ type ResolvedModel struct {
 	API              API
 	BaseURL          string
 	Reasoning        bool
-	ThinkingLevelMap map[constants.ThinkingLevel]ThinkingMapValue
+	ThinkingLevelMap map[protocol.ThinkingLevel]ThinkingMapValue
 	Input            []string
 	ContextWindow    int
 	MaxTokens        int

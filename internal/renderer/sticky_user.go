@@ -7,7 +7,7 @@ import (
 	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/riipandi/elph/internal/align"
-	"github.com/riipandi/elph/internal/constants"
+	"github.com/riipandi/elph/internal/uiconst"
 )
 
 // messageBlockLineRange returns the [start, end) line span of a message block in
@@ -50,7 +50,7 @@ func (m Model) userMessageScrollAnchor(msgIndex int) (anchor int, ok bool) {
 
 func (m Model) nextUserMessageIndex(after int) int {
 	for i := after + 1; i < len(m.messages); i++ {
-		if m.messages[i].kind == constants.MessageUser {
+		if m.messages[i].kind == uiconst.MessageUser {
 			return i
 		}
 	}
@@ -66,7 +66,7 @@ func (m Model) stickyUserMessageIndex(scrollTop int) int {
 
 	candidate := -1
 	for i, msg := range m.messages {
-		if msg.kind != constants.MessageUser {
+		if msg.kind != uiconst.MessageUser {
 			continue
 		}
 		anchor, ok := m.userMessageScrollAnchor(i)
@@ -182,7 +182,7 @@ func (m Model) renderUserSticky(msgIndex int) string {
 		return ""
 	}
 	msg := m.messages[msgIndex]
-	if msg.kind != constants.MessageUser {
+	if msg.kind != uiconst.MessageUser {
 		return ""
 	}
 	return renderUserSticky(m.messageAreaWidth(), msg.text, msg.at)
@@ -201,7 +201,7 @@ func userMessageStickyTitle(text string, maxW int) string {
 	if title == "" {
 		return ""
 	}
-	return constants.StickyUserTitleStyle().Render(title)
+	return uiconst.StickyUserTitleStyle().Render(title)
 }
 
 func userMessageStickyLine(text string, innerW int, at time.Time) string {
@@ -210,7 +210,7 @@ func userMessageStickyLine(text string, innerW int, at time.Time) string {
 		return userMessageStickyTitle(text, innerW)
 	}
 
-	right := constants.StickyUserTimestampStyle().Render(ts)
+	right := uiconst.StickyUserTimestampStyle().Render(ts)
 	rightW := lipgloss.Width(right)
 	leftColW := max(innerW-rightW, 1)
 	titleW := max(leftColW-align.ColumnGap, 1)
@@ -234,21 +234,21 @@ func stickyUserFooterRow(contentW int, left, right string) string {
 
 func stickyUserLineStyle(width int) lipgloss.Style {
 	return lipgloss.NewStyle().
-		Background(constants.UserStickyMsgBg).
+		Background(uiconst.UserStickyMsgBg).
 		Width(width).
 		MaxHeight(1)
 }
 
 func renderUserSticky(blockWidth int, text string, at time.Time) string {
-	vPad, hPad := messageBlockPadding(constants.MessageUser)
-	style := constants.StickyUserStyle()
+	vPad, hPad := messageBlockPadding(uiconst.MessageUser)
+	style := uiconst.StickyUserStyle()
 	innerW := userBoxInnerWidth(blockWidth, hPad)
 
 	content := userMessageStickyLine(text, innerW, at)
 	return renderUserBoxWithLeftBar(
 		blockWidth,
-		constants.UserStickyMsgBg,
-		constants.UserStickyTimestampFg,
+		uiconst.UserStickyMsgBg,
+		uiconst.UserStickyTimestampFg,
 		style,
 		vPad,
 		hPad,

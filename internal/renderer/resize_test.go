@@ -7,7 +7,7 @@ import (
 
 	"charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
-	"github.com/riipandi/elph/internal/constants"
+	"github.com/riipandi/elph/internal/uiconst"
 	"github.com/stretchr/testify/require"
 )
 
@@ -27,7 +27,7 @@ func TestResizePreservesMessageHistory(t *testing.T) {
 	m.width = 80
 	m.height = 30
 	m.ready = true
-	m.messages = []message{{text: "hello from user", kind: constants.MessageUser}}
+	m.messages = []message{{text: "hello from user", kind: uiconst.MessageUser}}
 
 	updated, _ := m.Update(tea.WindowSizeMsg{Width: 60, Height: 24})
 	m = updated.(Model)
@@ -67,7 +67,7 @@ func TestManyMessagesContentFitsInViewport(t *testing.T) {
 	for i := range 25 {
 		m.messages = append(m.messages, message{
 			text: fmt.Sprintf("message number %d from user", i),
-			kind: constants.MessageUser,
+			kind: uiconst.MessageUser,
 		})
 	}
 
@@ -84,7 +84,7 @@ func TestLongPasteBannerAppearsOnce(t *testing.T) {
 	m.ready = true
 
 	readme := strings.Repeat("Elph - minimalist AI agent companion. ", 80)
-	m.messages = []message{{text: readme, kind: constants.MessageUser}}
+	m.messages = []message{{text: readme, kind: uiconst.MessageUser}}
 
 	content := m.contentView()
 	require.Equal(t, 1, strings.Count(content, "Welcome to"))

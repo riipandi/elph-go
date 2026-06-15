@@ -6,7 +6,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/atotto/clipboard"
 	"github.com/charmbracelet/x/ansi"
-	"github.com/riipandi/elph/internal/constants"
+	"github.com/riipandi/elph/internal/uiconst"
 )
 
 const aiCopyHintText = "click or ctrl+y to copy"
@@ -19,13 +19,13 @@ func renderAIMessageFooter(blockWidth int, body string, showCopyHint bool) strin
 	if strings.Contains(ansi.Strip(body), aiCopyHintText) {
 		return body
 	}
-	_, hPad := messageBlockPadding(constants.MessageAI)
+	_, hPad := messageBlockPadding(uiconst.MessageAI)
 	return body + "\n\n" + dimItalicHintLine(hPad, aiCopyHintText)
 }
 
 func (m Model) lastAIMessageIndex() int {
 	for i := len(m.messages) - 1; i >= 0; i-- {
-		if m.messages[i].kind == constants.MessageAI && strings.TrimSpace(m.messages[i].text) != "" {
+		if m.messages[i].kind == uiconst.MessageAI && strings.TrimSpace(m.messages[i].text) != "" {
 			return i
 		}
 	}
@@ -37,7 +37,7 @@ func (m Model) copyMessageAt(index int) (Model, tea.Cmd) {
 		return m, nil
 	}
 	msg := m.messages[index]
-	if msg.kind != constants.MessageAI || strings.TrimSpace(msg.text) == "" {
+	if msg.kind != uiconst.MessageAI || strings.TrimSpace(msg.text) == "" {
 		return m, nil
 	}
 	_ = clipboard.WriteAll(msg.text)

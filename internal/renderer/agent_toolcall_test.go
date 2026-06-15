@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/riipandi/elph/internal/constants"
+	"github.com/riipandi/elph/internal/uiconst"
 	"github.com/stretchr/testify/require"
 )
 
@@ -22,9 +22,9 @@ func TestAppendAgentResponseDeltaStripsToolCalls(t *testing.T) {
 
 	require.Equal(t, -1, m.agent.ResponseMsgID, "tool-only response should not create AI bubble")
 	require.Len(t, m.messages, 1)
-	require.Equal(t, constants.MessageDetail, m.messages[0].kind)
+	require.Equal(t, uiconst.MessageDetail, m.messages[0].kind)
 	require.Equal(t, "WebSearch", m.messages[0].detailLabel)
-	require.Equal(t, constants.DetailStatusUnavailable, m.messages[0].detailStatus)
+	require.Equal(t, uiconst.DetailStatusUnavailable, m.messages[0].detailStatus)
 	require.Contains(t, m.messages[0].text, "Tool unavailable")
 	require.Contains(t, m.messages[0].text, "cafe Sukabumi")
 }
@@ -69,7 +69,7 @@ func TestAppendAgentResponseDeltaUnknownTool(t *testing.T) {
 
 	require.Len(t, m.messages, 1)
 	require.Equal(t, "Figma_search", m.messages[0].detailLabel)
-	require.Equal(t, constants.DetailStatusError, m.messages[0].detailStatus)
+	require.Equal(t, uiconst.DetailStatusError, m.messages[0].detailStatus)
 	require.Contains(t, m.messages[0].text, "Tool not available")
 }
 
@@ -81,7 +81,7 @@ func TestAppendAgentResponseDeltaStripsPartialToolSuffix(t *testing.T) {
 	m = m.appendAgentResponseDelta("<tool")
 
 	require.Len(t, m.messages, 1)
-	require.Equal(t, constants.MessageAI, m.messages[0].kind)
+	require.Equal(t, uiconst.MessageAI, m.messages[0].kind)
 	require.Equal(t, "Rekomendasi kafe:", strings.TrimSpace(m.messages[0].text))
 }
 
@@ -93,10 +93,10 @@ func TestAppendAgentResponseDeltaIncompleteToolCallCreatesDetailBox(t *testing.T
 	m = m.appendAgentResponseDelta(raw)
 
 	require.Len(t, m.messages, 2)
-	require.Equal(t, constants.MessageDetail, m.messages[0].kind)
+	require.Equal(t, uiconst.MessageDetail, m.messages[0].kind)
 	require.Equal(t, "WebSearch", m.messages[0].detailLabel)
 	require.Contains(t, m.messages[0].text, "cafe Sukabumi")
-	require.Equal(t, constants.MessageAI, m.messages[1].kind)
+	require.Equal(t, uiconst.MessageAI, m.messages[1].kind)
 	require.Equal(t, "prefix", strings.TrimSpace(m.messages[1].text))
 }
 
@@ -116,7 +116,7 @@ func TestAppendAgentResponseDeltaStripsLeakedQueryBeforeMarkup(t *testing.T) {
 
 	require.Equal(t, -1, m.agent.ResponseMsgID)
 	require.Len(t, m.messages, 1)
-	require.Equal(t, constants.MessageDetail, m.messages[0].kind)
+	require.Equal(t, uiconst.MessageDetail, m.messages[0].kind)
 	require.Equal(t, "WebSearch", m.messages[0].detailLabel)
 }
 
@@ -129,7 +129,7 @@ func TestAppendAgentResponseDeltaStripsMangledUnnamedParameter(t *testing.T) {
 	m = m.appendAgentResponseDelta(raw)
 
 	require.Len(t, m.messages, 1)
-	require.Equal(t, constants.MessageDetail, m.messages[0].kind)
+	require.Equal(t, uiconst.MessageDetail, m.messages[0].kind)
 	require.Equal(t, "WebSearch", m.messages[0].detailLabel)
 	require.Contains(t, m.messages[0].text, "Sukabumi")
 }
@@ -145,7 +145,7 @@ func TestAppendAgentResponseDeltaStripsOrphanToolMarkupTail(t *testing.T) {
 	m = m.appendAgentResponseDelta(raw)
 
 	require.Len(t, m.messages, 1)
-	require.Equal(t, constants.MessageDetail, m.messages[0].kind)
+	require.Equal(t, uiconst.MessageDetail, m.messages[0].kind)
 	require.Equal(t, "WebSearch", m.messages[0].detailLabel)
 	require.Contains(t, m.messages[0].text, "Sukabumi")
 }
@@ -170,7 +170,7 @@ func TestAppendAgentResponseDeltaStripsToolCallUnderscoreClose(t *testing.T) {
 func TestFinishAgentTurnStripsEmbeddedToolCalls(t *testing.T) {
 	m := New()
 	m = m.beginAgentTurn()
-	m.messages = []message{{text: "partial", kind: constants.MessageAI}}
+	m.messages = []message{{text: "partial", kind: uiconst.MessageAI}}
 	m.agent.ResponseMsgID = 0
 
 	response := `Here are ideas.<toolcall>

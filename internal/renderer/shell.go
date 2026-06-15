@@ -2,13 +2,13 @@ package renderer
 
 import (
 	"context"
+	rtshell "github.com/riipandi/elph/internal/runtime/shell"
 	"strings"
 	"sync"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
-	"github.com/riipandi/elph/internal/constants"
-	"github.com/riipandi/elph/internal/runtime"
+	"github.com/riipandi/elph/internal/uiconst"
 )
 
 type shellOutputMsg struct {
@@ -18,7 +18,7 @@ type shellOutputMsg struct {
 type shellOutputClosedMsg struct{}
 
 type shellDoneMsg struct {
-	result      runtime.ShellResult
+	result      rtshell.ShellResult
 	command     string
 	withContext bool
 }
@@ -42,20 +42,20 @@ func isShellCancelKey(msg tea.KeyPressMsg) bool {
 	if isInputEscapeKey(msg) {
 		return true
 	}
-	return resolveKeyAction(msg) == constants.ActionQuit
+	return resolveKeyAction(msg) == uiconst.ActionQuit
 }
 
-func (m Model) addShellDetailMessage(label, body string, status constants.DetailStatus) Model {
+func (m Model) addShellDetailMessage(label, body string, status uiconst.DetailStatus) Model {
 	return m.addShellDetailMessageAt(label, body, status, time.Now())
 }
 
-func (m Model) addShellDetailMessageAt(label, body string, status constants.DetailStatus, at time.Time) Model {
+func (m Model) addShellDetailMessageAt(label, body string, status uiconst.DetailStatus, at time.Time) Model {
 	if at.IsZero() {
 		at = time.Now()
 	}
 	m.messages = append(m.messages, message{
 		text:           body,
-		kind:           constants.MessageDetail,
+		kind:           uiconst.MessageDetail,
 		detailLabel:    label,
 		detailStatus:   status,
 		detailExpanded: true,
@@ -79,7 +79,7 @@ func (m Model) handleShellSubmit(command string, withContext bool) (Model, tea.C
 	m.shell.WithContext = withContext
 	m.shell.Output = ""
 	m = m.beginShellActivity()
-	m = m.addShellDetailMessageAt(shellDetailLabel(command), "(running...)", constants.DetailStatusRunning, at)
+	m = m.addShellDetailMessageAt(shellDetailLabel(command), "(running...)", uiconst.DetailStatusRunning, at)
 	m.shell.DetailMsgID = len(m.messages) - 1
 	m.layout.ContentDirty = true
 	m = m.syncLayout(true)
@@ -88,7 +88,7 @@ func (m Model) handleShellSubmit(command string, withContext bool) (Model, tea.C
 	m.shell.Cancel = cancel
 
 	m.shell.OutputCh = make(chan string, 64)
-	m.shell.DoneCh = make(chan runtime.ShellResult, 1)
+	m.shell.DoneCh = make(chan rtshell.ShellResult, 1)
 
 	outCh := m.shell.OutputCh
 	doneCh := m.shell.DoneCh
@@ -111,7 +111,7 @@ func (m Model) handleShellSubmit(command string, withContext bool) (Model, tea.C
 				}
 			}
 
-			result := runtime.RunShellContext(ctx, workDir, command, sendChunk)
+			result := rtshell.RunShellContext(ctx, workDir, command, sendChunk)
 
 			sendMu.Lock()
 			sendOpen = false
@@ -146,7 +146,7 @@ func waitShellOutput(ch <-chan string) tea.Cmd {
 	}
 }
 
-func waitShellDone(ch <-chan runtime.ShellResult, command string, withContext bool) tea.Cmd {
+func waitShellDone(ch <-chan rtshell.ShellResult, command string, withContext bool) tea.Cmd {
 	return func() tea.Msg {
 		result := <-ch
 		return shellDoneMsg{
@@ -166,14 +166,14 @@ func (m Model) cancelShell() (Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m Model) updateShellDetailMessage(result *runtime.ShellResult) Model {
+func (m Model) updateShellDetailMessage(result *rtshell.ShellResult) Model {
 	if m.shell.DetailMsgID < 0 || m.shell.DetailMsgID >= len(m.messages) {
 		return m
 	}
 
 	var text string
 	if result != nil {
-		text = runtime.FormatShellDetailBody(
+		text = rtshell.FormatShellDetailBody(
 			result.Output,
 			result.ExitCode,
 			result.Err,
@@ -190,7 +190,7 @@ func (m Model) updateShellDetailMessage(result *runtime.ShellResult) Model {
 	if result != nil {
 		m.messages[idx].detailStatus = shellDetailStatus(result, false)
 	} else {
-		m.messages[idx].detailStatus = constants.DetailStatusRunning
+		m.messages[idx].detailStatus = uiconst.DetailStatusRunning
 	}
 	m.messages[idx].renderCache = messageRenderCache{}
 	m.layout.ContentDirty = true
@@ -206,7 +206,7 @@ func (m Model) finishShellDone(msg shellDoneMsg) (Model, tea.Cmd) {
 	m = m.updateShellDetailMessage(&msg.result)
 
 	if m.shell.DetailMsgID >= 0 && m.shell.DetailMsgID < len(m.messages) {
-		m.session.AppendLog("shell", runtime.FormatShellDisplay(
+		m.session.AppendLog("shell", rtshell.FormatShellDisplay(
 			m.shell.Command,
 			msg.result.Output,
 			msg.result.ExitCode,
@@ -220,7 +220,7 @@ func (m Model) finishShellDone(msg shellDoneMsg) (Model, tea.Cmd) {
 	m.shell.Running = false
 
 	if msg.withContext && !msg.result.Cancelled {
-		prompt := runtime.FormatShellContext(msg.command, msg.result.Output, msg.result.ExitCode)
+		prompt := rtshell.FormatShellContext(msg.command, msg.result.Output, msg.result.ExitCode)
 		m.session.AppendLog("shell_context", prompt)
 		if !m.hasActiveModel() {
 			m, cmd := m.promptSelectModel()
@@ -240,7 +240,7 @@ func (m Model) finishShellDone(msg shellDoneMsg) (Model, tea.Cmd) {
 }
 
 func (m Model) handleShellOutput(msg shellOutputMsg) (Model, tea.Cmd) {
-	m.shell.Output = runtime.ApplyStreamChunk(m.shell.Output, msg.chunk)
+	m.shell.Output = rtshell.ApplyStreamChunk(m.shell.Output, msg.chunk)
 	m = m.updateShellDetailMessage(nil)
 	m = m.syncLayout(true)
 

@@ -3,20 +3,20 @@ package renderer
 import (
 	"testing"
 
-	"github.com/riipandi/elph/internal/constants"
+	"github.com/riipandi/elph/internal/uiconst"
 	"github.com/riipandi/elph/pkg/core/agent"
 	"github.com/stretchr/testify/require"
 )
 
 func TestAgentTurnCreatesThinkingPlaceholder(t *testing.T) {
 	m := testInputModel(t)
-	m.messages = []message{{text: "hello", kind: constants.MessageUser}}
+	m.messages = []message{{text: "hello", kind: uiconst.MessageUser}}
 	m = m.beginAgentTurn()
 
 	m, cmd := m.agentTurnCmds("hello", nil)
 	require.NotNil(t, cmd)
 	require.Len(t, m.messages, 2)
-	require.Equal(t, constants.MessageThinking, m.messages[1].kind)
+	require.Equal(t, uiconst.MessageThinking, m.messages[1].kind)
 	require.Equal(t, 1, m.agent.ThinkingMsgID)
 
 	view := stripANSI(m.messagesView())
@@ -28,7 +28,7 @@ func TestThinkingPlaceholderStreamsBeforeResponse(t *testing.T) {
 	m := testInputModel(t)
 	m.height = 24
 	m.ready = true
-	m.messages = []message{{text: "prompt", kind: constants.MessageUser}}
+	m.messages = []message{{text: "prompt", kind: uiconst.MessageUser}}
 	m = m.beginAgentTurn()
 	m, _ = m.agentTurnCmds("prompt", nil)
 
@@ -50,7 +50,7 @@ func TestThinkTagsRouteToThinkingBoxDuringResponseStream(t *testing.T) {
 	m := testInputModel(t)
 	m.height = 24
 	m.ready = true
-	m.messages = []message{{text: "prompt", kind: constants.MessageUser}}
+	m.messages = []message{{text: "prompt", kind: uiconst.MessageUser}}
 	m = m.beginAgentTurn()
 	m, _ = m.agentTurnCmds("prompt", nil)
 
@@ -72,7 +72,7 @@ func TestManyThinkingDeltasDoNotStallUpdateLoop(t *testing.T) {
 	m := testInputModel(t)
 	m.height = 24
 	m.ready = true
-	m.messages = []message{{text: "prompt", kind: constants.MessageUser}}
+	m.messages = []message{{text: "prompt", kind: uiconst.MessageUser}}
 	m = m.beginAgentTurn()
 	m, _ = m.agentTurnCmds("prompt", nil)
 
@@ -91,7 +91,7 @@ func TestThinkingDeltaRepaintsImmediatelyWithoutFlushTick(t *testing.T) {
 	m := testInputModel(t)
 	m.height = 24
 	m.ready = true
-	m.messages = []message{{text: "prompt", kind: constants.MessageUser}}
+	m.messages = []message{{text: "prompt", kind: uiconst.MessageUser}}
 	m = m.beginAgentTurn()
 	m, _ = m.agentTurnCmds("prompt", nil)
 
@@ -107,7 +107,7 @@ func TestThinkingDeltasRepaintViewportThroughUpdateLoop(t *testing.T) {
 	m := testInputModel(t)
 	m.height = 24
 	m.ready = true
-	m.messages = []message{{text: "prompt", kind: constants.MessageUser}}
+	m.messages = []message{{text: "prompt", kind: uiconst.MessageUser}}
 	m = m.beginAgentTurn()
 	m, _ = m.agentTurnCmds("prompt", nil)
 
@@ -125,7 +125,7 @@ func TestThinkingDeltasRepaintViewportThroughUpdateLoop(t *testing.T) {
 
 func TestStreamedCodeFencePreservesClosingBackticks(t *testing.T) {
 	m := testInputModel(t)
-	m.messages = []message{{text: "prompt", kind: constants.MessageUser}}
+	m.messages = []message{{text: "prompt", kind: uiconst.MessageUser}}
 	m = m.beginAgentTurn()
 	m, _ = m.agentTurnCmds("prompt", nil)
 
@@ -141,7 +141,7 @@ func TestStreamedCodeFencePreservesClosingBackticks(t *testing.T) {
 
 	rendered := stripANSI(m.renderMessage(message{
 		text: m.messages[1].text,
-		kind: constants.MessageAI,
+		kind: uiconst.MessageAI,
 	}))
 	require.Contains(t, rendered, "fmt.Println")
 	require.NotContains(t, rendered, "```")
@@ -151,7 +151,7 @@ func TestThinkTagsStreamIncrementallyIntoThinkingBox(t *testing.T) {
 	m := testInputModel(t)
 	m.height = 24
 	m.ready = true
-	m.messages = []message{{text: "prompt", kind: constants.MessageUser}}
+	m.messages = []message{{text: "prompt", kind: uiconst.MessageUser}}
 	m = m.beginAgentTurn()
 	m, _ = m.agentTurnCmds("prompt", nil)
 

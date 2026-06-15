@@ -4,29 +4,29 @@ import (
 	"context"
 	"time"
 
-	"github.com/riipandi/elph/pkg/ai/provider"
+	"github.com/riipandi/elph/pkg/ai/protocol"
 )
 
 // ToolExecuteFunc runs one provider-native tool invocation.
 type ToolExecuteFunc func(ctx context.Context, name string, args map[string]any) ToolRunResult
 
 // ToolExecuteStreamFunc runs a tool and streams stdout/stderr chunks to onChunk.
-type ToolExecuteStreamFunc func(ctx context.Context, call provider.ToolCall, args map[string]any, onChunk func(string)) ToolRunResult
+type ToolExecuteStreamFunc func(ctx context.Context, call protocol.ToolCall, args map[string]any, onChunk func(string)) ToolRunResult
 
 // TurnOptions configures a single agent turn.
 type TurnOptions struct {
 	SystemPrompt           string
 	UserPrompt             string
 	Model                  string
-	Provider               provider.Provider
+	Provider               protocol.Provider
 	ShowThinking           bool
-	Thinking               provider.ThinkingConfig
-	Compat                 provider.Compat
+	Thinking               protocol.ThinkingConfig
+	Compat                 protocol.Compat
 	ToolsEnabled           bool
 	WorkDir                string
-	Messages               []provider.ChatMessage
-	UserImages             []provider.ImageAttachment
-	Tools                  []provider.ToolDefinition
+	Messages               []protocol.ChatMessage
+	UserImages             []protocol.ImageAttachment
+	Tools                  []protocol.ToolDefinition
 	ExecuteTool            ToolExecuteFunc
 	ExecuteToolStream      ToolExecuteStreamFunc
 	InteractTool           ToolInteractFunc

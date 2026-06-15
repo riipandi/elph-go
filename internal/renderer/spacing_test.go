@@ -5,16 +5,16 @@ import (
 	"testing"
 
 	"charm.land/lipgloss/v2"
-	"github.com/riipandi/elph/internal/constants"
+	"github.com/riipandi/elph/internal/uiconst"
 	"github.com/riipandi/elph/pkg/core/agent"
 	"github.com/stretchr/testify/require"
 )
 
-func boxedMessageKind(kind constants.MessageKind) bool {
-	return kind == constants.MessageUser || kind == constants.MessageTool
+func boxedMessageKind(kind uiconst.MessageKind) bool {
+	return kind == uiconst.MessageUser || kind == uiconst.MessageTool
 }
 
-func expectedBlankLinesBetween(prev, curr constants.MessageKind) int {
+func expectedBlankLinesBetween(prev, curr uiconst.MessageKind) int {
 	blanks := 1 // messageBlockGap
 	if boxedMessageKind(prev) {
 		blanks++
@@ -22,11 +22,11 @@ func expectedBlankLinesBetween(prev, curr constants.MessageKind) int {
 	if boxedMessageKind(curr) {
 		blanks++
 	}
-	if prev == constants.MessageAI {
+	if prev == uiconst.MessageAI {
 		blanks++    // bottom padding inside AI block
 		blanks += 2 // copy hint separator before footer line
 	}
-	if prev == constants.MessageDetail || prev == constants.MessageThinking {
+	if prev == uiconst.MessageDetail || prev == uiconst.MessageThinking {
 		blanks += 6
 	}
 	return blanks
@@ -35,15 +35,15 @@ func expectedBlankLinesBetween(prev, curr constants.MessageKind) int {
 func TestMessageSpacingMatrixConsistent(t *testing.T) {
 	kinds := []struct {
 		name string
-		kind constants.MessageKind
+		kind uiconst.MessageKind
 		text string
 	}{
-		{"thinking", constants.MessageThinking, "[[thinking]]"},
-		{"ai", constants.MessageAI, "[[ai]]"},
-		{"user", constants.MessageUser, "[[user]]"},
-		{"detail", constants.MessageDetail, "detail body"},
-		{"tool", constants.MessageTool, "[[tool]]"},
-		{"system", constants.MessageSystem, "[[system]]"},
+		{"thinking", uiconst.MessageThinking, "[[thinking]]"},
+		{"ai", uiconst.MessageAI, "[[ai]]"},
+		{"user", uiconst.MessageUser, "[[user]]"},
+		{"detail", uiconst.MessageDetail, "detail body"},
+		{"tool", uiconst.MessageTool, "[[tool]]"},
+		{"system", uiconst.MessageSystem, "[[system]]"},
 	}
 
 	for _, prev := range kinds {
@@ -68,12 +68,12 @@ func TestMessageSpacingMatrixConsistent(t *testing.T) {
 func TestAssistantTurnSpacingConsistent(t *testing.T) {
 	m := testModel()
 	m.messages = []message{
-		promptSpacingMessage("[[think]]", constants.MessageThinking),
-		{text: "[[answer]]", kind: constants.MessageAI},
-		{text: "[[prompt]]", kind: constants.MessageUser},
-		{text: "[[reply]]", kind: constants.MessageAI},
-		{text: "[[shell]]", kind: constants.MessageTool},
-		{text: "[[note]]", kind: constants.MessageSystem},
+		promptSpacingMessage("[[think]]", uiconst.MessageThinking),
+		{text: "[[answer]]", kind: uiconst.MessageAI},
+		{text: "[[prompt]]", kind: uiconst.MessageUser},
+		{text: "[[reply]]", kind: uiconst.MessageAI},
+		{text: "[[shell]]", kind: uiconst.MessageTool},
+		{text: "[[note]]", kind: uiconst.MessageSystem},
 	}
 	content := normalizeSpacingLines(stripANSI(m.messagesView()))
 
@@ -87,35 +87,35 @@ func TestAssistantTurnSpacingConsistent(t *testing.T) {
 	}
 }
 
-func spacingMarker(text string, kind constants.MessageKind) string {
-	if kind == constants.MessageDetail || kind == constants.MessageThinking {
+func spacingMarker(text string, kind uiconst.MessageKind) string {
+	if kind == uiconst.MessageDetail || kind == uiconst.MessageThinking {
 		return "[[collapsible-block]]"
 	}
 	return text
 }
 
-func promptSpacingMessage(text string, kind constants.MessageKind) message {
+func promptSpacingMessage(text string, kind uiconst.MessageKind) message {
 	msg := message{text: text, kind: kind}
-	if kind == constants.MessageDetail || kind == constants.MessageThinking {
+	if kind == uiconst.MessageDetail || kind == uiconst.MessageThinking {
 		msg.detailLabel = "[[collapsible-block]]"
 	}
 	return msg
 }
 
-func kindForMarker(marker string) constants.MessageKind {
+func kindForMarker(marker string) uiconst.MessageKind {
 	switch marker {
 	case "[[think]]":
-		return constants.MessageThinking
+		return uiconst.MessageThinking
 	case "[[answer]]", "[[reply]]":
-		return constants.MessageAI
+		return uiconst.MessageAI
 	case "[[prompt]]":
-		return constants.MessageUser
+		return uiconst.MessageUser
 	case "[[shell]]":
-		return constants.MessageTool
+		return uiconst.MessageTool
 	case "[[note]]":
-		return constants.MessageSystem
+		return uiconst.MessageSystem
 	default:
-		return constants.MessageAI
+		return uiconst.MessageAI
 	}
 }
 
@@ -141,7 +141,7 @@ func TestActiveTurnMessageSpacingConsistent(t *testing.T) {
 	// Spacing is measured from the user footer timestamp, which already sits below the prompt body.
 	require.Equal(t, 2,
 		blankLinesBetweenMarkers(content, formatMessageTimestamp(m.messages[0].at), "Thinking"))
-	require.Equal(t, expectedBlankLinesBetween(constants.MessageThinking, constants.MessageAI),
+	require.Equal(t, expectedBlankLinesBetween(uiconst.MessageThinking, uiconst.MessageAI),
 		blankLinesBetweenMarkers(content, "Thinking", "[[answer]]"))
 }
 

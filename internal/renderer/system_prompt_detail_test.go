@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"charm.land/lipgloss/v2"
-	"github.com/riipandi/elph/internal/constants"
+	"github.com/riipandi/elph/internal/uiconst"
 	"github.com/stretchr/testify/require"
 )
 
@@ -18,9 +18,9 @@ func TestSubmitDiagnosticSystemPromptUsesDetailBox(t *testing.T) {
 
 	require.Nil(t, cmd)
 	require.Len(t, m.messages, 2)
-	require.Equal(t, constants.MessageUser, m.messages[0].kind)
+	require.Equal(t, uiconst.MessageUser, m.messages[0].kind)
 	require.Equal(t, "/diagnostic:system-prompt", m.messages[0].text)
-	require.Equal(t, constants.MessageDetail, m.messages[1].kind)
+	require.Equal(t, uiconst.MessageDetail, m.messages[1].kind)
 	require.Equal(t, "System prompt", m.messages[1].detailLabel)
 	require.Contains(t, m.messages[1].text, "You are an expert coding assistant.")
 	require.False(t, m.messages[1].detailExpanded)

@@ -4,7 +4,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/riipandi/elph/pkg/ai/provider"
+	"github.com/riipandi/elph/pkg/ai/protocol"
 	"github.com/riipandi/elph/pkg/skill"
 )
 
@@ -48,7 +48,7 @@ func LimitToolRunResult(result ToolRunResult, maxBytes int) ToolRunResult {
 	return out
 }
 
-func messageUTF8Size(msg provider.ChatMessage) int {
+func messageUTF8Size(msg protocol.ChatMessage) int {
 	n := len(msg.Content)
 	for _, img := range msg.Images {
 		n += len(img.Data) + len(img.MIME)
@@ -60,7 +60,7 @@ func messageUTF8Size(msg provider.ChatMessage) int {
 	return n
 }
 
-func historyUTF8Size(messages []provider.ChatMessage) int {
+func historyUTF8Size(messages []protocol.ChatMessage) int {
 	total := 0
 	for _, msg := range messages {
 		total += messageUTF8Size(msg)
@@ -68,7 +68,7 @@ func historyUTF8Size(messages []provider.ChatMessage) int {
 	return total
 }
 
-func truncateHistoryMessage(msg provider.ChatMessage) provider.ChatMessage {
+func truncateHistoryMessage(msg protocol.ChatMessage) protocol.ChatMessage {
 	switch msg.Role {
 	case "tool":
 		limit := MaxProviderToolBytes
@@ -85,7 +85,7 @@ func truncateHistoryMessage(msg provider.ChatMessage) provider.ChatMessage {
 }
 
 // removeOldestTurn drops the first user turn (user + following assistant/tool messages).
-func removeOldestTurn(messages []provider.ChatMessage) []provider.ChatMessage {
+func removeOldestTurn(messages []protocol.ChatMessage) []protocol.ChatMessage {
 	if len(messages) == 0 {
 		return nil
 	}
@@ -104,12 +104,12 @@ func removeOldestTurn(messages []provider.ChatMessage) []provider.ChatMessage {
 }
 
 // CompactMessages trims large payloads and drops oldest turns to stay within limits.
-func CompactMessages(messages []provider.ChatMessage) []provider.ChatMessage {
+func CompactMessages(messages []protocol.ChatMessage) []protocol.ChatMessage {
 	if len(messages) == 0 {
 		return nil
 	}
 
-	out := make([]provider.ChatMessage, len(messages))
+	out := make([]protocol.ChatMessage, len(messages))
 	for i, msg := range messages {
 		out[i] = truncateHistoryMessage(msg)
 	}
@@ -129,7 +129,7 @@ func CompactMessages(messages []provider.ChatMessage) []provider.ChatMessage {
 }
 
 // stripHistoryImages drops image bytes from older user turns so history stays bounded.
-func stripHistoryImages(messages []provider.ChatMessage) []provider.ChatMessage {
+func stripHistoryImages(messages []protocol.ChatMessage) []protocol.ChatMessage {
 	if len(messages) == 0 {
 		return messages
 	}

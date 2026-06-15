@@ -7,13 +7,13 @@ import (
 	"charm.land/lipgloss/v2"
 	"charm.land/lipgloss/v2/compat"
 	"github.com/riipandi/elph/internal/command"
-	"github.com/riipandi/elph/internal/constants"
+	"github.com/riipandi/elph/internal/uiconst"
 	"github.com/riipandi/elph/pkg/ai/provider"
 )
 
 var (
-	cmdPaletteSelected = lipgloss.NewStyle().Foreground(constants.Blue).Bold(true)
-	cmdPaletteName     = lipgloss.NewStyle().Foreground(constants.PrimaryText)
+	cmdPaletteSelected = lipgloss.NewStyle().Foreground(uiconst.Blue).Bold(true)
+	cmdPaletteName     = lipgloss.NewStyle().Foreground(uiconst.PrimaryText)
 	// Lifted gray for selected summary — softer than command highlight.
 	cmdPaletteSummarySelected = lipgloss.NewStyle().Foreground(compat.AdaptiveColor{
 		Light: lipgloss.Color("#6C6C6C"),

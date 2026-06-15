@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"charm.land/lipgloss/v2"
-	"github.com/riipandi/elph/internal/constants"
+	"github.com/riipandi/elph/internal/uiconst"
 	"github.com/stretchr/testify/require"
 )
 
@@ -43,7 +43,7 @@ func TestInputScrollbarSitsFlushToRightPadding(t *testing.T) {
 	inner := m.inputBodyView()
 	prefixW := 0
 	if m.showPromptPrefix {
-		prefix := lipgloss.NewStyle().Foreground(constants.White).Bold(true).Render(m.promptChar + " ")
+		prefix := lipgloss.NewStyle().Foreground(uiconst.White).Bold(true).Render(m.promptChar + " ")
 		prefixW = lipgloss.Width(prefix)
 	}
 	wantInnerW := inputContentWidth(m.chromeOuterWidth()) - prefixW

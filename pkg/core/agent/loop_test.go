@@ -5,20 +5,20 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/riipandi/elph/pkg/ai/provider"
+	"github.com/riipandi/elph/pkg/ai/protocol"
 	"github.com/stretchr/testify/require"
 )
 
 type loopStubProvider struct {
-	steps []provider.TurnResult
+	steps []protocol.TurnResult
 	calls int
 }
 
 func (s *loopStubProvider) ID() string { return "stub" }
 
-func (s *loopStubProvider) Complete(ctx context.Context, req provider.TurnRequest) (provider.TurnResult, error) {
+func (s *loopStubProvider) Complete(ctx context.Context, req protocol.TurnRequest) (protocol.TurnResult, error) {
 	if s.calls >= len(s.steps) {
-		return provider.TurnResult{Content: "done"}, nil
+		return protocol.TurnResult{Content: "done"}, nil
 	}
 	result := s.steps[s.calls]
 	s.calls++
@@ -26,14 +26,14 @@ func (s *loopStubProvider) Complete(ctx context.Context, req provider.TurnReques
 }
 
 type recordingProvider struct {
-	lastMessages []provider.ChatMessage
+	lastMessages []protocol.ChatMessage
 }
 
 func (r *recordingProvider) ID() string { return "recording" }
 
-func (r *recordingProvider) Complete(ctx context.Context, req provider.TurnRequest) (provider.TurnResult, error) {
-	r.lastMessages = append([]provider.ChatMessage(nil), req.Messages...)
-	return provider.TurnResult{Content: "ok", StopReason: provider.StopReasonEndTurn}, nil
+func (r *recordingProvider) Complete(ctx context.Context, req protocol.TurnRequest) (protocol.TurnResult, error) {
+	r.lastMessages = append([]protocol.ChatMessage(nil), req.Messages...)
+	return protocol.TurnResult{Content: "ok", StopReason: protocol.StopReasonEndTurn}, nil
 }
 
 func TestRunTurnAppendsFollowUpPromptToHistory(t *testing.T) {
@@ -41,7 +41,7 @@ func TestRunTurnAppendsFollowUpPromptToHistory(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	history := []provider.ChatMessage{
+	history := []protocol.ChatMessage{
 		{Role: "user", Content: "first"},
 		{Role: "assistant", Content: "answer one"},
 	}
@@ -65,16 +65,16 @@ func TestRunTurnAppendsFollowUpPromptToHistory(t *testing.T) {
 }
 
 func TestRunTurnDisablesThinkingOnToolFollowUp(t *testing.T) {
-	stub := &loopStubProvider{steps: []provider.TurnResult{
+	stub := &loopStubProvider{steps: []protocol.TurnResult{
 		{
-			StopReason: provider.StopReasonToolUse,
-			ToolCalls: []provider.ToolCall{{
+			StopReason: protocol.StopReasonToolUse,
+			ToolCalls: []protocol.ToolCall{{
 				ID:        "call_1",
 				Name:      "Bash",
 				Arguments: json.RawMessage(`{"command":"echo hi"}`),
 			}},
 		},
-		{Content: "Done.", StopReason: provider.StopReasonEndTurn},
+		{Content: "Done.", StopReason: protocol.StopReasonEndTurn},
 	}}
 	rec := &thinkingRecordingProvider{inner: stub}
 
@@ -82,7 +82,7 @@ func TestRunTurnDisablesThinkingOnToolFollowUp(t *testing.T) {
 		UserPrompt:   "run",
 		Provider:     rec,
 		ToolsEnabled: true,
-		Thinking:     provider.ThinkingConfig{Enabled: true, ThinkingFormat: provider.ThinkingFormatQwen},
+		Thinking:     protocol.ThinkingConfig{Enabled: true, ThinkingFormat: protocol.ThinkingFormatQwen},
 		ShowThinking: true,
 		InteractTool: func(ctx context.Context, req ToolInteractRequest) (ToolInteractResponse, error) {
 			return ToolInteractResponse{Approved: false}, nil
@@ -112,31 +112,31 @@ func TestRunTurnDisablesThinkingOnToolFollowUp(t *testing.T) {
 
 type thinkingRecordingProvider struct {
 	inner    *loopStubProvider
-	thinking []provider.ThinkingConfig
+	thinking []protocol.ThinkingConfig
 }
 
 func (r *thinkingRecordingProvider) ID() string { return r.inner.ID() }
 
-func (r *thinkingRecordingProvider) Complete(ctx context.Context, req provider.TurnRequest) (provider.TurnResult, error) {
+func (r *thinkingRecordingProvider) Complete(ctx context.Context, req protocol.TurnRequest) (protocol.TurnResult, error) {
 	r.thinking = append(r.thinking, req.Thinking)
 	return r.inner.Complete(ctx, req)
 }
 
 func TestRunTurnAskUserRoundsDoNotCountTowardLimit(t *testing.T) {
-	steps := make([]provider.TurnResult, 0, maxToolIterations+2)
+	steps := make([]protocol.TurnResult, 0, maxToolIterations+2)
 	for range maxToolIterations + 1 {
-		steps = append(steps, provider.TurnResult{
-			StopReason: provider.StopReasonToolUse,
-			ToolCalls: []provider.ToolCall{{
+		steps = append(steps, protocol.TurnResult{
+			StopReason: protocol.StopReasonToolUse,
+			ToolCalls: []protocol.ToolCall{{
 				ID:        "call_ask",
 				Name:      "AskUser",
 				Arguments: json.RawMessage(`{"question":"Pick one","options":["a","b"]}`),
 			}},
 		})
 	}
-	steps = append(steps, provider.TurnResult{
+	steps = append(steps, protocol.TurnResult{
 		Content:    "Done.",
-		StopReason: provider.StopReasonEndTurn,
+		StopReason: protocol.StopReasonEndTurn,
 	})
 
 	stub := &loopStubProvider{steps: steps}
@@ -165,16 +165,16 @@ func TestRunTurnAskUserRoundsDoNotCountTowardLimit(t *testing.T) {
 }
 
 func TestRunTurnNativeToolLoop(t *testing.T) {
-	stub := &loopStubProvider{steps: []provider.TurnResult{
+	stub := &loopStubProvider{steps: []protocol.TurnResult{
 		{
-			StopReason: provider.StopReasonToolUse,
-			ToolCalls: []provider.ToolCall{{
+			StopReason: protocol.StopReasonToolUse,
+			ToolCalls: []protocol.ToolCall{{
 				ID:        "call_1",
 				Name:      "Read",
 				Arguments: json.RawMessage(`{"path":"README.md"}`),
 			}},
 		},
-		{Content: "Found the readme.", StopReason: provider.StopReasonEndTurn},
+		{Content: "Found the readme.", StopReason: protocol.StopReasonEndTurn},
 	}}
 
 	ctx, cancel := context.WithCancel(context.Background())

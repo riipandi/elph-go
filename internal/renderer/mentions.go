@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/riipandi/elph/internal/inputui"
 	"github.com/riipandi/elph/internal/mention"
 )
 
@@ -24,37 +25,8 @@ func (m Model) mentionPaletteActive() bool {
 	return len(m.suggest.MentionSuggestions) > 0
 }
 
-func inputCursorByteCol(line string, col int) int {
-	runes := []rune(line)
-	if col > len(runes) {
-		col = len(runes)
-	}
-	if col <= 0 {
-		return 0
-	}
-	return len(string(runes[:col]))
-}
-
 func (m Model) inputCursorOffset() int {
-	val := m.input.Value()
-	lines := strings.Split(val, "\n")
-	line := m.input.Line()
-	if line < 0 {
-		line = 0
-	}
-	if line >= len(lines) {
-		line = max(len(lines)-1, 0)
-	}
-
-	offset := 0
-	for i := 0; i < line; i++ {
-		offset += len(lines[i]) + 1
-	}
-	offset += inputCursorByteCol(lines[line], m.input.Column())
-	if offset > len(val) {
-		offset = len(val)
-	}
-	return offset
+	return inputui.CursorOffset(m.input.Value(), m.input.Line(), m.input.Column())
 }
 
 func (m Model) activeMention() (query string, start int, ok bool) {

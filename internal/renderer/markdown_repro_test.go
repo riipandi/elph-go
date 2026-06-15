@@ -3,7 +3,7 @@ package renderer
 import (
 	"testing"
 
-	"github.com/riipandi/elph/internal/constants"
+	"github.com/riipandi/elph/internal/uiconst"
 	"github.com/stretchr/testify/require"
 )
 
@@ -48,7 +48,7 @@ func TestMarkdownFeatureRegression(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			raw := m.renderMessage(message{text: c.text, kind: constants.MessageAI})
+			raw := m.renderMessage(message{text: c.text, kind: uiconst.MessageAI})
 			plain := stripANSI(raw)
 			for _, want := range c.contains {
 				require.Contains(t, plain, want, "complete path")
@@ -65,7 +65,7 @@ func TestStreamingBlockPreviewPreservesTableRows(t *testing.T) {
 	m.agent.Busy = true
 	m.agent.ResponseMsgID = 0
 	table := "| Col A | Col B |\n|-------|-------|\n| one   | two   |"
-	m.messages = []message{{text: table, kind: constants.MessageAI}}
+	m.messages = []message{{text: table, kind: uiconst.MessageAI}}
 
 	plain := stripANSI(m.renderMessageAt(0))
 	require.Contains(t, plain, "Col A")

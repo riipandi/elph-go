@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/riipandi/elph/pkg/ai/provider"
+	"github.com/riipandi/elph/pkg/ai/protocol"
 	"github.com/stretchr/testify/require"
 )
 
@@ -21,11 +21,11 @@ func TestToolResultMessageLimitsLargeOutput(t *testing.T) {
 }
 
 func TestCompactMessagesDropsOldestTurn(t *testing.T) {
-	var msgs []provider.ChatMessage
+	var msgs []protocol.ChatMessage
 	for i := 0; i < 30; i++ {
 		msgs = append(msgs,
-			provider.ChatMessage{Role: "user", Content: strings.Repeat("u", 64)},
-			provider.ChatMessage{Role: "assistant", Content: strings.Repeat("a", 64)},
+			protocol.ChatMessage{Role: "user", Content: strings.Repeat("u", 64)},
+			protocol.ChatMessage{Role: "assistant", Content: strings.Repeat("a", 64)},
 		)
 	}
 	compact := CompactMessages(msgs)
@@ -34,7 +34,7 @@ func TestCompactMessagesDropsOldestTurn(t *testing.T) {
 }
 
 func TestCompactMessagesTruncatesToolPayload(t *testing.T) {
-	msgs := []provider.ChatMessage{{
+	msgs := []protocol.ChatMessage{{
 		Role:    "tool",
 		Content: strings.Repeat("o", MaxProviderToolBytes+100),
 	}}

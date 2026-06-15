@@ -3,7 +3,7 @@ package renderer
 import (
 	"time"
 
-	"github.com/riipandi/elph/internal/constants"
+	"github.com/riipandi/elph/internal/uiconst"
 )
 
 // messageRenderCache stores a rendered message block for reuse across viewport
@@ -14,7 +14,7 @@ type messageRenderCache struct {
 	sourceLen         int
 	streaming         bool
 	expanded          bool
-	detailStatus      constants.DetailStatus
+	detailStatus      uiconst.DetailStatus
 	atUnix            int64
 	showStatusPreview bool
 	showLiveBody      bool
@@ -22,7 +22,7 @@ type messageRenderCache struct {
 	output            string
 }
 
-func (c messageRenderCache) hit(width int, streaming bool, sourceLen int, expanded bool, detailStatus constants.DetailStatus, at time.Time, opts collapsibleRenderOpts) bool {
+func (c messageRenderCache) hit(width int, streaming bool, sourceLen int, expanded bool, detailStatus uiconst.DetailStatus, at time.Time, opts collapsibleRenderOpts) bool {
 	return c.output != "" &&
 		c.width == width &&
 		c.streaming == streaming &&

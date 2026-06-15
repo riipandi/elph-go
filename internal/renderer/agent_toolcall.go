@@ -2,10 +2,10 @@ package renderer
 
 import (
 	"fmt"
+	"github.com/riipandi/elph/internal/runtime/toolresult"
 	"sort"
 	"strings"
 
-	"github.com/riipandi/elph/internal/runtime"
 	"github.com/riipandi/elph/pkg/core/agent"
 )
 
@@ -19,7 +19,7 @@ func (m Model) resetToolCallStreamFilter() Model {
 }
 
 func (m Model) toolCallSignature(call agent.ParsedToolCall) string {
-	presentation := runtime.ResolveToolRequest(call.Name, call.Parameters)
+	presentation := toolresult.ResolveToolRequest(call.Name, call.Parameters)
 	keys := make([]string, 0, len(call.Parameters))
 	for key := range call.Parameters {
 		keys = append(keys, key)
@@ -58,7 +58,7 @@ func (m Model) recordToolCallRequests(calls []agent.ParsedToolCall) Model {
 			continue
 		}
 
-		presentation := runtime.ResolveToolRequest(call.Name, call.Parameters)
+		presentation := toolresult.ResolveToolRequest(call.Name, call.Parameters)
 		m = m.addToolDetailMessageWithStatus(
 			presentation.Name,
 			presentation.Body,

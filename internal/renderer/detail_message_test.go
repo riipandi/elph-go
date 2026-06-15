@@ -5,16 +5,16 @@ import (
 	"testing"
 
 	"charm.land/lipgloss/v2"
-	"github.com/riipandi/elph/internal/constants"
 	"github.com/riipandi/elph/internal/prompt/template"
 	"github.com/riipandi/elph/internal/settings"
+	"github.com/riipandi/elph/internal/uiconst"
 	"github.com/stretchr/testify/require"
 )
 
 func TestDetailMessageCollapsedByDefault(t *testing.T) {
 	m := testModel()
 	m.messages = []message{{
-		kind:        constants.MessageDetail,
+		kind:        uiconst.MessageDetail,
 		detailLabel: "Prompt",
 		text:        "Analyze this codebase.\nFocus on: auth",
 	}}
@@ -30,7 +30,7 @@ func TestDetailMessageCollapsedByDefault(t *testing.T) {
 func TestDetailMessageExpandedShowsFullBody(t *testing.T) {
 	m := testModel()
 	m.messages = []message{{
-		kind:           constants.MessageDetail,
+		kind:           uiconst.MessageDetail,
 		detailLabel:    "Prompt",
 		text:           "Analyze this codebase.\nFocus on: auth",
 		detailExpanded: true,
@@ -43,9 +43,9 @@ func TestDetailMessageExpandedShowsFullBody(t *testing.T) {
 func TestToggleLastDetailExpand(t *testing.T) {
 	m := testModel()
 	m.messages = []message{
-		{kind: constants.MessageUser, text: "hello"},
+		{kind: uiconst.MessageUser, text: "hello"},
 		{
-			kind:        constants.MessageDetail,
+			kind:        uiconst.MessageDetail,
 			detailLabel: "Prompt",
 			text:        "Identify the codebase.\nFocus on architecture.",
 		},
@@ -70,18 +70,18 @@ func TestPromptTemplateShowsSeparateUserAndDetailMessages(t *testing.T) {
 	m = updated.(Model)
 	require.NotNil(t, cmd)
 	require.Len(t, m.messages, 3)
-	require.Equal(t, constants.MessageUser, m.messages[0].kind)
+	require.Equal(t, uiconst.MessageUser, m.messages[0].kind)
 	require.Equal(t, "/identify auth", m.messages[0].text)
-	require.Equal(t, constants.MessageDetail, m.messages[1].kind)
+	require.Equal(t, uiconst.MessageDetail, m.messages[1].kind)
 	require.Equal(t, "Prompt", m.messages[1].detailLabel)
 	require.Contains(t, m.messages[1].text, "focusing on auth")
-	require.Equal(t, constants.MessageThinking, m.messages[2].kind)
+	require.Equal(t, uiconst.MessageThinking, m.messages[2].kind)
 }
 
 func TestCtrlOTogglesDetailBlock(t *testing.T) {
 	m := testInputModel(t)
 	m.messages = []message{{
-		kind:        constants.MessageDetail,
+		kind:        uiconst.MessageDetail,
 		detailLabel: "$ ls",
 		text:        "file.txt\nREADME.md",
 	}}
@@ -98,13 +98,13 @@ func TestCtrlOTogglesDetailBlock(t *testing.T) {
 func TestCtrlOUpdatesContentViewWhileStreaming(t *testing.T) {
 	m := testInputModel(t)
 	m.messages = []message{
-		{kind: constants.MessageUser, text: "/identify auth"},
+		{kind: uiconst.MessageUser, text: "/identify auth"},
 		{
-			kind:        constants.MessageDetail,
+			kind:        uiconst.MessageDetail,
 			detailLabel: "Prompt",
 			text:        "line one\nline two\nline three",
 		},
-		{kind: constants.MessageAI, text: "partial response"},
+		{kind: uiconst.MessageAI, text: "partial response"},
 	}
 	m.agent.Busy = true
 	m.agent.ResponseMsgID = 2
@@ -161,18 +161,18 @@ func TestCtrlOTogglesThinkingBlock(t *testing.T) {
 }
 
 func TestDetailMessageDiffersFromAIStyle(t *testing.T) {
-	detailStyle := constants.DetailStatusStyle(constants.DetailStatusNeutral)
-	aiStyle := constants.MessageStyle(constants.MessageAI)
+	detailStyle := uiconst.DetailStatusStyle(uiconst.DetailStatusNeutral)
+	aiStyle := uiconst.MessageStyle(uiconst.MessageAI)
 	require.NotEqual(t, detailStyle.GetBackground(), aiStyle.GetBackground())
 }
 
 func TestDetailTitleHasNoBackgroundChip(t *testing.T) {
 	m := testModel()
 	rendered := m.renderMessage(message{
-		kind:         constants.MessageDetail,
+		kind:         uiconst.MessageDetail,
 		detailLabel:  "Prompt",
 		text:         "body",
-		detailStatus: constants.DetailStatusNeutral,
+		detailStatus: uiconst.DetailStatusNeutral,
 	})
 	firstLine := strings.SplitN(rendered, "\n", 2)[0]
 	require.Contains(t, stripANSI(firstLine), "Prompt")

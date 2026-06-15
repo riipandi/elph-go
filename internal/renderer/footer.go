@@ -7,7 +7,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/atotto/clipboard"
-	"github.com/riipandi/elph/internal/constants"
+	"github.com/riipandi/elph/internal/appconst"
 	"github.com/riipandi/elph/internal/git"
 	"github.com/riipandi/elph/internal/settings"
 	"github.com/riipandi/elph/pkg/ai/provider"
@@ -151,7 +151,7 @@ func (m Model) cycleThinkingLevel() (Model, tea.Cmd) {
 	if model, ok := m.session.Catalog.Model(m.session.ProviderID, m.session.ModelID); ok {
 		m.thinkingLevel = provider.NextSupportedThinkingLevel(m.thinkingLevel, model)
 	} else {
-		m.thinkingLevel = constants.NextThinkingLevel(m.thinkingLevel)
+		m.thinkingLevel = appconst.NextThinkingLevel(m.thinkingLevel)
 	}
 	_ = settings.SetThinkingLevel(m.thinkingLevel)
 	return m.withMessage(fmt.Sprintf("Thinking level: %s", m.thinkingLevel))

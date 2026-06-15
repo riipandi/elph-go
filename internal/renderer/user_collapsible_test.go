@@ -7,7 +7,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
-	"github.com/riipandi/elph/internal/constants"
+	"github.com/riipandi/elph/internal/uiconst"
 	"github.com/stretchr/testify/require"
 )
 
@@ -28,7 +28,7 @@ func TestUserMessageSingleLineNoHintOrChevron(t *testing.T) {
 	at := time.Date(2026, 6, 14, 10, 20, 30, 0, time.Local)
 	rendered := stripANSI(m.renderMessage(message{
 		text: "hello",
-		kind: constants.MessageUser,
+		kind: uiconst.MessageUser,
 		at:   at,
 	}))
 	require.Contains(t, rendered, "hello")
@@ -42,7 +42,7 @@ func TestUserMessageFooterTimestampBeforeHint(t *testing.T) {
 	at := time.Date(2026, 6, 14, 10, 20, 30, 0, time.Local)
 	rendered := stripANSI(m.renderMessage(message{
 		text: "hello\nworld",
-		kind: constants.MessageUser,
+		kind: uiconst.MessageUser,
 		at:   at,
 	}))
 	tsIdx := strings.Index(rendered, "10:20:30")
@@ -55,7 +55,7 @@ func TestUserMessageExpandShowsFullContent(t *testing.T) {
 	m := testModel()
 	m.messages = []message{{
 		text:           "line one\nline two",
-		kind:           constants.MessageUser,
+		kind:           uiconst.MessageUser,
 		detailExpanded: true,
 		at:             time.Now(),
 	}}
@@ -77,7 +77,7 @@ func TestSingleLineUserMessageNotCollapsible(t *testing.T) {
 	m := testModel()
 	m.messages = []message{{
 		text: "hello",
-		kind: constants.MessageUser,
+		kind: uiconst.MessageUser,
 		at:   time.Now(),
 	}}
 	_, toggled := m.toggleDetailExpandAt(0)
@@ -89,7 +89,7 @@ func TestMouseClickTogglesUserMessageFooter(t *testing.T) {
 	m.height = 40
 	m.messages = []message{{
 		text: "alpha\nbeta",
-		kind: constants.MessageUser,
+		kind: uiconst.MessageUser,
 		at:   time.Now(),
 	}}
 	m = m.syncLayout(false)
@@ -106,7 +106,7 @@ func TestCtrlOTogglesUserMessageExpand(t *testing.T) {
 	m := testModel()
 	m.messages = []message{{
 		text: "alpha\nbeta",
-		kind: constants.MessageUser,
+		kind: uiconst.MessageUser,
 		at:   time.Now(),
 	}}
 

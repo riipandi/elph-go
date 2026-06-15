@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/riipandi/elph/pkg/ai/provider"
+	"github.com/riipandi/elph/pkg/ai/protocol"
 	"github.com/stretchr/testify/require"
 )
 
@@ -12,9 +12,9 @@ func TestLogProviderRequestThinkingState(t *testing.T) {
 	var lines []string
 	logProviderRequest(func(kind, text string) {
 		lines = append(lines, kind+":"+text)
-	}, 1, "mimo-v2.5", 3, 5, provider.ThinkingConfig{
+	}, 1, "mimo-v2.5", 3, 5, protocol.ThinkingConfig{
 		Enabled:        true,
-		ThinkingFormat: provider.ThinkingFormatQwen,
+		ThinkingFormat: protocol.ThinkingFormatQwen,
 	})
 
 	require.Len(t, lines, 1)

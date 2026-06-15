@@ -16,9 +16,9 @@ func TestAskUserQuestionAndOptions(t *testing.T) {
 		"question": "Go or Rust?",
 		"options":  []any{"Go", "Rust"},
 	})
-	require.Equal(t, "Go or Rust?", fields.question)
-	require.Equal(t, []string{"Go", "Rust"}, fields.options)
-	require.True(t, fields.allowCustom)
+	require.Equal(t, "Go or Rust?", fields.Question)
+	require.Equal(t, []string{"Go", "Rust"}, fields.Options)
+	require.True(t, fields.AllowCustom)
 }
 
 func TestParseAskUserArgsAllowCustomFalse(t *testing.T) {
@@ -27,7 +27,7 @@ func TestParseAskUserArgsAllowCustomFalse(t *testing.T) {
 		"options":     []any{"A", "B"},
 		"allowCustom": false,
 	})
-	require.False(t, fields.allowCustom)
+	require.False(t, fields.AllowCustom)
 }
 
 func TestResolveAskUserAnswerPrefersCustomOverChoice(t *testing.T) {
@@ -83,16 +83,16 @@ func TestParseAskUserArgsOptionsJSONString(t *testing.T) {
 		"question": "Pick a language",
 		"options":  `["English", "Indonesia"]`,
 	})
-	require.Equal(t, "Pick a language", fields.question)
-	require.Equal(t, []string{"English", "Indonesia"}, fields.options)
+	require.Equal(t, "Pick a language", fields.Question)
+	require.Equal(t, []string{"English", "Indonesia"}, fields.Options)
 }
 
 func TestParseAskUserArgsQuestionHoldsJSONArray(t *testing.T) {
 	fields := parseAskUserArgs(map[string]any{
 		"question": `["English", "Indonesia"]`,
 	})
-	require.Equal(t, "Choose an option:", fields.question)
-	require.Equal(t, []string{"English", "Indonesia"}, fields.options)
+	require.Equal(t, "Choose an option:", fields.Question)
+	require.Equal(t, []string{"English", "Indonesia"}, fields.Options)
 }
 
 func TestParseAskUserArgsSwappedQuestionAndOptions(t *testing.T) {
@@ -100,16 +100,16 @@ func TestParseAskUserArgsSwappedQuestionAndOptions(t *testing.T) {
 		"question": `["English", "Indonesia"`,
 		"options":  "What language should the report be in",
 	})
-	require.Equal(t, "What language should the report be in", fields.question)
-	require.Equal(t, []string{"English", "Indonesia"}, fields.options)
+	require.Equal(t, "What language should the report be in", fields.Question)
+	require.Equal(t, []string{"English", "Indonesia"}, fields.Options)
 }
 
 func TestParseAskUserArgsMalformedQuestionSalvagesQuotedOptions(t *testing.T) {
 	fields := parseAskUserArgs(map[string]any{
 		"question": `["English", "Indonesia`,
 	})
-	require.Equal(t, "Choose an option:", fields.question)
-	require.Equal(t, []string{"English", "Indonesia"}, fields.options)
+	require.Equal(t, "Choose an option:", fields.Question)
+	require.Equal(t, []string{"English", "Indonesia"}, fields.Options)
 }
 
 func TestNewAskUserFormShowsQuestionNotRawJSONArray(t *testing.T) {
@@ -296,7 +296,7 @@ func TestToolInteractBridgeDeliverResponse(t *testing.T) {
 	}()
 
 	msg := waitToolInteractOffer(bridge)().(toolInteractOfferMsg)
-	msg.offer.RespCh <- agent.ToolInteractResponse{Answer: "yes"}
+	msg.Offer.RespCh <- agent.ToolInteractResponse{Answer: "yes"}
 
 	resp := <-done
 	require.Equal(t, "yes", resp.Answer)
@@ -464,7 +464,7 @@ func TestAskUserEnterOnChoiceSubmitsSelectedOption(t *testing.T) {
 		},
 		RespCh: respCh,
 	}
-	updated, _ := m.Update(toolInteractOfferMsg{offer: offer})
+	updated, _ := m.Update(toolInteractOfferMsg{Offer: offer})
 	m = updated.(Model)
 	require.True(t, m.toolInteractDialogActive())
 
@@ -490,7 +490,7 @@ func TestAskUserEnterOnFirstChoiceSubmitsWithoutCustomFocus(t *testing.T) {
 		},
 		RespCh: respCh,
 	}
-	updated, _ := m.Update(toolInteractOfferMsg{offer: offer})
+	updated, _ := m.Update(toolInteractOfferMsg{Offer: offer})
 	m = updated.(Model)
 	require.True(t, m.toolInteractDialogActive())
 
@@ -513,7 +513,7 @@ func TestAskUserTabStillMovesToCustomInput(t *testing.T) {
 		},
 		RespCh: make(chan agent.ToolInteractResponse, 1),
 	}
-	updated, _ := m.Update(toolInteractOfferMsg{offer: offer})
+	updated, _ := m.Update(toolInteractOfferMsg{Offer: offer})
 	m = updated.(Model)
 	require.Equal(t, "choice", m.toolInteractForm.GetFocusedField().GetKey())
 

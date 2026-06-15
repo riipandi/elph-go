@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/riipandi/elph/internal/constants"
+	"github.com/riipandi/elph/internal/uiconst"
 	"github.com/stretchr/testify/require"
 )
 
@@ -27,7 +27,7 @@ func TestUserMessageShowsTimestamp(t *testing.T) {
 	at := time.Date(2026, 6, 14, 10, 20, 30, 0, time.Local)
 	rendered := stripANSI(m.renderMessage(message{
 		text: "hello",
-		kind: constants.MessageUser,
+		kind: uiconst.MessageUser,
 		at:   at,
 	}))
 	require.Contains(t, rendered, "10:20:30")
@@ -40,7 +40,7 @@ func TestUserMessageTimestampHasProportionalGap(t *testing.T) {
 	at := time.Date(2026, 6, 14, 10, 20, 30, 0, time.Local)
 	rendered := stripANSI(m.renderMessage(message{
 		text:           "line one\nline two",
-		kind:           constants.MessageUser,
+		kind:           uiconst.MessageUser,
 		detailExpanded: true,
 		at:             at,
 	}))
@@ -62,7 +62,7 @@ func TestDetailMessageShowsTimestampInTitle(t *testing.T) {
 	m := testModel()
 	at := time.Date(2026, 6, 14, 10, 20, 30, 0, time.Local)
 	rendered := stripANSI(m.renderMessage(message{
-		kind:        constants.MessageDetail,
+		kind:        uiconst.MessageDetail,
 		detailLabel: "Prompt",
 		text:        "expanded prompt body",
 		at:          at,

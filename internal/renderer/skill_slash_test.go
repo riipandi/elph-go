@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/riipandi/elph/internal/constants"
+	"github.com/riipandi/elph/internal/uiconst"
 	"github.com/riipandi/elph/pkg/skill"
 	"github.com/stretchr/testify/require"
 )
@@ -26,12 +26,12 @@ Answer briefly without losing context.`), 0o644))
 	model := updated.(Model)
 	require.NotNil(t, cmd)
 	require.Len(t, model.messages, 3)
-	require.Equal(t, constants.MessageUser, model.messages[0].kind)
+	require.Equal(t, uiconst.MessageUser, model.messages[0].kind)
 	require.Equal(t, "/skill:aside explain mutex", model.messages[0].text)
-	require.Equal(t, constants.MessageDetail, model.messages[1].kind)
+	require.Equal(t, uiconst.MessageDetail, model.messages[1].kind)
 	require.Equal(t, "Skill: aside", model.messages[1].detailLabel)
 	require.Contains(t, model.messages[1].text, "Answer briefly without losing context.")
 	require.Contains(t, model.messages[1].text, "<user_args>\nexplain mutex\n</user_args>")
 	require.False(t, model.messages[1].detailExpanded)
-	require.Equal(t, constants.MessageThinking, model.messages[2].kind)
+	require.Equal(t, uiconst.MessageThinking, model.messages[2].kind)
 }

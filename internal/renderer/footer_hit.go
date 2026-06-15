@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 
 	"charm.land/lipgloss/v2"
-	"github.com/riipandi/elph/internal/constants"
+	"github.com/riipandi/elph/internal/uiconst"
 )
 
 type footerZone int
@@ -58,7 +58,7 @@ func (m Model) footerHitRects() []footerHitRect {
 	add(1, footerZoneSession, sidStart, sidW)
 
 	modeStart := sidStart + sidW
-	modeW := lipgloss.Width(lipgloss.NewStyle().Foreground(constants.ModeBorderColor(m.mode)).Bold(true).Render(string(m.mode)))
+	modeW := lipgloss.Width(lipgloss.NewStyle().Foreground(uiconst.ModeBorderColor(m.mode)).Bold(true).Render(string(m.mode)))
 	add(1, footerZoneMode, modeStart, modeW)
 
 	gitStr := "[-]"

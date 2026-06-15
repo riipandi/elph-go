@@ -8,7 +8,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/riipandi/elph/internal/align"
-	"github.com/riipandi/elph/internal/constants"
+	"github.com/riipandi/elph/internal/uiconst"
 	"github.com/stretchr/testify/require"
 )
 
@@ -21,12 +21,12 @@ func stickyScrollTestModel(t *testing.T) Model {
 	m.messages = []message{
 		{
 			text: "user prompt line one\nuser prompt line two",
-			kind: constants.MessageUser,
+			kind: uiconst.MessageUser,
 			at:   time.Date(2026, 6, 15, 9, 0, 0, 0, time.Local),
 		},
 		{
 			text: strings.Repeat("assistant response line\n", 40),
-			kind: constants.MessageAI,
+			kind: uiconst.MessageAI,
 		},
 	}
 	m.layout.ContentDirty = true
@@ -67,11 +67,11 @@ func TestStickyUserMessageIndexHiddenWhenNextUserVisible(t *testing.T) {
 	m := stickyScrollTestModel(t)
 	m.messages = append(m.messages, message{
 		text: "second user prompt",
-		kind: constants.MessageUser,
+		kind: uiconst.MessageUser,
 		at:   time.Now(),
 	}, message{
 		text: strings.Repeat("second response\n", 10),
-		kind: constants.MessageAI,
+		kind: uiconst.MessageAI,
 	})
 	m.layout.ContentDirty = true
 	m = m.syncLayout(false)
@@ -99,7 +99,7 @@ func TestStickyScrollShowsFullLastDetailBoxAtBottom(t *testing.T) {
 	m := stickyScrollTestModel(t)
 	m.height = 28
 	m.messages = append(m.messages, message{
-		kind:           constants.MessageDetail,
+		kind:           uiconst.MessageDetail,
 		detailLabel:    "Tool result",
 		text:           strings.Repeat("detail body line\n", 6) + "detail footer marker",
 		detailExpanded: true,
@@ -188,9 +188,9 @@ func TestRenderUserStickyTitleAndTimestampUseDistinctStyles(t *testing.T) {
 	at := time.Date(2026, 6, 15, 9, 30, 0, 0, time.Local)
 	raw := renderUserSticky(60, "hello\nworld", at)
 
-	require.Contains(t, raw, constants.StickyUserTitleStyle().Render("▸ hello"))
-	require.Contains(t, raw, constants.StickyUserTimestampStyle().Render("09:30:00"))
-	require.NotContains(t, raw, constants.StickyUserTimestampStyle().Render("hello"))
+	require.Contains(t, raw, uiconst.StickyUserTitleStyle().Render("▸ hello"))
+	require.Contains(t, raw, uiconst.StickyUserTimestampStyle().Render("09:30:00"))
+	require.NotContains(t, raw, uiconst.StickyUserTimestampStyle().Render("hello"))
 }
 
 func TestRenderUserStickyTimestampOnTitleLine(t *testing.T) {
@@ -217,8 +217,8 @@ func TestRenderUserStickyTruncatesTitleForTimestamp(t *testing.T) {
 }
 
 func TestStickyUserFooterRowPadsGapWithStickyBackground(t *testing.T) {
-	left := constants.StickyUserTitleStyle().Render("▸ " + strings.Repeat("x", 8) + "...")
-	right := constants.StickyUserTimestampStyle().Render("14:25:49")
+	left := uiconst.StickyUserTitleStyle().Render("▸ " + strings.Repeat("x", 8) + "...")
+	right := uiconst.StickyUserTimestampStyle().Render("14:25:49")
 	contentW := 40
 
 	row := stickyUserFooterRow(contentW, left, right)
@@ -228,7 +228,7 @@ func TestStickyUserFooterRowPadsGapWithStickyBackground(t *testing.T) {
 	gap := leftW - lipgloss.Width(left)
 	require.GreaterOrEqual(t, gap, align.ColumnGap)
 
-	expectedPad := constants.StickyUserStyle().Render(strings.Repeat(" ", gap))
+	expectedPad := uiconst.StickyUserStyle().Render(strings.Repeat(" ", gap))
 	require.Contains(t, row, expectedPad)
 }
 

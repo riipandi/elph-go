@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/riipandi/elph/internal/constants"
+	"github.com/riipandi/elph/internal/uiconst"
 	"github.com/stretchr/testify/require"
 )
 
@@ -12,7 +12,7 @@ func TestGlamourH1MatchesOtherHeadings(t *testing.T) {
 	m := testModel()
 	raw := m.renderMessage(message{
 		text: "# Title one\n\n## Title two",
-		kind: constants.MessageAI,
+		kind: uiconst.MessageAI,
 	})
 	require.NotContains(t, raw, "48;2;") // no H1 badge background from default dark style
 	require.Contains(t, stripANSI(raw), "Title one")
@@ -23,7 +23,7 @@ func TestGlamourLinkPreprocessHidesURL(t *testing.T) {
 	m := testModel()
 	plain := stripANSI(m.renderMessage(message{
 		text: "Visit [GitHub](https://github.com) now.",
-		kind: constants.MessageAI,
+		kind: uiconst.MessageAI,
 	}))
 	require.Contains(t, plain, "GitHub")
 	require.NotContains(t, plain, "https://github.com")
@@ -33,7 +33,7 @@ func TestGlamourImagePreprocessShowsAltOnly(t *testing.T) {
 	m := testModel()
 	plain := stripANSI(m.renderMessage(message{
 		text: "See ![logo](https://example.com/logo.png) here.",
-		kind: constants.MessageAI,
+		kind: uiconst.MessageAI,
 	}))
 	require.Contains(t, plain, "logo")
 	require.NotContains(t, plain, "Image:")
@@ -43,7 +43,7 @@ func TestGlamourImagePreprocessShowsAltOnly(t *testing.T) {
 func TestCopyHintOnCachedAsyncMarkdown(t *testing.T) {
 	m := testModel()
 	source := "## Done\n\nAll good."
-	m.messages = []message{{text: source, kind: constants.MessageAI}}
+	m.messages = []message{{text: source, kind: uiconst.MessageAI}}
 	updated, cmd := m.scheduleMarkdownRender(0)
 	require.NotNil(t, cmd)
 	rendered := cmd().(markdownRenderMsg)

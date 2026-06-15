@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/riipandi/elph/internal/config"
-	"github.com/riipandi/elph/internal/constants"
+	"github.com/riipandi/elph/internal/uiconst"
 	"github.com/riipandi/elph/internal/renderer"
 	"github.com/riipandi/elph/internal/settings"
 	"github.com/spf13/cobra"
@@ -111,7 +111,7 @@ func helpBanner() string {
 		fmt.Sprintf("Welcome to %s v%s", config.AppName, config.AppVersion),
 		fmt.Sprintf("Build %s (%s) %s", config.BuildHash, config.Platform, config.BuildDate),
 	}
-	return constants.JoinSideBySide(constants.LogoLines(), info, 2) + "\n"
+	return uiconst.JoinSideBySide(uiconst.LogoLines(), info, 2) + "\n"
 }
 
 func init() {

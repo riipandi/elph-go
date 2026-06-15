@@ -60,7 +60,7 @@ func TestBridgeInteractReturnsResolvedAskUserWithoutDialog(t *testing.T) {
 			},
 		}): {Answer: "B"},
 	}
-	bridge.resolvedAskUsers = &store
+	bridge.ResolvedAskUsers = &store
 
 	resp, err := bridge.Interact(t.Context(), agent.ToolInteractRequest{
 		Kind: agent.ToolInteractAskUser,

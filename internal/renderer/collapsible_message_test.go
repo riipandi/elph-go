@@ -5,14 +5,14 @@ import (
 	"testing"
 
 	"charm.land/lipgloss/v2"
-	"github.com/riipandi/elph/internal/constants"
+	"github.com/riipandi/elph/internal/uiconst"
 	"github.com/stretchr/testify/require"
 )
 
 func TestCollapsibleHeaderRendersLabel(t *testing.T) {
 	m := testModel()
 	rendered := stripANSI(m.renderMessage(message{
-		kind:        constants.MessageDetail,
+		kind:        uiconst.MessageDetail,
 		detailLabel: "Prompt",
 		text:        "body",
 	}))
@@ -24,7 +24,7 @@ func TestCollapsibleHeaderIsNotFullWidth(t *testing.T) {
 	m := testModel()
 	m.width = 80
 	rendered := m.renderMessage(message{
-		kind:        constants.MessageDetail,
+		kind:        uiconst.MessageDetail,
 		detailLabel: "Prompt",
 		text:        "body",
 	})
@@ -35,7 +35,7 @@ func TestCollapsibleHeaderIsNotFullWidth(t *testing.T) {
 func TestCollapsibleLayoutHasHintGapAfterContent(t *testing.T) {
 	m := testModel()
 	rendered := stripANSI(m.renderMessage(message{
-		kind:        constants.MessageDetail,
+		kind:        uiconst.MessageDetail,
 		detailLabel: "Prompt",
 		text:        "preview line",
 	}))

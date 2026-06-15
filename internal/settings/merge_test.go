@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/riipandi/elph/internal/constants"
+	"github.com/riipandi/elph/internal/appconst"
 	"github.com/riipandi/elph/internal/projectdir"
 	"github.com/stretchr/testify/require"
 )
@@ -31,7 +31,7 @@ func TestLoadForMergesProjectOverHome(t *testing.T) {
 		ShowThinking: &showThinking,
 		SyncInterval: "12h",
 		Session: SessionSettings{
-			AgentMode: string(constants.ModeBuild),
+			AgentMode: string(appconst.ModeBuild),
 		},
 	}))
 
@@ -53,7 +53,7 @@ func TestLoadForMergesProjectOverHome(t *testing.T) {
 	require.False(t, cfg.StickyScrollEnabled())
 	require.True(t, cfg.ShowThinkingEnabled())
 	require.Equal(t, "12h", cfg.SyncInterval)
-	require.Equal(t, constants.ModePlan, cfg.AgentMode())
+	require.Equal(t, appconst.ModePlan, cfg.AgentMode())
 }
 
 func TestLoadForProjectJSONCWhenJSONMissing(t *testing.T) {
@@ -121,7 +121,7 @@ func TestLoadForProjectDoesNotOverrideHomeModelSelection(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "home-provider", cfg.ActiveProviderID())
 	require.Equal(t, "home-model", cfg.ActiveModelID())
-	require.Equal(t, constants.ModePlan, cfg.AgentMode())
+	require.Equal(t, appconst.ModePlan, cfg.AgentMode())
 }
 
 func TestLoadForProjectSuppliesDefaultModelWhenHomeUnset(t *testing.T) {

@@ -8,8 +8,8 @@ import (
 	"charm.land/lipgloss/v2"
 	"github.com/riipandi/elph/internal/align"
 	"github.com/riipandi/elph/internal/command"
-	"github.com/riipandi/elph/internal/constants"
 	"github.com/riipandi/elph/internal/settings"
+	"github.com/riipandi/elph/internal/uiconst"
 	"github.com/riipandi/elph/pkg/ai"
 	"github.com/riipandi/elph/pkg/ai/provider"
 )
@@ -21,7 +21,7 @@ const (
 	modelSelectorCurrentLabel  = "current"
 )
 
-var modelSelectorCurrentMarker = lipgloss.NewStyle().Foreground(constants.Green)
+var modelSelectorCurrentMarker = lipgloss.NewStyle().Foreground(uiconst.Green)
 
 // ModelSelectorState tracks the interactive /model picker overlay.
 type ModelSelectorState struct {

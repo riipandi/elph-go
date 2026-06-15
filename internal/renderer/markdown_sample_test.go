@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/riipandi/elph/internal/constants"
+	"github.com/riipandi/elph/internal/uiconst"
 	"github.com/stretchr/testify/require"
 )
 
@@ -214,7 +214,7 @@ fmt.Println("dalam details")
 
 func TestUserSampleMarkdownRenders(t *testing.T) {
 	m := testModel()
-	raw := m.renderMessage(message{text: userSampleMarkdown, kind: constants.MessageAI})
+	raw := m.renderMessage(message{text: userSampleMarkdown, kind: uiconst.MessageAI})
 	plain := stripANSI(raw)
 
 	// Headings
@@ -299,7 +299,7 @@ func TestUserSampleMarkdownDebug(t *testing.T) {
 		t.Skip("debug output")
 	}
 	m := testModel()
-	plain := stripANSI(m.renderMessage(message{text: userSampleMarkdown, kind: constants.MessageAI}))
+	plain := stripANSI(m.renderMessage(message{text: userSampleMarkdown, kind: uiconst.MessageAI}))
 	t.Log("\n" + plain)
 	_ = strings.TrimSpace(plain)
 }

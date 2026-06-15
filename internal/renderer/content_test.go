@@ -6,14 +6,14 @@ import (
 	"testing"
 
 	"charm.land/lipgloss/v2"
-	"github.com/riipandi/elph/internal/constants"
+	"github.com/riipandi/elph/internal/uiconst"
 	"github.com/stretchr/testify/require"
 )
 
 func TestContentViewIncludesBannerAndMessages(t *testing.T) {
 	m := New()
 	m.width = 80
-	m.messages = []message{{text: "hello from user", kind: constants.MessageUser}}
+	m.messages = []message{{text: "hello from user", kind: uiconst.MessageUser}}
 
 	content := m.contentView()
 	require.Contains(t, content, "Welcome to")
@@ -40,7 +40,7 @@ func TestContentViewLongPasteIncludesBannerOnce(t *testing.T) {
 	m.ready = true
 
 	readme := strings.Repeat("Elph minimalist AI agent companion. ", 80)
-	m.messages = []message{{text: readme, kind: constants.MessageUser}}
+	m.messages = []message{{text: readme, kind: uiconst.MessageUser}}
 
 	content := m.contentView()
 	require.Equal(t, 1, strings.Count(content, "Welcome to"))
@@ -64,7 +64,7 @@ func TestManyMessagesViewportContent(t *testing.T) {
 	for i := range 25 {
 		m.messages = append(m.messages, message{
 			text: fmt.Sprintf("message %d", i),
-			kind: constants.MessageUser,
+			kind: uiconst.MessageUser,
 		})
 	}
 

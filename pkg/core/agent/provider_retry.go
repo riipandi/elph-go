@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/riipandi/elph/pkg/ai/provider"
+	"github.com/riipandi/elph/pkg/ai/protocol"
 	"github.com/riipandi/elph/pkg/ai/utils"
 )
 
@@ -35,31 +35,31 @@ func shouldRetryProvider(err error) bool {
 	if msg := strings.ToLower(err.Error()); strings.Contains(msg, "stream stalled") || strings.Contains(msg, "idle timeout") {
 		return true
 	}
-	var pe *provider.ProviderError
+	var pe *protocol.ProviderError
 	if errors.As(err, &pe) && pe != nil {
 		if pe.IsRetriable() {
 			return true
 		}
 	}
-	return provider.ShouldStreamNonStreamingFallback(err)
+	return protocol.ShouldStreamNonStreamingFallback(err)
 }
 
 func shouldDisableStreamOnRetry(err error) bool {
 	if errors.Is(err, utils.ErrStreamStall) {
 		return true
 	}
-	return provider.ShouldStreamNonStreamingFallback(err)
+	return protocol.ShouldStreamNonStreamingFallback(err)
 }
 
 func completeProviderWithRetry(
 	ctx context.Context,
 	log TurnLogFunc,
 	step int,
-	p provider.Provider,
-	req provider.TurnRequest,
+	p protocol.Provider,
+	req protocol.TurnRequest,
 	cfg ProviderRetryConfig,
 	onRetry func(attempt int),
-) (provider.TurnResult, error) {
+) (protocol.TurnResult, error) {
 	var lastErr error
 	for attempt := 0; attempt < cfg.attempts(); attempt++ {
 		if attempt > 0 {
@@ -71,7 +71,7 @@ func completeProviderWithRetry(
 				onRetry(attempt)
 			}
 			if !wait(ctx, providerRetryBackoff*time.Duration(attempt)) {
-				return provider.TurnResult{}, ctx.Err()
+				return protocol.TurnResult{}, ctx.Err()
 			}
 		}
 
@@ -87,14 +87,14 @@ func completeProviderWithRetry(
 		}
 		lastErr = err
 		if ctx.Err() != nil || ProviderCancelError(err) || !shouldRetryProvider(err) {
-			return provider.TurnResult{}, err
+			return protocol.TurnResult{}, err
 		}
 		if attempt+1 >= cfg.attempts() {
-			return provider.TurnResult{}, err
+			return protocol.TurnResult{}, err
 		}
 	}
 	if lastErr != nil {
-		return provider.TurnResult{}, lastErr
+		return protocol.TurnResult{}, lastErr
 	}
-	return provider.TurnResult{}, errors.New("provider: retry failed")
+	return protocol.TurnResult{}, errors.New("provider: retry failed")
 }

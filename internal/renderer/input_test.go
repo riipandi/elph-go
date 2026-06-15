@@ -2,6 +2,8 @@ package renderer
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -18,7 +20,7 @@ func testInputModel(t *testing.T) Model {
 	m.width = 80
 	m.height = 24
 	m.ready = true
-	return m.syncLayout(false)
+	return withActiveTestModel(m).syncLayout(false)
 }
 
 func TestCtrlJInsertsNewlineAndGrows(t *testing.T) {
@@ -92,6 +94,102 @@ func TestEnterDoesNotSubmitWhileBusy(t *testing.T) {
 	require.True(t, m.agent.Busy)
 	require.Equal(t, "queued message", m.input.Value())
 	require.Empty(t, m.messages)
+}
+
+func TestSubmitWithoutModelKeepsDraft(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	providersDir := filepath.Join(home, ".elph", "providers")
+	require.NoError(t, os.MkdirAll(providersDir, 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(providersDir, "demo.json"), []byte(`{
+		"baseUrl": "https://example.com/v1",
+		"api": "openai-completions",
+		"apiKey": "$KEY",
+		"models": [{"id": "m1", "name": "Demo"}]
+	}`), 0o644))
+	t.Setenv("ELPH_PROVIDERS_DIR", providersDir)
+	t.Setenv("KEY", "secret")
+
+	m := New()
+	m.width = 80
+	m.height = 24
+	m.ready = true
+	m = m.syncLayout(false)
+	m.input.SetValue("hello")
+
+	m, _, ok := m.trySubmitInput()
+	require.True(t, ok)
+	require.True(t, m.modelSelector.Active)
+	require.Greater(t, len(m.modelSelector.Flat), 0)
+	require.False(t, m.agent.Busy)
+	require.Len(t, m.messages, 1)
+	require.Contains(t, m.messages[0].text, "Select a model first")
+	require.Empty(t, m.input.Value())
+	require.NotNil(t, m.pendingPromptDraft)
+	require.Equal(t, "hello", m.pendingPromptDraft.value)
+}
+
+func TestCtrlLPreservesPromptDraft(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	providersDir := filepath.Join(home, ".elph", "providers")
+	require.NoError(t, os.MkdirAll(providersDir, 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(providersDir, "demo.json"), []byte(`{
+		"baseUrl": "https://example.com/v1",
+		"api": "openai-completions",
+		"apiKey": "$KEY",
+		"models": [{"id": "m1", "name": "Demo"}]
+	}`), 0o644))
+	t.Setenv("ELPH_PROVIDERS_DIR", providersDir)
+	t.Setenv("KEY", "secret")
+
+	m := New()
+	m.width = 80
+	m.height = 24
+	m.ready = true
+	m = m.syncLayout(false)
+	m.input.SetValue("draft prompt")
+
+	updated, _ := m.Update(keyCtrl('l'))
+	m = updated.(Model)
+	require.True(t, m.modelSelector.Active)
+	require.Empty(t, m.input.Value())
+	require.Equal(t, "draft prompt", m.pendingPromptDraft.value)
+
+	updated, _ = m.Update(keyCtrl('l'))
+	m = updated.(Model)
+	require.False(t, m.modelSelector.Active)
+	require.Equal(t, "draft prompt", m.input.Value())
+}
+
+func TestModelSelectConfirmRestoresPromptDraft(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	providersDir := filepath.Join(home, ".elph", "providers")
+	require.NoError(t, os.MkdirAll(providersDir, 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(providersDir, "demo.json"), []byte(`{
+		"baseUrl": "https://example.com/v1",
+		"api": "openai-completions",
+		"apiKey": "$KEY",
+		"models": [{"id": "m1", "name": "Demo"}]
+	}`), 0o644))
+	t.Setenv("ELPH_PROVIDERS_DIR", providersDir)
+	t.Setenv("KEY", "secret")
+
+	m := New()
+	m.width = 80
+	m.height = 24
+	m.ready = true
+	m = m.syncLayout(false)
+	m.input.SetValue("keep this")
+
+	updated, _ := m.Update(keyCtrl('l'))
+	m = updated.(Model)
+	var handled bool
+	m, _, handled = m.confirmModelSelector()
+	require.True(t, handled)
+	require.False(t, m.modelSelector.Active)
+	require.Equal(t, "keep this", m.input.Value())
 }
 
 func TestEnterSubmitsSingleLine(t *testing.T) {

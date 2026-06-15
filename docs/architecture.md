@@ -41,7 +41,7 @@ elph/
 | `renderer`       | Bubble Tea v2 TUI (viewport, input, paste collapse/editor, agent bridge, prose/Glamour markdown, AI copy hint, huh dialogs) |
 | `projectdir`     | Project-local paths (`<workDir>/.agents/elph`, `.gitignore`)                                                                |
 | `runtime`        | Session, tool execution, shell, JSONL session logs (`slog`)                                                                 |
-| `settings`       | `~/.elph/settings.json` persistence                                                                                         |
+| `settings`       | Layered `settings.json` (`~/.elph` + project `.agents/elph`), `version.json` sync metadata                                  |
 | `theme`          | `auto` / `dark` / `light` lipgloss themes                                                                                   |
 | `tools`          | Diagnostic helpers (not agent-executable)                                                                                   |
 
@@ -117,7 +117,7 @@ Turn-time limits and sizes are listed in [agent-runtime.md § In-memory history]
 
 | Surface                                             | Doc                                                                                                     |
 |-----------------------------------------------------|---------------------------------------------------------------------------------------------------------|
-| `~/.elph/settings.json`                             | [configuration.md](./configuration.md)                                                                  |
+| `~/.elph/settings.json`, `version.json`             | [configuration.md](./configuration.md), [schemas/config-schema.json](../schemas/config-schema.json)     |
 | `~/.elph/providers/*.json`                          | [configuration.md](./configuration.md), [schemas/provider-schema.json](../schemas/provider-schema.json) |
 | `~/.elph/prompts/`, project `.agents/elph/prompts/` | [prompt-templates.md](./prompt-templates.md)                                                            |
 | Env vars (`ELPH_*`, API keys)                       | [configuration.md](./configuration.md)                                                                  |

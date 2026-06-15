@@ -433,6 +433,10 @@ func (m Model) handleSlashCommand(raw string) (Model, tea.Cmd, bool) {
 	}
 	m = m.applyModelSwitch(result.Switch)
 	if prompt := strings.TrimSpace(result.AgentPrompt); prompt != "" {
+		if !m.hasActiveModel() {
+			m, cmd := m.promptSelectModel()
+			return m, cmd, true
+		}
 		at := time.Now()
 		m = m.addUserMessageAt(trimmed, at)
 		detailLabel := strings.TrimSpace(result.DetailLabel)
@@ -503,6 +507,10 @@ func (m Model) trySubmitInput() (Model, tea.Cmd, bool) {
 			return m, nil, false
 		}
 		return m.handleShellSubmit(cmd, withContext)
+	}
+	if !m.hasActiveModel() {
+		m, cmd := m.promptSelectModel()
+		return m, cmd, true
 	}
 	val = stripTrigger(val)
 	display := strings.TrimSpace(val)

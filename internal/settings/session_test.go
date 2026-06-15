@@ -77,9 +77,7 @@ func TestSessionRoundTripPreservesOtherFields(t *testing.T) {
 
 	disabled := false
 	require.NoError(t, Save(Settings{
-		Models: ModelsSettings{
-			SyncInterval: "6h",
-		},
+		SyncInterval: "6h",
 		ShowThinking: &disabled,
 	}))
 
@@ -90,7 +88,7 @@ func TestSessionRoundTripPreservesOtherFields(t *testing.T) {
 	cfg, err := Load()
 	require.NoError(t, err)
 	require.False(t, cfg.ShowThinkingEnabled())
-	require.Equal(t, "6h", cfg.Models.SyncInterval)
+	require.Equal(t, "6h", cfg.SyncInterval)
 	require.Equal(t, "openai", cfg.ActiveProviderID())
 	require.Equal(t, "gpt-4o", cfg.ActiveModelID())
 	require.Equal(t, constants.ModeAsk, cfg.AgentMode())

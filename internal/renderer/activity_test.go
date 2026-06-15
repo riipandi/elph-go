@@ -49,7 +49,7 @@ func TestInputStaysFocusedDuringAgentTurn(t *testing.T) {
 }
 
 func TestSubmitStartsAgentActivity(t *testing.T) {
-	m := New()
+	m := withActiveTestModel(New())
 	m.width = 80
 	m.height = 24
 	m.ready = true
@@ -106,7 +106,7 @@ func TestAgentThinkingDeltaHiddenWhenDisabled(t *testing.T) {
 
 	disabled := false
 	require.NoError(t, settings.Save(settings.Settings{
-		Models:       settings.ModelsSettings{SyncInterval: "24h"},
+		SyncInterval: "24h",
 		ShowThinking: &disabled,
 	}))
 

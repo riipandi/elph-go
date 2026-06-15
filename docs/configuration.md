@@ -9,6 +9,7 @@ Default home: `~/.elph/` (override individual dirs with env vars below).
 ```
 ~/.elph/
 ├── settings.json          # UI preferences, session provider/model/mode (or settings.jsonc)
+├── version.json           # models.dev sync timestamp, release metadata (see below)
 └── providers/
     ├── openai.json
     ├── anthropic.json
@@ -22,6 +23,7 @@ Default home: `~/.elph/` (override individual dirs with env vars below).
 
 <workDir>/.agents/elph/
 ├── .gitignore               # ignores metadata/, settings, mcp/, attachments/, and itself; prompts/skills stay committable
+├── settings.json            # optional project overrides (or settings.jsonc); merged on load, not written by Save
 ├── prompts/*.md             # project templates (override global by filename)
 ├── skills/<name>/SKILL.md   # project skills (override global by name)
 ├── attachments/             # pasted images per session (gitignored; created on first paste)
@@ -34,13 +36,13 @@ Default home: `~/.elph/` (override individual dirs with env vars below).
 
 ## Environment variables
 
-| Variable             | Effect                                                          |
-|----------------------|-----------------------------------------------------------------|
-| `ELPH_PROVIDERS_DIR` | Replace `~/.elph/providers` (`pkg/ai/provider/paths.go`)        |
-| `ELPH_PROMPTS_DIR`   | Replace `~/.elph/prompts` (`internal/prompttemplate/paths.go`)  |
-| `ELPH_SKILLS_DIR`    | Replace `~/.elph/skills` (`internal/prompt/skills.go`)          |
-| `ELPH_PROVIDER`      | Force active provider id                                        |
-| `ELPH_MODEL`         | Force active model id (can override model on fallback provider) |
+| Variable             | Effect                                                                         |
+|----------------------|--------------------------------------------------------------------------------|
+| `ELPH_PROVIDERS_DIR` | Replace `~/.elph/providers` (`pkg/ai/provider/paths.go`)                       |
+| `ELPH_PROMPTS_DIR`   | Replace `~/.elph/prompts` (`internal/prompttemplate/paths.go`)                 |
+| `ELPH_SKILLS_DIR`    | Replace `~/.elph/skills` (`internal/prompt/skills.go`)                         |
+| `ELPH_PROVIDER`      | Force active provider id                                                       |
+| `ELPH_MODEL`         | Force active model id (matched across providers when `ELPH_PROVIDER` is unset) |
 
 Provider JSON files reference API keys via:
 
@@ -69,29 +71,55 @@ Parsing lives in `pkg/jsoncfg`.
 
 ## `settings.json`
 
-Path: `~/.elph/settings.json` or `~/.elph/settings.jsonc` (`internal/settings/settings.go`).
+Schema: [schemas/config-schema.json](../schemas/config-schema.json).
+
+### Layered settings
+
+Elph merges settings from two layers (`internal/settings/load.go`):
+
+1. Defaults
+2. `~/.elph/settings.json` or `settings.jsonc` (home)
+3. `<workDir>/.agents/elph/settings.json` or `settings.jsonc` (project), when present
+
+Project values override home **field-by-field** for most preferences (theme, `stickyScroll`, `session.agentMode`, and so on).
+
+**Exceptions:**
+
+- `session.providerId` and `session.modelId` from **home always win** when set. Project `session` may only supply default provider/model when home has no selection.
+- `Save()` and runtime mutations (`SetActiveModel`, `SetAgentMode`, …) read and write **home only** (`~/.elph`).
+
+On first launch, `settings.Ensure()` creates `~/.elph/settings.json` with defaults if no settings file exists.
+
+### Fields
 
 | Field                      | Default   | Description                                                                                                                                                                                                                 |
 |----------------------------|-----------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `syncInterval`             | `24h`     | Minimum interval before the TUI checks models.dev again at startup (Go duration, e.g. `24h`, `12h`, `30m`)                                                                                                                  |
 | `theme`                    | `auto`    | `auto`, `dark`, or `light`                                                                                                                                                                                                  |
 | `showThinking`             | `true`    | Stream reasoning blocks in TUI                                                                                                                                                                                              |
 | `autoExpandThinking`       | `false`   | Thinking blocks start expanded                                                                                                                                                                                              |
 | `useRawPaste`              | `false`   | When `false`, long text pastes (≥ 4 lines or ≥ 400 runes) collapse to `[Pasted: N lines]` in the input; preview/edit with **Ctrl+O**. When `true`, paste verbatim. See [tui.md § Long text paste](./tui.md#long-text-paste) |
+| `stickyScroll`             | `true`    | Pin the latest user prompt to the top of the viewport while scrolling assistant replies                                                                                                                                     |
 | `preferedResponseLanguage` | `inherit` | Reply language: `inherit` matches the user's message language; set a fixed language (for example `English`) to always default to that; overridden when the user explicitly asks for another language                        |
 | `thinkingBudgets`          | —         | Per-level token budget overrides                                                                                                                                                                                            |
-| `session.providerId`       | —         | Last selected provider                                                                                                                                                                                                      |
-| `session.modelId`          | —         | Last selected model                                                                                                                                                                                                         |
+| `session.providerId`       | —         | Last selected provider (saved to `~/.elph` on change)                                                                                                                                                                       |
+| `session.modelId`          | —         | Last selected model (saved to `~/.elph` on change)                                                                                                                                                                          |
 | `session.agentMode`        | `build`   | `build`, `plan`, `ask`, `brave` — **brave** skips tool approval prompts                                                                                                                                                     |
 | `session.thinkingLevel`    | `high`    | `off` … `xhigh`                                                                                                                                                                                                             |
-| `models.lastSync`          | —         | RFC3339 timestamp of last models.dev sync                                                                                                                                                                                   |
-| `models.syncInterval`      | `24h`     | Minimum interval before the TUI checks models.dev again at startup                                                                                                                                                          |
 
-Model selection priority (`pkg/ai/provider/registry.go`):
+Legacy `models.syncInterval` and `models.lastSync` in older settings files are migrated on load (`syncInterval` is promoted to the top level; `lastSync` moves to `version.json`).
+
+### Model selection
+
+Priority (`pkg/ai/provider/registry.go`):
 
 1. `ELPH_PROVIDER` + `ELPH_MODEL`
-2. Saved `session.providerId` / `modelId`
-3. First configured provider with API key and enabled model
-4. `ELPH_MODEL` alone when only model env is set
+2. Saved `session.providerId` / `session.modelId` (from merged settings; home selection wins over project defaults)
+3. `ELPH_MODEL` matched across configured providers when `ELPH_PROVIDER` is unset
+
+There is **no automatic default model**. Until a model is chosen (or env overrides apply), the TUI shows **No model selected** and blocks chat submit until a provider with a valid `apiKey` is active.
+
+Selecting a model in the picker **always saves** `session.providerId` / `modelId`. If `apiKey` is missing or unresolved, the selection is still persisted and the footer updates, but the runtime provider stays inactive until credentials are configured (see [tui.md § Model selector](./tui.md#model-selector)).
 
 ## Provider JSON
 
@@ -134,28 +162,42 @@ tools with `/diagnostic:list-tools` or tail logs with `/diagnostic:open-log` (bo
 
 ## Session persistence
 
-| Persisted                    | Location                                     | Notes                                         |
-|------------------------------|----------------------------------------------|-----------------------------------------------|
-| Provider/model/mode/thinking | `settings.json`                              | Across TUI restarts                           |
-| Conversation history         | In-memory `Session.History`                  | Provider messages for multi-turn native tools |
-| Session metadata dir         | `<workDir>/.agents/elph/metadata/<sess_id>/` | Per-session todos + logs                      |
-| TodoList snapshot            | `…/metadata/<sess_id>/todos.jsonl`           | Latest task list; removed when empty          |
-| Session log                  | `…/metadata/<sess_id>/log_events.json`       | Structured JSONL via `slog`                   |
-| Requests log                 | `…/metadata/<sess_id>/log_requests.json`     | Provider/tool trace JSONL                     |
-| Full chat export             | —                                            | Not implemented                               |
+| Persisted             | Location                                     | Notes                                         |
+|-----------------------|----------------------------------------------|-----------------------------------------------|
+| Provider/model        | `~/.elph/settings.json` → `session.*`        | Home-only save; restored on startup           |
+| Agent mode / thinking | `settings.json` (merged)                     | Across TUI restarts                           |
+| Conversation history  | In-memory `Session.History`                  | Provider messages for multi-turn native tools |
+| Session metadata dir  | `<workDir>/.agents/elph/metadata/<sess_id>/` | Per-session todos + logs                      |
+| TodoList snapshot     | `…/metadata/<sess_id>/todos.jsonl`           | Latest task list; removed when empty          |
+| Session log           | `…/metadata/<sess_id>/log_events.json`       | Structured JSONL via `slog`                   |
+| Requests log          | `…/metadata/<sess_id>/log_requests.json`     | Provider/tool trace JSONL                     |
+| Full chat export      | —                                            | Not implemented                               |
 
 ### `--no-session`
 
 Referenced in banner tips but **not implemented** — no CLI flag or ephemeral mode exists yet.
 
+## `version.json`
+
+Path: `~/.elph/version.json`. Schema: [schemas/version-schema.json](../schemas/version-schema.json).
+
+| Field               | Description                                                             |
+|---------------------|-------------------------------------------------------------------------|
+| `lastSyncProviders` | RFC3339 timestamp of the last models.dev provider metadata sync         |
+| `relaseCheckedAt`   | Placeholder release-check timestamp (typo preserved in JSON field name) |
+| `stableVersion`     | Placeholder stable version string                                       |
+| `version`           | Placeholder installed version string                                    |
+
+Legacy `models.lastSync` in old `settings.json` files is migrated to `lastSyncProviders` on first read.
+
 ## Models.dev sync in the TUI
 
-When `models.syncInterval` has elapsed since `models.lastSync`, the TUI performs **one check at startup** (not on a background timer):
+When top-level `syncInterval` has elapsed since `version.json` → `lastSyncProviders`, the TUI performs **one check at startup** (not on a background timer):
 
 1. Fetches models.dev and runs a **dry-run preview** (`PreviewModelsDevUpdates`) — no provider files are written.
 2. If provider files would change, a **[huh](https://github.com/charmbracelet/huh) confirm dialog** asks whether to update (`Update` / `Skip`).
 3. If the user chooses **Update**, a full sync runs (`settings.RunModelsSync`), including live `/models` endpoints where configured.
-4. If the user chooses **Skip**, or preview finds nothing to change, `models.lastSync` is updated so the prompt does not repeat until the next interval.
+4. If the user chooses **Skip**, or preview finds nothing to change, `lastSyncProviders` is updated so the prompt does not repeat until the next interval.
 
 To refresh metadata immediately without waiting for the interval, run `elph provider update` from the CLI.
 

@@ -4,12 +4,12 @@ How a user message becomes a provider completion, tool execution, and TUI update
 
 ## Entry points
 
-| Trigger                 | Handler                                                                |
-|-------------------------|------------------------------------------------------------------------|
-| Normal chat input       | `runtime.Session.StartTurn` → `agent.RunTurn`                          |
-| Prompt template `/name` | Expand template → same as chat                                         |
-| `!cmd` / `!!cmd`        | `runtime.RunShell` / `RunShellContext` — optional follow-up agent turn |
-| No provider configured  | Placeholder simulation (`agent.runPlaceholderTurn`)                    |
+| Trigger                 | Handler                                                                                                             |
+|-------------------------|---------------------------------------------------------------------------------------------------------------------|
+| Normal chat input       | `runtime.Session.StartTurn` → `agent.RunTurn`                                                                       |
+| Prompt template `/name` | Expand template → same as chat                                                                                      |
+| `!cmd` / `!!cmd`        | `runtime.RunShell` / `RunShellContext` — optional follow-up agent turn                                              |
+| No provider configured  | TUI blocks chat submit (model picker prompt); `agent.runPlaceholderTurn` only if a turn runs with `Provider == nil` |
 
 `Session.StartTurn` (`internal/runtime/session.go`) injects:
 

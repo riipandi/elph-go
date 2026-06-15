@@ -54,9 +54,6 @@ pricing, and other metadata.
 Provider credentials, headers, temperature, thinkingLevelMap, compat, and other
 per-model overrides are preserved. New or incomplete models receive reasoning and
 thinking metadata from built-in templates when available.
-
-Records the sync time in ~/.elph/settings.json. The TUI checks this timestamp
-on startup and auto-syncs when models.syncInterval has elapsed (default 24h).
 `),
 	RunE: runProviderUpdate,
 }

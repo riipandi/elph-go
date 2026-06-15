@@ -12,7 +12,7 @@ import (
 )
 
 func testModel() Model {
-	m := New()
+	m := withActiveTestModel(New())
 	m.width = 80
 	m.content.SetWidth(80)
 	return m

@@ -60,7 +60,7 @@ func TestSelectProviderEntriesPrefersJSON(t *testing.T) {
 	for i, entry := range selected {
 		names[i] = entry.Name()
 	}
-	require.ElementsMatch(t, []string{"openai.json", "kimi.jsonc"}, names)
+	require.Equal(t, []string{"kimi.jsonc", "openai.json"}, names)
 }
 
 func TestResolveProviderPath(t *testing.T) {

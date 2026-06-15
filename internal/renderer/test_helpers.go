@@ -1,6 +1,30 @@
 package renderer
 
-import tea "charm.land/bubbletea/v2"
+import (
+	"context"
+
+	tea "charm.land/bubbletea/v2"
+	"github.com/riipandi/elph/pkg/ai/provider"
+)
+
+type stubTurnProvider struct{}
+
+func (stubTurnProvider) ID() string { return "stub" }
+
+func (stubTurnProvider) Complete(context.Context, provider.TurnRequest) (provider.TurnResult, error) {
+	return provider.TurnResult{Content: "ok"}, nil
+}
+
+func withActiveTestModel(m Model) Model {
+	m.session.Provider = stubTurnProvider{}
+	m.session.ProviderID = "stub"
+	m.session.ModelID = "stub-model"
+	m.session.ModelName = "Stub"
+	m.session.ProviderName = "Stub"
+	m.modelName = "Stub"
+	m.provider = "Stub"
+	return m
+}
 
 func viewContent(m Model) string {
 	return m.View().Content

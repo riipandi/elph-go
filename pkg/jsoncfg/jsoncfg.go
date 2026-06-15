@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/tidwall/jsonc"
@@ -90,6 +91,11 @@ func SelectProviderEntries(entries []fs.DirEntry) ([]fs.DirEntry, []error) {
 	for _, pick := range byID {
 		out = append(out, pick.entry)
 	}
+	sort.Slice(out, func(i, j int) bool {
+		idI, _ := ProviderID(out[i].Name())
+		idJ, _ := ProviderID(out[j].Name())
+		return idI < idJ
+	})
 	return out, errs
 }
 

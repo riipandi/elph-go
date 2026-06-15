@@ -135,7 +135,7 @@ func TestThinkingAutoExpandSetting(t *testing.T) {
 	m := testInputModel(t)
 	enabled := true
 	require.NoError(t, settings.Save(settings.Settings{
-		Models:             settings.ModelsSettings{SyncInterval: "24h"},
+		SyncInterval:       "24h",
 		AutoExpandThinking: &enabled,
 	}))
 	m = m.addThinkingMessage("expanded reasoning\nsecond line")

@@ -222,6 +222,11 @@ func (m Model) finishShellDone(msg shellDoneMsg) (Model, tea.Cmd) {
 	if msg.withContext && !msg.result.Cancelled {
 		prompt := runtime.FormatShellContext(msg.command, msg.result.Output, msg.result.ExitCode)
 		m.session.AppendLog("shell_context", prompt)
+		if !m.hasActiveModel() {
+			m, cmd := m.promptSelectModel()
+			m = m.syncLayout(true)
+			return m, cmd
+		}
 		m = m.beginAgentTurn()
 		m = m.syncLayout(true)
 		var agentCmd tea.Cmd

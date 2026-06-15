@@ -1,25 +1,13 @@
 {
 	"$schema": "http://json-schema.org/draft-07/schema#",
 	"title": "Elph settings configuration",
-	"description": "User preferences persisted at ~/.elph/settings.json.",
+	"description": "User preferences at ~/.elph/settings.json (or settings.jsonc). Optional project overrides live at <workDir>/.agents/elph/settings.json — same shape; merged on load, saved to home only.",
 	"type": "object",
 	"properties": {
-		"models": {
-			"type": "object",
-			"description": "Automatic models.dev catalog sync settings.",
-			"properties": {
-				"lastSync": {
-					"type": "string",
-					"format": "date-time",
-					"description": "RFC3339 timestamp of the last successful provider model sync."
-				},
-				"syncInterval": {
-					"type": "string",
-					"default": "24h",
-					"description": "Go duration between automatic syncs (for example 24h, 12h, 30m). Default 24h."
-				}
-			},
-			"additionalProperties": false
+		"syncInterval": {
+			"type": "string",
+			"default": "24h",
+			"description": "Go duration between automatic models.dev syncs at startup (for example 24h, 12h, 30m). Default 24h."
 		},
 		"theme": {
 			"type": "string",
@@ -45,6 +33,11 @@
 			"type": "boolean",
 			"description": "Insert pasted text verbatim in the input prompt. When false, long pastes collapse to [Pasted: N lines] with preview/edit via ctrl+o.",
 			"default": false
+		},
+		"stickyScroll": {
+			"type": "boolean",
+			"description": "Pin the latest user prompt to the top of the viewport while scrolling assistant replies.",
+			"default": true
 		},
 		"preferedResponseLanguage": {
 			"type": "string",
@@ -83,15 +76,15 @@
 		},
 		"session": {
 			"type": "object",
-			"description": "Last-used runtime selections restored on startup.",
+			"description": "Runtime selections restored on startup. providerId and modelId are persisted in home settings; project settings may supply defaults only when home has no selection.",
 			"properties": {
 				"providerId": {
 					"type": "string",
-					"description": "Last selected provider id from ~/.elph/providers."
+					"description": "Last selected provider id (filename stem under ~/.elph/providers). Saved to ~/.elph on change."
 				},
 				"modelId": {
 					"type": "string",
-					"description": "Last selected model id for the active provider."
+					"description": "Last selected model id for the active provider. Saved to ~/.elph on change."
 				},
 				"agentMode": {
 					"type": "string",

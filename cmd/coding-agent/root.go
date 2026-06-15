@@ -7,6 +7,7 @@ import (
 	"github.com/riipandi/elph/internal/config"
 	"github.com/riipandi/elph/internal/constants"
 	"github.com/riipandi/elph/internal/renderer"
+	"github.com/riipandi/elph/internal/settings"
 	"github.com/spf13/cobra"
 	"github.com/subosito/gotenv"
 )
@@ -28,6 +29,10 @@ modes, and manage providers from one place.`,
 		HiddenDefaultCmd:  true,
 	},
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		if err := settings.Ensure(); err != nil {
+			fmt.Fprintf(os.Stderr, "failed to initialize settings: %v\n", err)
+			os.Exit(1)
+		}
 		if rootEnvFile != "" {
 			if err := gotenv.OverLoad(rootEnvFile); err != nil {
 				fmt.Fprintf(os.Stderr, "failed to load env file %s: %v\n", rootEnvFile, err)

@@ -39,6 +39,42 @@ func (m Model) modelSelectorActive() bool {
 	return m.modelSelector.Active
 }
 
+func (m Model) hasActiveModel() bool {
+	if m.session.Provider != nil {
+		return true
+	}
+	return m.session.ProviderID != "" && m.session.ModelID != ""
+}
+
+func isModelSlashInput(raw string) bool {
+	trimmed := strings.TrimSpace(raw)
+	if !isSlashCommand(trimmed) {
+		return false
+	}
+	body := strings.TrimSpace(strings.TrimPrefix(strings.TrimLeft(trimmed, " \t"), "/"))
+	if body == "" {
+		return false
+	}
+	name := strings.ToLower(strings.SplitN(body, " ", 2)[0])
+	return name == "model"
+}
+
+func (m Model) promptSelectModel() (Model, tea.Cmd) {
+	catalog := m.session.Catalog
+	if len(catalog.Providers) == 0 {
+		catalog, _ = provider.LoadCatalog("")
+	}
+	if len(catalog.Providers) == 0 {
+		return m.withMessage("No model selected — add provider JSON files to ~/.elph/providers")
+	}
+	if catalog.TotalEnabledModels() == 0 {
+		return m.withMessage("No model selected — enable a model in ~/.elph/providers")
+	}
+	m, cmd := m.withMessage("Select a model first (Ctrl+L)")
+	m = m.openModelSelectorPreservingDraft(catalog)
+	return m, cmd
+}
+
 func (m Model) triggerModelSelector() (Model, tea.Cmd) {
 	if m.modelSelectorActive() {
 		m = m.closeModelSelector()
@@ -54,11 +90,66 @@ func (m Model) triggerModelSelector() (Model, tea.Cmd) {
 		return m.withMessage("/model: no providers found — add JSON files to ~/.elph/providers")
 	}
 
-	m = m.openModelSelector(catalog, "")
+	m = m.openModelSelectorPreservingDraft(catalog)
 	return m, nil
 }
 
 func (m Model) openModelSelector(catalog provider.Catalog, query string) Model {
+	m.pendingPromptDraft = nil
+	return m.openModelSelectorFiltered(catalog, query)
+}
+
+func (m Model) openModelSelectorPreservingDraft(catalog provider.Catalog) Model {
+	m = m.stashPromptDraftIfNeeded()
+	return m.openModelSelectorFiltered(catalog, "")
+}
+
+func (m Model) stashPromptDraftIfNeeded() Model {
+	if isModelSlashInput(m.input.Value()) {
+		m.pendingPromptDraft = nil
+		return m
+	}
+	hasDraft := strings.TrimSpace(m.input.Value()) != "" ||
+		len(m.pendingAttachments) > 0 ||
+		len(m.inputPastes) > 0
+	if !hasDraft {
+		m.pendingPromptDraft = nil
+		return m
+	}
+	pastes := make(map[int]string, len(m.inputPastes))
+	for k, v := range m.inputPastes {
+		pastes[k] = v
+	}
+	m.pendingPromptDraft = &promptDraftState{
+		value:       m.input.Value(),
+		pastes:      pastes,
+		attachments: append([]inputAttachment(nil), m.pendingAttachments...),
+	}
+	return m
+}
+
+func (m Model) restorePromptDraft() Model {
+	draft := m.pendingPromptDraft
+	m.pendingPromptDraft = nil
+	if draft == nil {
+		m.input.SetValue("")
+		m = m.clearInputPastes()
+		m.pendingAttachments = nil
+		m.input.SetHeight(1)
+		return m.syncInputHeight()
+	}
+	m.input.SetValue(draft.value)
+	if len(draft.pastes) > 0 {
+		m.inputPastes = draft.pastes
+	} else {
+		m = m.clearInputPastes()
+	}
+	m.pendingAttachments = append([]inputAttachment(nil), draft.attachments...)
+	m.input.SetHeight(1)
+	return m.syncInputHeight()
+}
+
+func (m Model) openModelSelectorFiltered(catalog provider.Catalog, query string) Model {
 	groups, flat := ai.BuildSelectorGroups(catalog, query)
 	m.modelSelector = ModelSelectorState{
 		Active:           true,
@@ -81,9 +172,9 @@ func (m Model) openModelSelector(catalog provider.Catalog, query string) Model {
 
 func (m Model) closeModelSelector() Model {
 	m.modelSelector = ModelSelectorState{}
-	m.input.SetValue("")
 	m.input.Placeholder = ""
 	m.showPromptPrefix = false
+	m = m.restorePromptDraft()
 	m.input.Focus()
 	return m
 }
@@ -233,8 +324,8 @@ func (m Model) confirmModelSelector() (Model, tea.Cmd, bool) {
 		return m, cmd, true
 	}
 
-	cfg, err := provider.SelectModel(m.modelSelector.Catalog, regProvider, model)
-	if err != nil {
+	cfg, err := provider.BuildModelConfig(m.modelSelector.Catalog, regProvider, model)
+	if err != nil && !provider.IsCredentialError(err) {
 		m, cmd := m.withMessage(fmt.Sprintf("/model: %v", err))
 		m = m.closeModelSelector()
 		m = m.syncLayout(true)
@@ -253,7 +344,20 @@ func (m Model) confirmModelSelector() (Model, tea.Cmd, bool) {
 		Cost:          model.Cost,
 		Catalog:       m.modelSelector.Catalog,
 	})
-	m, cmd := m.withMessage(fmt.Sprintf("Switched to %s [%s]", cfg.ModelName, cfg.ProviderName))
+	var cmd tea.Cmd
+	if err != nil {
+		m, cmd = m.withMessage(fmt.Sprintf(
+			"Selected %s [%s] — %s",
+			cfg.ModelName,
+			cfg.ProviderName,
+			provider.CredentialHint(regProvider),
+		))
+	} else {
+		m, cmd = m.withMessage(fmt.Sprintf("Switched to %s [%s]", cfg.ModelName, cfg.ProviderName))
+	}
+	if m.pendingPromptDraft != nil && isModelSlashInput(m.pendingPromptDraft.value) {
+		m.pendingPromptDraft = nil
+	}
 	m = m.closeModelSelector()
 	m = m.syncLayout(true)
 	return m, cmd, true
@@ -263,7 +367,6 @@ func (m Model) applyModelSwitch(sw *command.ModelSwitch) Model {
 	if sw == nil {
 		return m
 	}
-	_ = settings.SetActiveModel(sw.ProviderID, sw.ModelID)
 	m.session.Provider = sw.Provider
 	m.session.ProviderID = sw.ProviderID
 	m.session.ProviderName = sw.ProviderName
@@ -278,12 +381,19 @@ func (m Model) applyModelSwitch(sw *command.ModelSwitch) Model {
 	m.contextWindow = sw.ContextWindow
 	m.modelSupportsImage = provider.SupportsImageInput(sw.Input)
 	m.modelCost = sw.Cost
-	if model, ok := sw.Catalog.Model(sw.ProviderID, sw.ModelID); ok {
+	model, modelOK := sw.Catalog.Model(sw.ProviderID, sw.ModelID)
+	if modelOK {
 		m.thinkingLevel = provider.ClampThinkingLevel(m.thinkingLevel, model)
-		_ = settings.SetThinkingLevel(m.thinkingLevel)
 	}
 	if m.contextWindow > 0 {
 		m.contextUsed = min(float64(m.tokensUsed)/float64(m.contextWindow), 1.0)
+	}
+	if err := settings.SetActiveModel(sw.ProviderID, sw.ModelID); err != nil {
+		m, _ = m.withMessage(fmt.Sprintf("Could not save model selection: %v", err))
+		return m
+	}
+	if modelOK {
+		_ = settings.SetThinkingLevel(m.thinkingLevel)
 	}
 	return m
 }

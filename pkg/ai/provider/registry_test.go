@@ -16,7 +16,7 @@ func TestResolveWithoutProviders(t *testing.T) {
 	require.Empty(t, cfg.ProviderID)
 }
 
-func TestResolveUsesFirstConfiguredProvider(t *testing.T) {
+func TestResolveWithoutSelectionReturnsEmpty(t *testing.T) {
 	dir := t.TempDir()
 	writeProviderFile(t, dir, "first.json", `{
 		"baseUrl": "https://example.com/v1",
@@ -36,10 +36,35 @@ func TestResolveUsesFirstConfiguredProvider(t *testing.T) {
 	t.Setenv("ELPH_MODEL", "")
 
 	cfg := Resolve()
+	require.Nil(t, cfg.Provider)
+	require.Empty(t, cfg.ProviderID)
+	require.Empty(t, cfg.ModelID)
+}
+
+func TestResolveEnvModelWithoutProvider(t *testing.T) {
+	dir := t.TempDir()
+	writeProviderFile(t, dir, "first.json", `{
+		"baseUrl": "https://example.com/v1",
+		"api": "openai-completions",
+		"apiKey": "$FIRST_KEY",
+		"models": [{"id": "m1", "name": "First"}]
+	}`)
+	writeProviderFile(t, dir, "second.json", `{
+		"baseUrl": "https://example.com/v1",
+		"api": "openai-completions",
+		"apiKey": "$SECOND_KEY",
+		"models": [{"id": "m2", "name": "Second"}]
+	}`)
+	t.Setenv("ELPH_PROVIDERS_DIR", dir)
+	t.Setenv("FIRST_KEY", "secret")
+	t.Setenv("SECOND_KEY", "secret")
+	t.Setenv("ELPH_PROVIDER", "")
+	t.Setenv("ELPH_MODEL", "m2")
+
+	cfg := Resolve()
 	require.NotNil(t, cfg.Provider)
 	require.Equal(t, "second", cfg.ProviderID)
 	require.Equal(t, "m2", cfg.ModelID)
-	require.Equal(t, "Second", cfg.ModelName)
 }
 
 func TestResolveUsesSavedActiveModel(t *testing.T) {

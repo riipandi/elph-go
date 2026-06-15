@@ -45,9 +45,9 @@ Set API keys via env vars referenced in the JSON (see [configuration.md](./confi
 
 1. Same connect/backfill step as `connect`
 2. Refreshes model metadata from [models.dev](https://models.dev) and live `/models` endpoints (OpenCode, DeepSeek, Kimi when keys are set)
-3. Records `models.lastSync` in `~/.elph/settings.json`
+3. Records `lastSyncProviders` in `~/.elph/version.json`
 
-When `models.syncInterval` has elapsed (default 24h), the TUI **checks once at startup** whether models.dev has updates. If changes are detected, it shows a **huh confirm dialog** (`Update` / `Skip`) before writing provider files. The TUI does not re-check on a background timer. Use `elph provider update` for an immediate CLI sync.
+When `syncInterval` in `~/.elph/settings.json` has elapsed (default `24h`), the TUI **checks once at startup** whether models.dev has updates. If changes are detected, it shows a **huh confirm dialog** (`Update` / `Skip`) before writing provider files. The TUI does not re-check on a background timer. Use `elph provider update` for an immediate CLI sync.
 
 ### `list`
 
@@ -93,3 +93,5 @@ Requires **Go ≥ 1.26**. `make prepare` also expects `python3` (build timing on
 
 - [configuration.md](./configuration.md) — paths, settings, env vars
 - [schemas/provider-schema.json](../schemas/provider-schema.json) — provider file format
+- [schemas/config-schema.json](../schemas/config-schema.json) — settings format (`~/.elph` and project overrides)
+- [schemas/version-schema.json](../schemas/version-schema.json) — `~/.elph/version.json`

@@ -13,7 +13,13 @@ import (
 	"github.com/riipandi/elph/pkg/ai/provider"
 )
 
-const modelsSyncUpdatingLabel = "Updating model metadata from models.dev"
+const (
+	modelsSyncUpdatingLabel = "Updating model metadata from models.dev"
+	modelsSyncDialogLabel   = "Model update"
+
+	modelsSyncChoiceUpdate = "update"
+	modelsSyncChoiceSkip   = "skip"
+)
 
 type modelsSyncOfferMsg struct {
 	providers []string
@@ -57,26 +63,48 @@ func runModelsSyncCmd() tea.Cmd {
 	}
 }
 
-func modelsSyncFormDescription(providers []string) string {
-	return fmt.Sprintf("models.dev has updates for:\n%s", strings.Join(providers, ", "))
+const modelsSyncUpdateAvailableText = "Model metadata updates are available."
+
+func formatModelsSyncDescription(width int) string {
+	desc := clampMultilineText(modelsSyncUpdateAvailableText, width, maxApprovalDescriptionLines)
+	if desc == "" {
+		return ""
+	}
+	return desc + "\n"
 }
 
 func newModelsSyncForm(providers []string, width int) *huh.Form {
-	var update bool
+	choice := modelsSyncChoiceUpdate
 	return huh.NewForm(
 		huh.NewGroup(
-			huh.NewConfirm().
-				Key("update").
-				Title("Model metadata update available").
-				Description(modelsSyncFormDescription(providers)).
-				Affirmative("Update").
-				Negative("Skip").
-				Value(&update),
+			huh.NewSelect[string]().
+				Key("choice").
+				Title("Apply model metadata updates?").
+				Description(formatModelsSyncDescription(width)).
+				Options(
+					huh.NewOption("Update", modelsSyncChoiceUpdate),
+					huh.NewOption("Skip", modelsSyncChoiceSkip),
+				).
+				Value(&choice),
 		),
 	).
 		WithWidth(width).
-		WithShowHelp(true).
-		WithTheme(huh.ThemeFunc(huh.ThemeCharm))
+		WithShowHelp(false).
+		WithTheme(toolInteractFormTheme())
+}
+
+func normalizeModelsSyncChoice(raw string) string {
+	switch strings.ToLower(strings.TrimSpace(raw)) {
+	case modelsSyncChoiceUpdate:
+		return modelsSyncChoiceUpdate
+	case modelsSyncChoiceSkip:
+		return modelsSyncChoiceSkip
+	default:
+		if raw == "" {
+			return modelsSyncChoiceUpdate
+		}
+		return raw
+	}
 }
 
 func (m Model) modelsSyncingActive() bool {
@@ -88,14 +116,7 @@ func (m Model) modelsSyncDialogActive() bool {
 }
 
 func (m Model) modelsSyncFormWidth() int {
-	w := m.width - 6
-	if w > 72 {
-		return 72
-	}
-	if w < 32 {
-		return 32
-	}
-	return w
+	return m.toolInteractFormWidth()
 }
 
 func (m Model) syncModelsSyncFormWidth() Model {
@@ -128,6 +149,14 @@ func (m Model) updateModelsSyncForm(msg tea.Msg) (Model, tea.Cmd) {
 		m = m.syncModelsSyncFormWidth()
 		m.layout.ContentDirty = true
 		m = m.syncLayout(false)
+
+	case tea.KeyPressMsg:
+		switch strings.ToLower(msg.String()) {
+		case "y":
+			return m.resolveModelsSyncConfirm(true)
+		case "n":
+			return m.resolveModelsSyncConfirm(false)
+		}
 	}
 
 	form, cmd := m.modelsSyncForm.Update(msg)
@@ -137,6 +166,7 @@ func (m Model) updateModelsSyncForm(msg tea.Msg) (Model, tea.Cmd) {
 	if cmd != nil {
 		cmds = append(cmds, cmd)
 	}
+	m = m.syncLayout(m.content.AtBottom())
 
 	switch m.modelsSyncForm.State {
 	case huh.StateCompleted, huh.StateAborted:
@@ -157,12 +187,10 @@ func (m Model) completeModelsSyncForm() (Model, tea.Cmd) {
 
 	switch form.State {
 	case huh.StateCompleted:
-		if form.GetBool("update") {
-			return m.startModelsSync()
-		}
-		return m.declineModelsSync(), nil
+		update := normalizeModelsSyncChoice(form.GetString("choice")) == modelsSyncChoiceUpdate
+		return m.resolveModelsSyncConfirm(update)
 	case huh.StateAborted:
-		return m.declineModelsSync(), nil
+		return m.resolveModelsSyncConfirm(false)
 	default:
 		return m, nil
 	}
@@ -186,15 +214,18 @@ func (m Model) declineModelsSync() Model {
 	return m
 }
 
-func (m Model) modelsSyncDialogView() string {
-	formView := strings.TrimSuffix(m.modelsSyncForm.View(), "\n\n")
+func (m Model) modelsSyncDialogBody() string {
+	formView := trimTrailingLineSpaces(strings.TrimSuffix(m.modelsSyncForm.View(), "\n\n"))
+	labelLine := lipgloss.NewStyle().Foreground(constants.Yellow).Bold(true).Render(modelsSyncDialogLabel)
+	hintLine := lipgloss.NewStyle().Foreground(constants.DimText).Render("y update · n skip · ↑/↓ · Enter · Esc")
+	return lipgloss.JoinVertical(lipgloss.Left, labelLine, "", formView, "", hintLine)
+}
+
+func (m Model) modelsSyncChromeView() string {
 	boxW := borderedChromeWidth(m.chromeOuterWidth())
-	border := lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(constants.Blue).
-		Padding(1, 2)
+	inner := m.modelsSyncDialogBody()
 	return lipgloss.NewStyle().MarginTop(1).Render(
-		border.Width(boxW).Render(formView),
+		cachedInputBorder(m.mode).Width(boxW).Render(inner),
 	)
 }
 
@@ -202,7 +233,7 @@ func (m Model) modelsSyncDialogHeight() int {
 	if !m.modelsSyncDialogActive() {
 		return 0
 	}
-	return lipgloss.Height(m.modelsSyncDialogView())
+	return lipgloss.Height(m.modelsSyncChromeView())
 }
 
 func (m Model) startModelsSync() (Model, tea.Cmd) {

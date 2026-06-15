@@ -67,7 +67,7 @@ func TestRunModelsSyncRecordsTimestamp(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, MarkModelsSynced(time.Date(2026, 6, 13, 15, 30, 0, 0, time.UTC)))
 
-	settings, err := Load()
+	version, err := LoadVersion()
 	require.NoError(t, err)
-	require.Equal(t, "2026-06-13T15:30:00Z", settings.Models.LastSync)
+	require.Equal(t, "2026-06-13T15:30:00Z", version.LastSyncProviders)
 }

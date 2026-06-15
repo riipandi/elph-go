@@ -30,8 +30,8 @@ func Resolve() Config {
 }
 
 // ResolveActive loads providers and resolves the active provider/model.
-// Priority: ELPH_PROVIDER/ELPH_MODEL env, saved provider/model, then the first
-// configured provider. ELPH_MODEL still applies when only the model env is set.
+// Priority: ELPH_PROVIDER/ELPH_MODEL env, saved provider/model, then ELPH_MODEL
+// matched across configured providers. No implicit default when nothing is selected.
 func ResolveActive(savedProviderID, savedModelID string) Config {
 	catalog, err := LoadCatalog("")
 	if err != nil {
@@ -70,16 +70,17 @@ func resolveCatalog(catalog Catalog, savedProviderID, savedModelID string) Confi
 		}
 	}
 
-	provider, model, ok := catalog.FirstConfigured()
-	if !ok {
-		return Config{Catalog: catalog}
-	}
 	if envModel != "" {
-		if picked, ok := pickModel(provider, envModel); ok {
-			model = picked
+		for _, reg := range catalog.Providers {
+			if !ProviderConfigEnabled(reg.Config) {
+				continue
+			}
+			if model, ok := pickModel(reg, envModel); ok {
+				return buildConfig(catalog, reg, model)
+			}
 		}
 	}
-	return buildConfig(catalog, provider, model)
+	return Config{Catalog: catalog}
 }
 
 func pickModel(provider RegisteredProvider, modelID string) (ResolvedModel, bool) {

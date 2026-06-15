@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/riipandi/elph/internal/theme"
-	"github.com/riipandi/elph/pkg/jsoncfg"
 )
 
 const (
@@ -24,7 +23,8 @@ const (
 
 // Settings is persisted at ~/.elph/settings.json.
 type Settings struct {
-	Models                   ModelsSettings  `json:"models"`
+	SyncInterval             string          `json:"syncInterval,omitempty"`
+	Models                   *ModelsSettings `json:"models,omitempty"`
 	Theme                    string          `json:"theme,omitempty"`
 	ShowThinking             *bool           `json:"showThinking,omitempty"`
 	AutoExpandThinking       *bool           `json:"autoExpandThinking,omitempty"`
@@ -35,35 +35,29 @@ type Settings struct {
 	Session                  SessionSettings `json:"session,omitempty"`
 }
 
-// ModelsSettings controls periodic models.dev metadata sync.
+// ModelsSettings holds legacy settings migrated on load.
 type ModelsSettings struct {
-	LastSync     string `json:"lastSync,omitempty"`
+	// SyncInterval is legacy; promoted to Settings.SyncInterval on load.
 	SyncInterval string `json:"syncInterval,omitempty"`
+	// LastSync is legacy; migrated to version.json on load.
+	LastSync string `json:"lastSync,omitempty"`
 }
 
-// Path returns the active settings file path (~/.elph/settings.json or settings.jsonc).
+func (m ModelsSettings) legacyLastSync() string {
+	return strings.TrimSpace(m.LastSync)
+}
+
+// Path returns the active home settings file path (~/.elph/settings.json or settings.jsonc).
 func Path() (string, error) {
-	home, err := os.UserHomeDir()
+	dir, err := homeSettingsDir()
 	if err != nil {
 		return "", err
 	}
-	return resolveSettingsPath(filepath.Join(home, defaultElphHomeDir)), nil
-}
-
-func resolveSettingsPath(dir string) string {
-	jsonPath := filepath.Join(dir, settingsFileName)
-	jsoncPath := filepath.Join(dir, settingsJSONCFileName)
-
-	jsonExists := settingsFileExists(jsonPath)
-	jsoncExists := settingsFileExists(jsoncPath)
-	switch {
-	case jsonExists:
-		return jsonPath
-	case jsoncExists:
-		return jsoncPath
-	default:
-		return jsonPath
+	path, ok := activeSettingsPath(dir)
+	if ok {
+		return path, nil
 	}
+	return filepath.Join(dir, settingsFileName), nil
 }
 
 func settingsFileExists(path string) bool {
@@ -71,26 +65,29 @@ func settingsFileExists(path string) bool {
 	return err == nil
 }
 
-// Load reads settings from disk. Missing files return defaults.
+// Ensure creates ~/.elph/settings.json with defaults when no settings file exists.
+// Existing settings.json or settings.jsonc files are left unchanged.
+func Ensure() error {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return err
+	}
+	dir := filepath.Join(home, defaultElphHomeDir)
+	jsonPath := filepath.Join(dir, settingsFileName)
+	jsoncPath := filepath.Join(dir, settingsJSONCFileName)
+	if settingsFileExists(jsonPath) || settingsFileExists(jsoncPath) {
+		return nil
+	}
+	return Save(defaultSettings())
+}
+
+// Load reads merged settings from ~/.elph and the current working directory.
 func Load() (Settings, error) {
-	path, err := Path()
+	wd, err := os.Getwd()
 	if err != nil {
-		return Settings{}, err
+		wd = ""
 	}
-
-	raw, err := os.ReadFile(path)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return defaultSettings(), nil
-		}
-		return Settings{}, fmt.Errorf("read settings %q: %w", path, err)
-	}
-
-	var cfg Settings
-	if err := jsoncfg.Unmarshal(raw, &cfg); err != nil {
-		return Settings{}, fmt.Errorf("decode settings %q: %w", path, err)
-	}
-	return cfg.withDefaults(), nil
+	return LoadFor(wd)
 }
 
 // Save writes settings to ~/.elph/settings.json.
@@ -119,9 +116,7 @@ func Save(cfg Settings) error {
 func defaultSettings() Settings {
 	showThinking := true
 	return Settings{
-		Models: ModelsSettings{
-			SyncInterval: "24h",
-		},
+		SyncInterval:             "24h",
 		Theme:                    string(theme.Auto),
 		ShowThinking:             &showThinking,
 		PreferedResponseLanguage: ResponseLanguageInherit,
@@ -129,7 +124,18 @@ func defaultSettings() Settings {
 }
 
 func (s Settings) withDefaults() Settings {
-	s.Models = s.Models.withDefaults()
+	if strings.TrimSpace(s.SyncInterval) == "" && s.Models != nil && strings.TrimSpace(s.Models.SyncInterval) != "" {
+		s.SyncInterval = strings.TrimSpace(s.Models.SyncInterval)
+	}
+	if s.Models != nil {
+		s.Models.SyncInterval = ""
+		if s.Models.LastSync == "" {
+			s.Models = nil
+		}
+	}
+	if strings.TrimSpace(s.SyncInterval) == "" {
+		s.SyncInterval = "24h"
+	}
 	if s.ShowThinking == nil {
 		v := true
 		s.ShowThinking = &v
@@ -187,54 +193,35 @@ func (s Settings) ThinkingBudgetOverrides() map[string]int {
 	return s.ThinkingBudgets
 }
 
-func (m ModelsSettings) withDefaults() ModelsSettings {
-	if m.SyncInterval == "" {
-		m.SyncInterval = "24h"
-	}
-	return m
-}
-
-// SyncIntervalDuration parses models.syncInterval (default 24h).
-func (m ModelsSettings) SyncIntervalDuration() time.Duration {
-	if m.SyncInterval == "" {
+// SyncIntervalDuration parses syncInterval (default 24h).
+func (s Settings) SyncIntervalDuration() time.Duration {
+	interval := strings.TrimSpace(s.withDefaults().SyncInterval)
+	if interval == "" {
 		return DefaultModelsSyncInterval
 	}
-	d, err := time.ParseDuration(m.SyncInterval)
+	d, err := time.ParseDuration(interval)
 	if err != nil || d <= 0 {
 		return DefaultModelsSyncInterval
 	}
 	return d
 }
 
-// LastSyncTime returns the parsed last sync timestamp.
-func (m ModelsSettings) LastSyncTime() (time.Time, bool) {
-	if m.LastSync == "" {
-		return time.Time{}, false
-	}
-	t, err := time.Parse(time.RFC3339, m.LastSync)
-	if err != nil {
-		return time.Time{}, false
-	}
-	return t, true
-}
-
 // SyncDue reports whether a models.dev sync should run at now.
 func (s Settings) SyncDue(now time.Time) bool {
-	last, ok := s.Models.LastSyncTime()
+	v, err := LoadVersion()
+	if err != nil {
+		return true
+	}
+	last, ok := v.LastSyncProvidersTime()
 	if !ok {
 		return true
 	}
-	return !now.Before(last.Add(s.Models.SyncIntervalDuration()))
+	return !now.Before(last.Add(s.SyncIntervalDuration()))
 }
 
 // MarkModelsSynced records a successful models.dev fetch/sync at now.
 func MarkModelsSynced(now time.Time) error {
-	cfg, err := Load()
-	if err != nil {
-		return err
-	}
-	cfg.Models.LastSync = now.UTC().Format(time.RFC3339)
-	return Save(cfg)
+	return MarkProvidersSynced(now)
 }
 
 // IsNotExist reports whether err is a missing settings file.

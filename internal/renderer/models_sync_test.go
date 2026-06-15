@@ -4,6 +4,7 @@ import (
 	"errors"
 	"testing"
 
+	tea "charm.land/bubbletea/v2"
 	"charm.land/huh/v2"
 	"github.com/riipandi/elph/pkg/ai/provider"
 	"github.com/stretchr/testify/require"
@@ -22,9 +23,9 @@ func TestFormatModelsSyncResult(t *testing.T) {
 }
 
 func TestModelsSyncFormDescription(t *testing.T) {
-	desc := modelsSyncFormDescription([]string{"openai.json", "anthropic.json"})
-	require.Contains(t, desc, "openai.json, anthropic.json")
-	require.Contains(t, desc, "models.dev")
+	desc := formatModelsSyncDescription(60)
+	require.Contains(t, desc, "updates are available")
+	require.NotContains(t, desc, "models.dev")
 }
 
 func TestResolveModelsSyncConfirmAccept(t *testing.T) {
@@ -65,6 +66,29 @@ func TestOfferModelsSyncOpensHuhForm(t *testing.T) {
 	require.NotNil(t, cmd)
 	require.NotNil(t, updated.modelsSyncForm)
 	require.Equal(t, huh.StateNormal, updated.modelsSyncForm.State)
+}
+
+func TestModelsSyncDialogMatchesAskUserLayout(t *testing.T) {
+	form := newModelsSyncForm([]string{"openai.json", "anthropic.json"}, 60)
+	if updated, _ := form.Update(tea.WindowSizeMsg{Width: 100, Height: 40}); updated != nil {
+		if f, ok := updated.(*huh.Form); ok {
+			form = f
+		}
+	}
+
+	m := testInputModel(t)
+	m.modelsSyncForm = form
+
+	view := stripANSI(m.modelsSyncChromeView())
+	require.Contains(t, view, modelsSyncDialogLabel)
+	require.Contains(t, view, "Apply model metadata updates")
+	require.Contains(t, view, "updates are available")
+	require.NotContains(t, view, "models.dev has updates")
+	require.Contains(t, view, "Update")
+	require.Contains(t, view, "Skip")
+	require.Contains(t, view, "y update")
+	require.Contains(t, view, "↑/↓")
+	require.NotContains(t, view, "↑ up")
 }
 
 func TestStartModelsSyncShowsStatusMessage(t *testing.T) {

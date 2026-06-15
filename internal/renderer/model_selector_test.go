@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"charm.land/lipgloss/v2"
+	"github.com/riipandi/elph/internal/settings"
 	"github.com/riipandi/elph/pkg/ai/provider"
 	"github.com/stretchr/testify/require"
 )
@@ -187,6 +188,62 @@ func TestModelSelectorNavigation(t *testing.T) {
 	require.Equal(t, "b1", updated.modelSelector.Flat[1].ID)
 }
 
+func TestModelSelectorConfirmWithoutAPIKeyPersistsSelection(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+
+	dir := t.TempDir()
+	writeProviderFile(t, dir, "demo.json", `{
+		"name": "Demo",
+		"baseUrl": "https://example.com/v1",
+		"api": "openai-completions",
+		"apiKey": "",
+		"models": [{"id": "m1", "name": "Demo Model", "contextWindow": 128000, "maxTokens": 8192}]
+	}`)
+	catalog, err := provider.LoadCatalog(dir)
+	require.NoError(t, err)
+
+	m := testInputModel(t)
+	m = m.openModelSelector(catalog, "")
+
+	updated, _, handled := m.confirmModelSelector()
+	require.True(t, handled)
+	require.False(t, updated.modelSelectorActive())
+	require.Nil(t, updated.session.Provider)
+	require.Equal(t, "demo", updated.session.ProviderID)
+	require.Equal(t, "m1", updated.session.ModelID)
+	require.Contains(t, updated.messages[len(updated.messages)-1].text, "apiKey")
+
+	cfg, err := settings.Load()
+	require.NoError(t, err)
+	require.Equal(t, "demo", cfg.ActiveProviderID())
+	require.Equal(t, "m1", cfg.ActiveModelID())
+}
+
+func TestModelSelectorConfirmPersistsSettings(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	m := testInputModel(t)
+	catalog := testModelCatalog(t)
+	m = m.openModelSelector(catalog, "")
+
+	for i, model := range m.modelSelector.Flat {
+		if model.ID == "b2" {
+			m.modelSelector.Selected = i
+			break
+		}
+	}
+
+	updated, _, handled := m.confirmModelSelector()
+	require.True(t, handled)
+
+	cfg, err := settings.Load()
+	require.NoError(t, err)
+	require.Equal(t, "beta", cfg.ActiveProviderID())
+	require.Equal(t, "b2", cfg.ActiveModelID())
+	require.Equal(t, "beta", updated.session.ProviderID)
+}
+
 func TestModelSelectorConfirmSwitchesModel(t *testing.T) {
 	m := testInputModel(t)
 	catalog := testModelCatalog(t)
@@ -312,4 +369,65 @@ func TestSlashModelOpensSelector(t *testing.T) {
 	require.True(t, handled)
 	require.True(t, updated.modelSelectorActive())
 	require.Equal(t, "beta", updated.modelSelector.Query)
+}
+
+func TestModelSlashDraftNotRestoredAfterConfirm(t *testing.T) {
+	m := testInputModel(t)
+	catalog := testModelCatalog(t)
+	m.session.Catalog = catalog
+	m.session.Provider = nil
+	m.session.ProviderID = ""
+	m.session.ModelID = ""
+
+	m.input.SetValue("/model")
+	updated, _ := m.Update(keyCtrl('l'))
+	m = updated.(Model)
+	require.True(t, m.modelSelectorActive())
+	require.Nil(t, m.pendingPromptDraft)
+
+	m, _, handled := m.confirmModelSelector()
+	require.True(t, handled)
+	require.False(t, m.modelSelectorActive())
+	require.Empty(t, m.input.Value())
+
+	m.input.SetValue("hello")
+	m, _, ok := m.trySubmitInput()
+	require.True(t, ok)
+	require.False(t, m.modelSelectorActive())
+}
+
+func TestSubmitAfterModelSelectWithoutCredentials(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+
+	dir := t.TempDir()
+	writeProviderFile(t, dir, "demo.json", `{
+		"name": "Demo",
+		"baseUrl": "https://example.com/v1",
+		"api": "openai-completions",
+		"apiKey": "",
+		"models": [{"id": "m1", "name": "Demo Model", "contextWindow": 128000, "maxTokens": 8192}]
+	}`)
+	catalog, err := provider.LoadCatalog(dir)
+	require.NoError(t, err)
+
+	m := testInputModel(t)
+	m.session.Catalog = catalog
+	m.session.Provider = nil
+	m.session.ProviderID = ""
+	m.session.ModelID = ""
+
+	m = m.openModelSelector(catalog, "")
+	updated, _, handled := m.confirmModelSelector()
+	require.True(t, handled)
+	require.False(t, updated.modelSelectorActive())
+	require.Nil(t, updated.session.Provider)
+	require.Equal(t, "demo", updated.session.ProviderID)
+	require.True(t, updated.hasActiveModel())
+
+	updated.input.SetValue("hello")
+	updated, _, ok := updated.trySubmitInput()
+	require.True(t, ok)
+	require.False(t, updated.modelSelectorActive())
+	require.True(t, updated.agent.Busy)
 }

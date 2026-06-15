@@ -47,15 +47,11 @@ func NewSession(workDir string) Session {
 
 	modelName := cfg.ModelName
 	if modelName == "" {
-		modelName = "No model configured"
-	}
-	providerID := cfg.ProviderID
-	if providerID == "" {
-		providerID = "placeholder"
+		modelName = "No model selected"
 	}
 	providerName := cfg.ProviderName
 	if providerName == "" {
-		providerName = providerID
+		providerName = "—"
 	}
 
 	todoStore := loadSessionTodos(workDir, id.String())
@@ -76,7 +72,7 @@ func NewSession(workDir string) Session {
 		ModelName:         modelName,
 		ContextWindow:     cfg.ContextWindow,
 		MaxTokens:         cfg.MaxTokens,
-		ProviderID:        providerID,
+		ProviderID:        cfg.ProviderID,
 		ProviderName:      providerName,
 		Catalog:           cfg.Catalog,
 		EnabledModelCount: cfg.Catalog.TotalEnabledModels(),

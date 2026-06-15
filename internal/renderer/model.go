@@ -135,6 +135,14 @@ type Model struct {
 	inputPastes map[int]string
 	nextPasteID int
 	pasteEditor pasteEditorState
+
+	pendingPromptDraft *promptDraftState // stashed while model selector uses the input as filter
+}
+
+type promptDraftState struct {
+	value       string
+	pastes      map[int]string
+	attachments []inputAttachment
 }
 
 // Shared "no background" style reused in textarea init to reduce allocations.

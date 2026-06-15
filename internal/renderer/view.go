@@ -56,6 +56,9 @@ func (m Model) viewParts() []string {
 	if m.toolInteractDialogActive() {
 		parts = append(parts, m.toolInteractChromeView())
 	}
+	if m.modelsSyncDialogActive() {
+		parts = append(parts, m.modelsSyncChromeView())
+	}
 	if av := m.activityView(); av != "" {
 		parts = append(parts, av)
 	}
@@ -74,6 +77,9 @@ func (m Model) chromeHeight() int {
 	h := lipgloss.Height(m.inputChromeView()) + lipgloss.Height(m.footerView())
 	if m.toolInteractDialogActive() {
 		h += lipgloss.Height(m.toolInteractChromeView())
+	}
+	if m.modelsSyncDialogActive() {
+		h += lipgloss.Height(m.modelsSyncChromeView())
 	}
 	if m.showsActivity() {
 		h += lipgloss.Height(m.activityView())
@@ -539,9 +545,6 @@ func (m Model) inputBodyView() string {
 }
 
 func (m Model) inputChromeView() string {
-	if m.modelsSyncDialogActive() {
-		return m.modelsSyncDialogView()
-	}
 	if m.modelSelectorActive() {
 		return m.modelSelectorChromeView()
 	}

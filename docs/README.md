@@ -18,11 +18,12 @@ Index of user and contributor documentation. All docs are written in English.
 
 ## JSON schemas
 
-| File                                                               | Purpose                                              |
-|--------------------------------------------------------------------|------------------------------------------------------|
-| [../schemas/provider-schema.json](../schemas/provider-schema.json) | Provider config format (`~/.elph/providers/*.json`)  |
-| [../schemas/config-schema.json](../schemas/config-schema.json)     | General config schema                                |
-| [../schemas/mcp-schema.json](../schemas/mcp-schema.json)           | **Planned** MCP config — not consumed by runtime yet |
+| File                                                               | Purpose                                                            |
+|--------------------------------------------------------------------|--------------------------------------------------------------------|
+| [../schemas/provider-schema.json](../schemas/provider-schema.json) | Provider config format (`~/.elph/providers/*.json`)                |
+| [../schemas/config-schema.json](../schemas/config-schema.json)     | Settings (`~/.elph` + optional `<workDir>/.agents/elph` overrides) |
+| [../schemas/version-schema.json](../schemas/version-schema.json)   | `~/.elph/version.json` (sync timestamp, release metadata)          |
+| [../schemas/mcp-schema.json](../schemas/mcp-schema.json)           | **Planned** MCP config — not consumed by runtime yet               |
 
 ## Documentation gaps (audit summary)
 

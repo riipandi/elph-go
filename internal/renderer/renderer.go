@@ -9,6 +9,9 @@ import (
 // Render starts the TUI application using Bubble Tea.
 func Render() error {
 	activateTerminalFeaturesSync()
+	if err := settings.Ensure(); err != nil {
+		return err
+	}
 	prefs, err := settings.Load()
 	if err != nil {
 		prefs = settings.Settings{}

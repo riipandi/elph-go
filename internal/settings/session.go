@@ -34,9 +34,9 @@ func (s Settings) ActiveModelID() string {
 	return strings.TrimSpace(s.Session.ModelID)
 }
 
-// Update loads settings, applies mutator, and saves the result.
+// Update loads home settings, applies mutator, and saves to ~/.elph.
 func Update(mutator func(*Settings)) error {
-	cfg, err := Load()
+	cfg, err := loadHomeSettings()
 	if err != nil {
 		return err
 	}

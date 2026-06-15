@@ -291,10 +291,10 @@ Until a full refresh runs, `[+N -N]` may show stale values while the branch name
 
 ## Models.dev update dialog
 
-When model metadata may be outdated (`models.syncInterval` elapsed), the TUI checks models.dev **once at startup**. If updates are available, a **[huh](https://github.com/charmbracelet/huh) confirm** replaces the input area:
+When model metadata may be outdated (`syncInterval` elapsed since `version.json` → `lastSyncProviders`), the TUI checks models.dev **once at startup**. If updates are available, a **[huh](https://github.com/charmbracelet/huh) confirm** replaces the input area:
 
-- **Title:** Model metadata update available
-- **Description:** provider files that would change (e.g. `openai.json`, `anthropic.json`)
+- **Label:** Model update
+- **Description:** Model metadata updates are available.
 - **Actions:** `Update` (full sync) or `Skip` (record sync time, no download)
 
 Implementation: `internal/renderer/models_sync.go`. Settings: [configuration.md § Models.dev sync in the TUI](./configuration.md#modelsdev-sync-in-the-tui).
@@ -339,7 +339,19 @@ During agent activity (connecting, thinking, tool work), a stopwatch shows elaps
 
 ## Model selector
 
-`Ctrl+L` or `/model` opens a fuzzy overlay (`internal/renderer/model_selector.go`). Filter providers with arrow keys; select with Enter.
+`Ctrl+L` or `/model` opens a fuzzy overlay (`internal/renderer/model_selector.go`). Filter providers with arrow keys; select with Enter. Left/Right (with an empty filter) cycle provider groups.
+
+### No model selected
+
+Elph does not pick a default model at startup. The footer shows **No model selected** until you choose one. Sending a message without an active provider opens the model picker (your draft text is preserved).
+
+### Missing API key
+
+If the provider JSON has no resolved `apiKey`, confirming a model still **saves** `session.providerId` / `session.modelId` to `~/.elph/settings.json` and updates the footer. Chat remains blocked until credentials work; the status message points at `~/.elph/providers/<id>.json` or the referenced environment variable.
+
+### Draft preservation
+
+Opening the picker while the input has text stashes the draft, clears the filter field, and restores the draft when the picker closes (Esc, **Ctrl+L**, or after confirming a model).
 
 ## @-mentions
 

@@ -50,8 +50,8 @@ func pasteIDOnLine(val string, lineIdx int) (int, bool) {
 func normalizeInputForSubmit(s string) string { return inputui.NormalizeForSubmit(s) }
 func isSlashCommand(s string) bool            { return inputui.IsSlashCommand(s) }
 
-func activateTerminalFeaturesSync() { inputui.ActivateTerminalFeaturesSync() }
-func enableTerminalFeatures() tea.Cmd { return inputui.EnableTerminalFeatures() }
+func activateTerminalFeaturesSync()    { inputui.ActivateTerminalFeaturesSync() }
+func enableTerminalFeatures() tea.Cmd  { return inputui.EnableTerminalFeatures() }
 func disableTerminalFeatures() tea.Cmd { return inputui.DisableTerminalFeatures() }
 
 type termFeaturesMsg = inputui.TermFeaturesMsg

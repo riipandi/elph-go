@@ -59,6 +59,6 @@ var builtin = []SlashCommand{
 		Aliases:      []string{"c"},
 		Description:  "Compress conversation history to save context window space",
 		ArgumentHint: "[percentage]",
-		Handler:     compactHandler,
+		Handler:      compactHandler,
 	},
 }

@@ -5,9 +5,9 @@ import (
 	"os"
 
 	"github.com/riipandi/elph/internal/config"
-	"github.com/riipandi/elph/internal/uiconst"
 	"github.com/riipandi/elph/internal/renderer"
 	"github.com/riipandi/elph/internal/settings"
+	"github.com/riipandi/elph/internal/uiconst"
 	"github.com/spf13/cobra"
 	"github.com/subosito/gotenv"
 )

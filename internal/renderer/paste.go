@@ -156,4 +156,3 @@ func lastNewlineBefore(s string, off int) int {
 	}
 	return -1
 }
-

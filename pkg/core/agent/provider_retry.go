@@ -20,8 +20,8 @@ const maxContextCompactions = 3
 type ProviderRetryConfig struct {
 	MaxRetries         int
 	StreamStallTimeout time.Duration
-	AutoCompactContext bool   // when true, compact messages on context-limit and retry
-	AutoCompactLimit   int    // compaction target percentage (0 = use default 80)
+	AutoCompactContext bool // when true, compact messages on context-limit and retry
+	AutoCompactLimit   int  // compaction target percentage (0 = use default 80)
 }
 
 func (cfg ProviderRetryConfig) attempts() int {

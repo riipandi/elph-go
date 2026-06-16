@@ -19,7 +19,7 @@ const (
 	askUserCustomPlaceholder = toolinteract.AskUserCustomPlaceholder
 )
 
-func newToolInteractBridge() *toolinteract.Bridge { return toolinteract.NewBridge() }
+func newToolInteractBridge() *toolinteract.Bridge          { return toolinteract.NewBridge() }
 func waitToolInteractOffer(b *toolinteract.Bridge) tea.Cmd { return toolinteract.WaitOffer(b) }
 func newToolInteractForm(req agent.ToolInteractRequest, width int) *huh.Form {
 	return toolinteract.NewForm(req, width)
@@ -46,10 +46,10 @@ func toolApprovalSignature(req agent.ToolInteractRequest) string {
 func isDialogCancelChoice(raw string) bool { return toolinteract.IsDialogCancelChoice(raw) }
 
 const (
-	approvalChoiceOnce    = toolinteract.ApprovalChoiceOnce
-	approvalChoiceSession = toolinteract.ApprovalChoiceSession
-	approvalChoiceDeny    = toolinteract.ApprovalChoiceDeny
-	dialogChoiceCancel    = toolinteract.DialogChoiceCancel
+	approvalChoiceOnce          = toolinteract.ApprovalChoiceOnce
+	approvalChoiceSession       = toolinteract.ApprovalChoiceSession
+	approvalChoiceDeny          = toolinteract.ApprovalChoiceDeny
+	dialogChoiceCancel          = toolinteract.DialogChoiceCancel
 	maxApprovalDescriptionLines = toolinteract.MaxApprovalDescriptionLines
 )
 

@@ -38,7 +38,7 @@ else                  → single Provider.Complete (no tools)
 
 `runProviderLoop` (`pkg/core/agent/loop.go`):
 
-- Max **8** iterations (`maxToolIterations`)
+- Max **25** iterations (configurable via `maxToolIterations` setting, `0` = default 25)
 - Tools: `FilterProviderTools(opts.Tools)` or `tool.ProviderDefinitions()`
 - Streams `EventResponseDelta`, `EventThinkingDelta`, `EventActivity`
 - On `result.ToolCalls`: `EventToolCallStart` → `InteractTool` (if needed) → `ExecuteTool` or
@@ -46,7 +46,6 @@ else                  → single Provider.Complete (no tools)
 - Tool follow-ups after step 0 disable thinking for faster replies (e.g. after deny)
 - Appends assistant + tool messages to `Messages`
 - Ends with `TurnDoneWithHistoryEvent` (history for next turn)
-
 Provider adapters:
 
 - OpenAI: `tool_calls` in `pkg/ai/provider/openai.go`, `openai_tools.go`
@@ -151,7 +150,7 @@ TypeID with prefix `sess` (`runtime.NewSession`). Shown in footer as `[sess_…]
 
 These limits keep idle and long-session RSS stable (~30 MB at rest after startup optimizations). See [architecture.md § Performance and memory](./architecture.md#performance-and-memory) for git, catalog, and models.dev behavior.
 
-History is compacted automatically (`agent.CompactMessages`):
+History is compacted after every turn via `agent.CompactMessages`:
 
 | Limit                         | Value   |
 |-------------------------------|---------|
@@ -162,9 +161,22 @@ History is compacted automatically (`agent.CompactMessages`):
 | Max assistant message         | 64 KB   |
 | Max AI bubble text (TUI)      | 48 KB   |
 
-Provider catalogs kept in session are trimmed: inactive models drop compat/thinking/headers metadata. Prompt templates load on first `/` use. System prompt lists only API-exposed built-in tools.
+### Context-limit auto-compaction
 
-Tool execution also caps raw output: Read 256 KB, Grep/Glob 128 KB, Glob 500 paths, ReadMediaFile 32 KB.
+When the provider returns a context-too-large error and `autoCompactContext` is `true` (default),
+`agent.CompactMessagesForContext` aggressively reduces history and retries:
+
+- Up to 3 retries with escalating aggressiveness (2×, 4×, 8× default limits)
+- Floor: 4 messages / 16 KB minimum, 4 KB tool-result truncation floor
+- No exponential backoff — compaction completes and retries immediately
+- Percentage target controlled by `autoCompactLimit` setting (default 80%)
+
+### Manual compaction (`/compact`)
+
+The `/compact` slash command (alias `/c`) compacts history to a user-specified percentage
+of the standard budget. With no argument, defaults to `autoCompactLimit`.
+Result: "Reduced: N → M messages (X → Y)" shown in a detail block.
+
 
 ### User vision images
 

@@ -147,8 +147,6 @@ func stripHistoryImages(messages []protocol.ChatMessage) []protocol.ChatMessage 
 	return messages
 }
 
-
-
 // CompactMessagesForContext aggressively reduces history when the provider
 // reports a context-limit error. Returns the compacted messages and whether
 // anything was removed.

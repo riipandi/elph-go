@@ -36,7 +36,7 @@ type Settings struct {
 	Provider                 *ProviderSettings `json:"provider,omitempty"`
 	Session                  SessionSettings   `json:"session,omitempty"`
 	MaxToolIterations        *int              `json:"maxToolIterations,omitempty"`
-	AutoCompactContext        *bool             `json:"autoCompactContext,omitempty"`
+	AutoCompactContext       *bool             `json:"autoCompactContext,omitempty"`
 	AutoCompactLimit         *int              `json:"autoCompactLimit,omitempty"`
 }
 

@@ -5,9 +5,9 @@ import (
 	"image/color"
 	"strings"
 
+	tea "charm.land/bubbletea/v2"
 	"charm.land/huh/v2"
 	"charm.land/lipgloss/v2"
-	tea "charm.land/bubbletea/v2"
 	"github.com/riipandi/elph/internal/uiconst"
 	"github.com/riipandi/elph/pkg/core/agent"
 	"github.com/riipandi/elph/pkg/tools"

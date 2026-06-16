@@ -103,6 +103,32 @@ var builtin = []Definition{
 		DefaultApproval: ApprovalAutoAllow,
 		Description:     "Invoke a registered inline Skill",
 	},
+
+	// Goal tools
+	{
+		Name:            CreateGoal,
+		Category:        CategoryGoal,
+		DefaultApproval: ApprovalAutoAllow,
+		Description:     "Create a new goal with a verifiable objective",
+	},
+	{
+		Name:            GetGoal,
+		Category:        CategoryGoal,
+		DefaultApproval: ApprovalAutoAllow,
+		Description:     "Get the current goal status and usage",
+	},
+	{
+		Name:            UpdateGoal,
+		Category:        CategoryGoal,
+		DefaultApproval: ApprovalAutoAllow,
+		Description:     "Update the goal lifecycle status (active, complete, paused, blocked)",
+	},
+	{
+		Name:            SetGoalBudget,
+		Category:        CategoryGoal,
+		DefaultApproval: ApprovalAutoAllow,
+		Description:     "Set a token, turn, or time budget for the current goal",
+	},
 }
 
 var builtinByName = func() map[string]Definition {

@@ -67,6 +67,35 @@ notice in the chat area listing completed tasks.
 Implementation: `pkg/tools/todolist` (apply/parse), `internal/runtime/todolist.go` (execute +
 persist), `internal/renderer/todo_panel.go` (panel UI).
 
+## Goal Tools
+
+Goal tools let the agent create, inspect, and manage a session goal. The goal lifecycle:
+`active` → `complete` / `blocked` / `paused` → `active` (resume). Tools are always exposed
+but return clear error messages when no goal exists.
+
+| Tool         | Default Approval | Description                                   |
+|--------------|------------------|-----------------------------------------------|
+| CreateGoal   | Auto-allow       | Create a new goal with a verifiable objective  |
+| GetGoal      | Auto-allow       | Get the current goal status and usage          |
+| UpdateGoal   | Auto-allow       | Update goal lifecycle status                   |
+| SetGoalBudget | Auto-allow       | Set a token, turn, or time budget for the goal |
+
+**CreateGoal** accepts `objective` (required), optional `completionCriterion`, and `replace`
+(overwrite existing active/paused goal). Returns the created goal snapshot.
+
+**GetGoal** takes no parameters and returns the current goal objective, status, turn/token
+counters, and any budget limits.
+
+**UpdateGoal** accepts `status`: `active` (resume paused), `complete`, `blocked`, or `paused`.
+Only valid transitions are accepted; invalid ones return an error.
+
+**SetGoalBudget** accepts `value` (positive number) and `unit` (`turns`, `tokens`, `seconds`,
+`minutes`, `hours`). Sets the budget limit for the current goal.
+
+Implementation: `pkg/tools/goal` (types + manager), `internal/runtime/exec/goal.go` (execute),
+`pkg/tools/schema` (provider schema). Goal state is scoped to the session and managed via
+context.
+
 ## Collaboration Tools
 
 Collaboration tools handle inter-Agent coordination, user interaction, and Skill invocation.
@@ -103,7 +132,7 @@ A tool is sent to the provider API only when **all** of the following are true
 4. It has a provider JSON schema (`providerSchema`).
 
 Today **Read**, **Write**, **Edit**, **Grep**, **Glob**, **ReadMediaFile**, **WebSearch**, **AskUser**,
-**Bash**, **TodoList**, and **Skill** are exposed.
+**Bash**, **TodoList**, **Skill**, **CreateGoal**, **GetGoal**, **UpdateGoal**, and **SetGoalBudget** are exposed.
 **AskUser** opens a huh question dialog. **Write**, **Edit**, and **Bash** show an approval dialog
 unless agent mode is
 **brave** or the user chose **allow for session** earlier in the TUI session. Auto-allow tools like
@@ -148,6 +177,10 @@ the body is long (see [tui.md § Detail blocks](./tui.md#input-modes)).
 | Write         | Requires approval | Yes          | Yes (huh confirm/brave)  |
 | Edit          | Requires approval | Yes          | Yes (huh confirm/brave)  |
 | Bash          | Requires approval | Yes          | Yes (huh confirm/brave)  |
+| CreateGoal    | Auto-allow        | Yes          | Yes                      |
+| GetGoal       | Auto-allow        | Yes          | Yes                      |
+| UpdateGoal    | Auto-allow        | Yes          | Yes                      |
+| SetGoalBudget | Auto-allow        | Yes          | Yes                      |
 
 `requires-approval` tools are sent to the provider API when executable; **huh** gates each call unless
 **brave** or **allow for session** applies. **AskUser** always uses huh before returning the answer

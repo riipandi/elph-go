@@ -14,6 +14,7 @@ import (
 	"github.com/riipandi/elph/pkg/core/agent"
 	"github.com/riipandi/elph/pkg/skill"
 	"github.com/riipandi/elph/pkg/tools/todolist"
+	"github.com/riipandi/elph/pkg/tools/goal"
 	"go.jetify.com/typeid/v2"
 )
 
@@ -35,9 +36,11 @@ type Session struct {
 	EnabledModelCount int
 	History           []provider.ChatMessage
 	todoStore         *[]todolist.Todo        // heap pointer; stable when Model copies Session
+	goalManager       *goal.Manager           // goal state
 	CompactionCount   int                     // number of times history has been compacted
 	CompactionHistory []agent.CompactionEntry // history of compactions with summaries
 }
+
 
 // NewSession creates a session with a generated typeid and assembled system prompt.
 func NewSession(workDir string) Session {
@@ -64,6 +67,7 @@ func NewSession(workDir string) Session {
 		ID:        id,
 		WorkDir:   workDir,
 		todoStore: &todoStore,
+		goalManager: goal.NewManager(),
 		SystemPrompt: prompt.Build(prompt.Options{
 			WorkDir:                  workDir,
 			PreferedResponseLanguage: prefs.ResponseLanguage(),
@@ -139,6 +143,12 @@ func (s *Session) StartTurn(ctx context.Context, opts agent.TurnOptions) <-chan 
 		s.todoStore = &store
 	}
 	ctx = todolist.WithStore(ctx, s.todoStore)
+	// Ensure goal manager is in context
+	if s.goalManager == nil {
+		s.goalManager = goal.NewManager()
+	}
+	ctx = goal.WithManager(ctx, s.goalManager)
+
 	opts.SystemPrompt = s.SystemPrompt
 	if opts.Model == "" {
 		opts.Model = s.ModelID

@@ -76,6 +76,15 @@ func ExecuteToolWithOutput(ctx context.Context, workDir, name string, args map[s
 		return executeSkill(ctx, workDir, args)
 	case tools.TodoList:
 		return executeTodoList(ctx, workDir, args)
+	case tools.CreateGoal:
+		return executeCreateGoal(ctx, args)
+	case tools.GetGoal:
+		return executeGetGoal(ctx, args)
+	case tools.UpdateGoal:
+		return executeUpdateGoal(ctx, args)
+	case tools.SetGoalBudget:
+		return executeSetGoalBudget(ctx, args)
+
 	default:
 		return toolresult.ToolResult{Err: fmt.Errorf("%w: %s", ErrToolNotImplemented, canonical)}
 	}

@@ -17,4 +17,8 @@ const (
 	AskUser       = "AskUser"
 	Skill         = "Skill"
 	TodoList      = "TodoList"
+	CreateGoal    = "CreateGoal"
+	GetGoal       = "GetGoal"
+	UpdateGoal    = "UpdateGoal"
+	SetGoalBudget = "SetGoalBudget"
 )

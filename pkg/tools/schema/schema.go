@@ -154,6 +154,23 @@ func ProviderSchema(name string) (map[string]any, bool) {
 		}, "skill"), true
 	case catalog.TodoList:
 		return todoListSchema(), true
+	case catalog.CreateGoal:
+		return objectSchema(map[string]propertySpec{
+			"objective":          {typ: "string", description: "The objective to pursue. Must have a verifiable end state."},
+			"completionCriterion": {typ: "string", description: "How to verify the goal is complete."},
+			"replace":            {typ: "boolean", description: "Replace an existing active or paused goal."},
+		}, "objective"), true
+	case catalog.GetGoal:
+		return objectSchema(nil), true
+	case catalog.UpdateGoal:
+		return objectSchema(map[string]propertySpec{
+			"status": {typ: "string", description: "Lifecycle status: active, complete, paused, or blocked"},
+		}, "status"), true
+	case catalog.SetGoalBudget:
+		return objectSchema(map[string]propertySpec{
+			"value": {typ: "number", description: "Positive numeric budget value"},
+			"unit":  {typ: "string", description: "Budget unit: turns, tokens, seconds, minutes, hours"},
+		}, "value", "unit"), true
 	case catalog.EnterPlanMode, catalog.ExitPlanMode:
 		return objectSchema(map[string]propertySpec{
 			"reason": {typ: "string", description: "Short reason for the mode change"},
@@ -162,6 +179,7 @@ func ProviderSchema(name string) (map[string]any, bool) {
 		return nil, false
 	}
 }
+
 
 type propertySpec struct {
 	typ         string

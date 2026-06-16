@@ -31,6 +31,7 @@ const (
 	CategoryPlanMode        = catalog.CategoryPlanMode
 	CategoryStateManagement = catalog.CategoryStateManagement
 	CategoryCollaboration   = catalog.CategoryCollaboration
+	CategoryGoal           = catalog.CategoryGoal
 
 	ApprovalAutoAllow        = catalog.ApprovalAutoAllow
 	ApprovalRequiresApproval = catalog.ApprovalRequiresApproval
@@ -51,6 +52,10 @@ const (
 	AskUser       = catalog.AskUser
 	Skill         = catalog.Skill
 	TodoList      = catalog.TodoList
+	CreateGoal    = catalog.CreateGoal
+	GetGoal       = catalog.GetGoal
+	UpdateGoal    = catalog.UpdateGoal
+	SetGoalBudget = catalog.SetGoalBudget
 )
 
 func Get(name string) (Definition, bool)                    { return catalog.Get(name) }

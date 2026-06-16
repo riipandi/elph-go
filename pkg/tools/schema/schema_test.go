@@ -28,7 +28,7 @@ func TestIsProviderExposed(t *testing.T) {
 
 func TestProviderDefinitionsExecutableTools(t *testing.T) {
 	defs := ProviderDefinitions()
-	require.Len(t, defs, 13)
+	require.Len(t, defs, 17)
 
 	names := make([]string, len(defs))
 	for i, def := range defs {
@@ -40,6 +40,7 @@ func TestProviderDefinitionsExecutableTools(t *testing.T) {
 		catalog.Read, catalog.Write, catalog.Edit, catalog.Grep, catalog.Glob,
 		catalog.ReadMediaFile, catalog.FetchURL, catalog.WebSearch, catalog.CodeSearch,
 		catalog.AskUser, catalog.Skill, catalog.TodoList, catalog.Bash,
+		catalog.CreateGoal, catalog.GetGoal, catalog.UpdateGoal, catalog.SetGoalBudget,
 	}, names)
 }
 

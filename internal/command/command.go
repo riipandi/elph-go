@@ -6,7 +6,9 @@ import (
 
 	"github.com/riipandi/elph/internal/prompt/template"
 	"github.com/riipandi/elph/pkg/ai/provider"
+	"github.com/riipandi/elph/pkg/tools/goal"
 )
+
 
 // Context carries session state needed by slash command handlers.
 type Context struct {
@@ -20,6 +22,10 @@ type Context struct {
 	ModelName       string
 
 	ContextUsage bool // set by /context handler
+
+	// GoalManager is an interface for the session goal manager.
+	GoalManager *goal.Manager
+
 
 	CompactHistory bool // set by /compact handler
 	CompactRatio   int  // compaction target percentage

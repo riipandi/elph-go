@@ -60,4 +60,12 @@ var builtin = []SlashCommand{
 		Description: "View context usage and token breakdown",
 		Handler:     contextHandler,
 	},
+	{
+		Name:        "goal",
+		Aliases:     []string{"goals"},
+		Description: "Manage session goals: status, pause, resume, cancel, replace, next",
+		ArgumentHint: "<subcommand> [args]",
+		Handler:     goalHandler,
+	},
+
 }

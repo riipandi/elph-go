@@ -99,7 +99,14 @@ func (s Session) Todos() []todolist.Todo {
 	out := make([]todolist.Todo, len(*s.todoStore))
 	copy(out, *s.todoStore)
 	return out
+	return out
 }
+
+// GoalManager returns the session's goal manager.
+func (s *Session) GoalManager() *goal.Manager {
+	return s.goalManager
+}
+
 
 // ReplaceTodos replaces the session todo list.
 func (s *Session) ReplaceTodos(todos []todolist.Todo) {

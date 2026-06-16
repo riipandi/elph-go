@@ -632,3 +632,35 @@ func TestToolInteractDialogPolishedLayout(t *testing.T) {
 	require.Contains(t, view, "c cancel")
 	require.NotContains(t, view, "↑ up")
 }
+
+func TestAskUserFormNoOptionsShowsInputAndNoCancelSelect(t *testing.T) {
+	form := newAskUserForm(agent.ToolInteractRequest{
+		Kind: agent.ToolInteractAskUser,
+		Args: map[string]any{
+			"question": "What is your favorite color?",
+		},
+	}, 60)
+	if updated, _ := form.Update(tea.WindowSizeMsg{Width: 100, Height: 40}); updated != nil {
+		if f, ok := updated.(*huh.Form); ok {
+			form = f
+		}
+	}
+
+	m := testInputModel(t)
+	m.toolInteractForm = form
+	m.toolInteractPending = toolInteractOffer{
+		Req: agent.ToolInteractRequest{
+			Kind: agent.ToolInteractAskUser,
+			Args: map[string]any{
+				"question": "What is your favorite color?",
+			},
+		},
+	}
+
+	view := stripANSI(m.toolInteractChromeView())
+	require.Contains(t, view, "What is your favorite color?")
+	require.Contains(t, view, "Your answer")
+	require.NotContains(t, view, "Cancel", "no-options form should not have a Cancel select")
+	require.NotContains(t, view, "1-1", "no-options form should not show number shortcut")
+	require.Contains(t, view, "Enter · Esc")
+}

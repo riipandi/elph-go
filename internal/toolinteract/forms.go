@@ -97,9 +97,7 @@ func newAskUserForm(req agent.ToolInteractRequest, width int) *huh.Form {
 			WithShowHelp(false).
 			WithTheme(huh.ThemeFunc(toolInteractHuhTheme))
 	}
-
 	var answer string
-	var choice string
 	return huh.NewForm(
 		huh.NewGroup(
 			huh.NewInput().
@@ -107,10 +105,6 @@ func newAskUserForm(req agent.ToolInteractRequest, width int) *huh.Form {
 				Title(question).
 				Placeholder("Your answer…").
 				Value(&answer),
-			huh.NewSelect[string]().
-				Key("choice").
-				Options(huh.NewOption("Cancel", dialogChoiceCancel)).
-				Value(&choice),
 		),
 	).
 		WithWidth(width).
@@ -219,7 +213,7 @@ func FooterHint(req agent.ToolInteractRequest) string {
 			}
 			return fmt.Sprintf("↑/↓ · 1-%d · c cancel · Enter · Esc", cancelNum)
 		}
-		return "Enter · ↑/↓ Cancel · c · Esc"
+		return "Enter · Esc"
 	case agent.ToolInteractApproval:
 		return "y once · a session · n deny · c cancel · 1-4 · ↑/↓ · Enter · Esc"
 	default:

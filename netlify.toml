@@ -6,7 +6,7 @@
   TZ = "Asia/Jakarta"
 
 [build]
-  publish = "public"
+  publish = "docsite/public"
   command = """\
   git config core.quotepath false && \
   hugo build --config ./docsite/hugo.yaml --gc --minify --baseURL "${URL}" && \

@@ -203,9 +203,9 @@ sequenceDiagram
     Loop->>Provider: tool_result follow-up message
 ```
 
-The agent loop runs up to eight tool rounds (`maxToolIterations`). Each round: completion with
-tools → execute calls → append tool results → complete again until the model stops calling
-tools.
+The agent loop runs up to 25 tool rounds (configurable via `maxToolIterations` setting, 0 = default 25).
+Each round: completion with tools → execute calls → append tool results → complete again until
+the model stops calling tools.
 
 ### Key functions
 

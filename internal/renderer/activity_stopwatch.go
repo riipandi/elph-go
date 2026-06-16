@@ -10,7 +10,7 @@ import (
 )
 
 func newActivityStopwatch() stopwatch.Model {
-	return stopwatch.New(stopwatch.WithInterval(250 * time.Millisecond))
+	return stopwatch.New(stopwatch.WithInterval(220 * time.Millisecond))
 }
 
 func formatCompactElapsed(d time.Duration) string {

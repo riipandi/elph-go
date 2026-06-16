@@ -78,25 +78,27 @@ type message struct {
 }
 
 type Model struct {
-	ready              bool
-	width              int
-	height             int
-	content            viewport.Model
-	input              textarea.Model
-	messages           []message
-	modelName          string
-	provider           string
-	mode               appconst.AgentMode
-	thinkingLevel      appconst.ThinkingLevel
-	sessionID          typeid.TypeID
-	workDir            string
-	branch             string
-	tip                string
-	contextUsed        float64 // 0.0 – 1.0
-	contextWindow      int
-	tokensUsed         int
-	sessionCost        float64
-	turnCount          int
+	ready         bool
+	width         int
+	height        int
+	content       viewport.Model
+	input         textarea.Model
+	messages      []message
+	modelName     string
+	provider      string
+	mode          appconst.AgentMode
+	thinkingLevel appconst.ThinkingLevel
+	sessionID     typeid.TypeID
+	workDir       string
+	branch        string
+	tip           string
+	contextUsed   float64 // 0.0 – 1.0
+	contextWindow int
+	tokensUsed    int
+	sessionCost   float64
+	turnCount     int
+	toolCallCount int
+
 	modelSupportsImage bool
 	modelCost          provider.Cost
 	gitAdded           int

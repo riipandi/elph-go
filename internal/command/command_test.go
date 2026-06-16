@@ -98,22 +98,6 @@ func TestDiagnosticListTools(t *testing.T) {
 	require.Contains(t, result.DetailBody, inttools.DiagnosticListTools)
 }
 
-func TestDiagnosticSystemPrompt(t *testing.T) {
-	result := Execute("/diagnostic:system-prompt", Context{
-		SystemPrompt: "You are an expert coding assistant.",
-	})
-	require.True(t, result.OK)
-	require.Empty(t, result.Output)
-	require.Equal(t, "System prompt", result.DetailLabel)
-	require.Contains(t, result.DetailBody, "You are an expert coding assistant.")
-}
-
-func TestDiagnosticSystemPromptEmpty(t *testing.T) {
-	result := Execute("/diagnostic:system-prompt", Context{})
-	require.True(t, result.OK)
-	require.Contains(t, result.Output, "not yet implemented")
-}
-
 func TestDiagnosticOpenLogSystem(t *testing.T) {
 	dir := t.TempDir()
 	session := session.NewSession(dir)

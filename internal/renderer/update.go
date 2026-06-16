@@ -50,6 +50,8 @@ func (m Model) handleAgentTurnClosed() (Model, tea.Cmd) {
 		m.agent.Activity = agent.ActivityIdle
 		m.agent.SpinnerFrame = 0
 		m = m.stopActivityStopwatch()
+		// Accumulate tool call count across turns
+		m.toolCallCount += len(m.agent.TurnToolCalls)
 		m = m.syncLayout(true)
 	}
 	m.agent.Events = nil

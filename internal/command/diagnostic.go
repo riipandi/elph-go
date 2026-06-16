@@ -11,10 +11,9 @@ import (
 )
 
 const (
-	DiagnosticListTools    = "diagnostic:list-tools"
-	DiagnosticSystemPrompt = "diagnostic:system-prompt"
-	DiagnosticOpenLog      = "diagnostic:open-log"
-	DiagnosticDebug        = "diagnostic:debug"
+	DiagnosticListTools = "diagnostic:list-tools"
+	DiagnosticOpenLog   = "diagnostic:open-log"
+	DiagnosticDebug     = "diagnostic:debug"
 )
 
 var openLogArgs = []ArgChoice{
@@ -38,16 +37,6 @@ func diagnosticListTools(ctx *Context, _ string) string {
 	ctx.pendingDetailLabel = "Available tools"
 	ctx.pendingDetailBody = strings.TrimRight(b.String(), "\n")
 	ctx.pendingDetailExpanded = true
-	return ""
-}
-
-func diagnosticSystemPrompt(ctx *Context, _ string) string {
-	if strings.TrimSpace(ctx.SystemPrompt) == "" {
-		return fmt.Sprintf("/%s: not yet implemented", DiagnosticSystemPrompt)
-	}
-
-	ctx.pendingDetailLabel = "System prompt"
-	ctx.pendingDetailBody = ctx.SystemPrompt
 	return ""
 }
 

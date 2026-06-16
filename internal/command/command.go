@@ -19,6 +19,8 @@ type Context struct {
 	ModelID         string
 	ModelName       string
 
+	ContextUsage bool // set by /context handler
+
 	CompactHistory bool // set by /compact handler
 	CompactRatio   int  // compaction target percentage
 
@@ -61,6 +63,7 @@ type Result struct {
 	DetailLabel       string
 	DetailBody        string
 	DetailExpanded    bool
+	ContextUsage      bool // set by /context handler
 	CompactHistory    bool // signal to hard-compact conversation history
 	CompactRatio      int  // compaction target percentage (0 = use default)
 }
@@ -136,6 +139,7 @@ func Execute(input string, ctx Context) Result {
 			DetailLabel:       ctx.pendingDetailLabel,
 			DetailBody:        ctx.pendingDetailBody,
 			DetailExpanded:    ctx.pendingDetailExpanded,
+			ContextUsage:      ctx.ContextUsage,
 			CompactHistory:    ctx.CompactHistory,
 			CompactRatio:      ctx.CompactRatio,
 		}

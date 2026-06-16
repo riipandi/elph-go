@@ -245,7 +245,7 @@ func splitShellBatchCmd(t *testing.T, cmd tea.Cmd) (tea.Cmd, tea.Cmd, tea.Cmd) {
 
 func TestCancelShellWithEscape(t *testing.T) {
 	m := testInputModel(t)
-	m.input.SetValue(`!!bash -c 'echo running; sleep 30'`)
+	m.input.SetValue(`!!bash -c 'echo running; sleep 10'`)
 
 	updated, cmd := m.Update(keyEnter())
 	m = updated.(Model)
@@ -271,7 +271,7 @@ func TestCancelShellWithEscape(t *testing.T) {
 
 func TestCancelShellWithCtrlC(t *testing.T) {
 	m := testInputModel(t)
-	m.input.SetValue(`!!bash -c 'echo running; sleep 30'`)
+	m.input.SetValue(`!!bash -c 'echo running; sleep 10'`)
 
 	updated, cmd := m.Update(keyEnter())
 	m = updated.(Model)
@@ -304,7 +304,7 @@ func TestShellWhileRunningBlocksSubmit(t *testing.T) {
 
 func TestCancelShellPreservesPartialOutput(t *testing.T) {
 	m := testInputModel(t)
-	m.input.SetValue(`!!bash -c 'echo partial; sleep 30'`)
+	m.input.SetValue(`!!bash -c 'echo partial; sleep 10'`)
 
 	updated, cmd := m.Update(keyEnter())
 	m = updated.(Model)

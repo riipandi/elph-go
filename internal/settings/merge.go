@@ -36,6 +36,17 @@ func mergeSettings(base, overlay Settings) Settings {
 			base.ThinkingBudgets[k] = v
 		}
 	}
+	if overlay.MaxToolIterations != nil {
+		val := *overlay.MaxToolIterations
+		base.MaxToolIterations = &val
+	}
+	if overlay.AutoCompactContext != nil {
+		base.AutoCompactContext = cloneBool(overlay.AutoCompactContext)
+	}
+	if overlay.AutoCompactLimit != nil {
+		val := *overlay.AutoCompactLimit
+		base.AutoCompactLimit = &val
+	}
 	base.Provider = mergeProviderSettings(base.Provider, overlay.Provider)
 	return base
 }

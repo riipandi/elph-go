@@ -3,8 +3,8 @@ package renderer
 import (
 	"testing"
 
-	"github.com/riipandi/elph/internal/constants"
 	"github.com/riipandi/elph/internal/prompt/template"
+	"github.com/riipandi/elph/internal/uiconst"
 	"github.com/stretchr/testify/require"
 )
 
@@ -73,7 +73,7 @@ func TestCtrlCWithoutInputQuitsOnSecondPress(t *testing.T) {
 func TestCtrlCResetClearsState(t *testing.T) {
 	m := testInputModel(t)
 	m.ctrlCPress = 1
-	m.messages = []message{{text: "Press again to exit", kind: constants.MessageSystem}}
+	m.messages = []message{{text: "Press again to exit", kind: uiconst.MessageSystem}}
 	m.ctrlCNoticeID = 0
 
 	updated, _ := m.Update(ctrlCResetMsg{})
@@ -86,7 +86,7 @@ func TestCtrlCResetClearsState(t *testing.T) {
 func TestOtherKeyCancelsCtrlCNotice(t *testing.T) {
 	m := testInputModel(t)
 	m.ctrlCPress = 1
-	m.messages = []message{{text: "Press again to exit", kind: constants.MessageSystem}}
+	m.messages = []message{{text: "Press again to exit", kind: uiconst.MessageSystem}}
 	m.ctrlCNoticeID = 0
 
 	updated, _ := m.Update(keyRune('a'))
@@ -129,7 +129,7 @@ func TestShiftTabCyclesThinking(t *testing.T) {
 
 func TestCtrlYCopiesLastMessage(t *testing.T) {
 	m := testInputModel(t)
-	m.messages = []message{{text: "last reply", kind: constants.MessageAI}}
+	m.messages = []message{{text: "last reply", kind: uiconst.MessageAI}}
 
 	updated, _ := m.Update(keyCtrl('y'))
 	m = updated.(Model)
@@ -201,9 +201,9 @@ func TestSubmitSlashCommandHelp(t *testing.T) {
 	require.Nil(t, cmd)
 	require.False(t, m.agent.Busy)
 	require.Len(t, m.messages, 2)
-	require.Equal(t, constants.MessageUser, m.messages[0].kind)
+	require.Equal(t, uiconst.MessageUser, m.messages[0].kind)
 	require.Equal(t, "/help", m.messages[0].text)
-	require.Equal(t, constants.MessageSystem, m.messages[1].kind)
+	require.Equal(t, uiconst.MessageSystem, m.messages[1].kind)
 	require.Contains(t, m.messages[1].text, "/changelog")
 	require.Contains(t, m.messages[1].text, "/diagnostic:list-tools")
 }
@@ -250,7 +250,7 @@ func TestSubmitDiagnosticOpenLogWithoutArgExecutesSelectedArg(t *testing.T) {
 	require.Nil(t, cmd)
 	require.False(t, m.agent.Busy)
 	require.Equal(t, "/diagnostic:open-log system", m.messages[0].text)
-	require.Equal(t, constants.MessageDetail, m.messages[1].kind)
+	require.Equal(t, uiconst.MessageDetail, m.messages[1].kind)
 	require.Equal(t, "Session log (system)", m.messages[1].detailLabel)
 	require.True(t, m.messages[1].detailExpanded)
 	require.Contains(t, m.messages[1].text, ".agents/elph/metadata/")
@@ -265,7 +265,7 @@ func TestSubmitDiagnosticOpenLogSystem(t *testing.T) {
 
 	require.Nil(t, cmd)
 	require.False(t, m.agent.Busy)
-	require.Equal(t, constants.MessageDetail, m.messages[1].kind)
+	require.Equal(t, uiconst.MessageDetail, m.messages[1].kind)
 	require.Equal(t, "Session log (system)", m.messages[1].detailLabel)
 	require.True(t, m.messages[1].detailExpanded)
 	require.Contains(t, m.messages[1].text, ".agents/elph/metadata/")
@@ -280,7 +280,7 @@ func TestSubmitDiagnosticListTools(t *testing.T) {
 
 	require.Nil(t, cmd)
 	require.False(t, m.agent.Busy)
-	require.Equal(t, constants.MessageDetail, m.messages[1].kind)
+	require.Equal(t, uiconst.MessageDetail, m.messages[1].kind)
 	require.Equal(t, "Available tools", m.messages[1].detailLabel)
 	require.True(t, m.messages[1].detailExpanded)
 	require.Contains(t, m.messages[1].text, "Read")
@@ -301,12 +301,12 @@ func TestSubmitPromptTemplateStartsAgentTurn(t *testing.T) {
 	require.NotNil(t, cmd)
 	require.True(t, m.agent.Busy)
 	require.Len(t, m.messages, 3)
-	require.Equal(t, constants.MessageUser, m.messages[0].kind)
+	require.Equal(t, uiconst.MessageUser, m.messages[0].kind)
 	require.Equal(t, "/identify auth", m.messages[0].text)
-	require.Equal(t, constants.MessageDetail, m.messages[1].kind)
+	require.Equal(t, uiconst.MessageDetail, m.messages[1].kind)
 	require.Equal(t, "Prompt", m.messages[1].detailLabel)
 	require.Contains(t, m.messages[1].text, "focusing on auth")
-	require.Equal(t, constants.MessageThinking, m.messages[2].kind)
+	require.Equal(t, uiconst.MessageThinking, m.messages[2].kind)
 }
 
 func TestSubmitSlashCommandUnknown(t *testing.T) {
@@ -401,7 +401,7 @@ func TestMouseReenableMsgResumesCapture(t *testing.T) {
 
 func TestReplaceNoticeUpdatesExisting(t *testing.T) {
 	m := testInputModel(t)
-	m.messages = []message{{text: "old notice", kind: constants.MessageSystem}}
+	m.messages = []message{{text: "old notice", kind: uiconst.MessageSystem}}
 	m.ctrlCNoticeID = 0
 
 	updated, _ := m.replaceNotice("new notice")
@@ -428,7 +428,7 @@ func TestWithMessageAppendsSystemMessage(t *testing.T) {
 	m = updated
 	require.Nil(t, cmd)
 	require.Len(t, m.messages, 1)
-	require.Equal(t, constants.MessageSystem, m.messages[0].kind)
+	require.Equal(t, uiconst.MessageSystem, m.messages[0].kind)
 }
 
 func TestAddToolDetailAndThinkingMessages(t *testing.T) {
@@ -436,10 +436,10 @@ func TestAddToolDetailAndThinkingMessages(t *testing.T) {
 	m = m.addToolDetailMessage("Read", "file contents")
 	m = m.addThinkingMessage("thinking...")
 	require.Len(t, m.messages, 2)
-	require.Equal(t, constants.MessageDetail, m.messages[0].kind)
+	require.Equal(t, uiconst.MessageDetail, m.messages[0].kind)
 	require.Equal(t, "Read", m.messages[0].detailLabel)
-	require.True(t, m.messages[0].detailExpanded)
-	require.Equal(t, constants.MessageThinking, m.messages[1].kind)
+	require.False(t, m.messages[0].detailExpanded)
+	require.Equal(t, uiconst.MessageThinking, m.messages[1].kind)
 }
 
 func TestShowPromptPrefixRendersInInput(t *testing.T) {

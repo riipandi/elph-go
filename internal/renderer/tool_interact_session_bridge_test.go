@@ -18,10 +18,10 @@ func TestToolInteractBridgeSkipsApprovalOnlyAfterSessionAllow(t *testing.T) {
 		require.True(t, resp.Approved)
 		require.False(t, resp.AllowSession)
 		msg := waitToolInteractOffer(bridge)().(toolInteractOfferMsg)
-		msg.offer.RespCh <- agent.ToolInteractResponse{Approved: true}
+		msg.Offer.RespCh <- agent.ToolInteractResponse{Approved: true}
 	}()
 
-	bridge.skipSessionApproval = true
+	bridge.SkipSessionApproval = true
 	resp, err := bridge.Interact(t.Context(), req)
 	require.NoError(t, err)
 	require.True(t, resp.Approved)
@@ -38,5 +38,5 @@ func TestToolInteractBridgeSessionAllowDoesNotStickWithoutFlag(t *testing.T) {
 	}()
 
 	msg := waitToolInteractOffer(bridge)().(toolInteractOfferMsg)
-	require.NotNil(t, msg.offer.RespCh)
+	require.NotNil(t, msg.Offer.RespCh)
 }

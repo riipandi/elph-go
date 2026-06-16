@@ -24,7 +24,7 @@
 ╭─────────────────────────────────────────────────────────────────╮
 │ >                                                               │   <- INPUT_PROMPT (multiline with ctrl+j or shift+enter)
 ╰─────────────────────────────────────────────────────────────────╯
-MODEL_NAME | PROVIDER | T: high | IMG           $0.00 | 0.0% (262k)   <- FOOTER / STATUSLINE (line-clamp if not enough width)
+MODEL_NAME | PROVIDER | T: high | IMG      $0.00 | 0k | 0.0% (262k)   <- FOOTER / STATUSLINE (line-clamp if not enough width)
 project_dir [sess_abcd12345] agent_mode          turn: 0 | main [-]
 ```
 
@@ -209,9 +209,20 @@ Implementation: `internal/renderer/paste.go`, `paste_editor.go`, `attachments.go
 ### Structure (no border)
 
 ```
-MODEL_NAME | PROVIDER | T: level | IMG           $0.00 | X% (262k)
-project_dir [session_id] mode             turn: 0 | branch [+N -N]
+MODEL_NAME | PROVIDER | T: level | IMG           $0.00 | 0.0% | 262k
+project_dir [session_id] mode               turn: 0 | branch [+N -N]
 ```
+
+The token display format is configurable via `footerTokenDisplay` setting (see [configuration.md](./configuration.md#settings-reference)). Context limit is always displayed.
+
+When no actual token usage data is available (e.g., at startup before the first API call), token counts are estimated from the system prompt.
+
+
+| Format       | Example                      | Description                                        |
+|--------------|------------------------------|----------------------------------------------------|
+| `both`       | `$0.00 | 131k | 0.0% | 262k` | Default — shows used tokens, percentage, and limit |
+| `percentage` | `$0.00 | 0.0% | 262k`        | Shows percentage and context window only           |
+| `count`      | `$0.00 | 131k | 262k`        | Shows used tokens and context window only          |
 
 ### Line 1
 
@@ -220,7 +231,7 @@ project_dir [session_id] mode             turn: 0 | branch [+N -N]
 | MODEL_NAME                    | `ThinkingColor(level)`   | Adapts to thinking level                                                           |
 | `| PROVIDER | T: level | IMG` | `dimText`                | **IMG** when the active model supports image input (`provider.SupportsImageInput`) |
 | `$0.00`                       | `ContextUsageColor(pct)` | Cost                                                                               |
-| `X% (262k)`                   | `ContextUsageColor(pct)` | Context usage percentage                                                           |
+| `X%` or `X% | 262k` or `262k` | `ContextUsageColor(pct)` | Token usage (configurable via `footerTokenDisplay`)                                |
 
 ### Line 2
 

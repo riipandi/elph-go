@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
-	"github.com/riipandi/elph/internal/constants"
+	"github.com/riipandi/elph/internal/uiconst"
 	"github.com/stretchr/testify/require"
 )
 
@@ -12,8 +12,8 @@ func TestMouseClickTogglesDetailBlockViaHintOnly(t *testing.T) {
 	m := testModelWithLayout(t)
 	m.height = 40
 	m.messages = []message{
-		{kind: constants.MessageDetail, detailLabel: "First", text: "alpha\nbeta"},
-		{kind: constants.MessageDetail, detailLabel: "Second", text: "gamma\ndelta"},
+		{kind: uiconst.MessageDetail, detailLabel: "First", text: "alpha\nbeta"},
+		{kind: uiconst.MessageDetail, detailLabel: "Second", text: "gamma\ndelta"},
 	}
 	m = m.syncLayout(false)
 
@@ -41,8 +41,8 @@ func TestMouseClickTogglesDetailBlockViaHintOnly(t *testing.T) {
 func TestMouseClickOnThinkingHeaderStillToggles(t *testing.T) {
 	m := testModelWithLayout(t)
 	m.messages = []message{
-		{kind: constants.MessageThinking, detailLabel: "Thinking", text: "reasoning"},
-		{kind: constants.MessageAI, text: "answer"},
+		{kind: uiconst.MessageThinking, detailLabel: "Thinking", text: "reasoning"},
+		{kind: uiconst.MessageAI, text: "answer"},
 	}
 	m = m.syncLayout(false)
 
@@ -58,8 +58,8 @@ func TestCtrlOTogglesNewestCollapsibleBlock(t *testing.T) {
 	m := testModelWithLayout(t)
 	m.height = 40
 	m.messages = []message{
-		{kind: constants.MessageDetail, detailLabel: "First", text: "alpha"},
-		{kind: constants.MessageDetail, detailLabel: "Second", text: "beta"},
+		{kind: uiconst.MessageDetail, detailLabel: "First", text: "alpha"},
+		{kind: uiconst.MessageDetail, detailLabel: "Second", text: "beta"},
 	}
 	m = m.syncLayout(false)
 

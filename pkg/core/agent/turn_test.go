@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/riipandi/elph/pkg/ai/provider"
+	"github.com/riipandi/elph/pkg/ai/protocol"
 	"github.com/stretchr/testify/require"
 )
 
@@ -17,18 +17,18 @@ type stubProvider struct {
 
 func (s stubProvider) ID() string { return "stub" }
 
-func (s stubProvider) Complete(ctx context.Context, req provider.TurnRequest) (provider.TurnResult, error) {
+func (s stubProvider) Complete(ctx context.Context, req protocol.TurnRequest) (protocol.TurnResult, error) {
 	if s.delay > 0 {
 		timer := time.NewTimer(s.delay)
 		defer timer.Stop()
 		select {
 		case <-timer.C:
 		case <-ctx.Done():
-			return provider.TurnResult{}, ctx.Err()
+			return protocol.TurnResult{}, ctx.Err()
 		}
 	}
 	if s.err != nil {
-		return provider.TurnResult{}, s.err
+		return protocol.TurnResult{}, s.err
 	}
 	if req.Stream != nil {
 		if req.Stream.OnThinking != nil {
@@ -36,7 +36,7 @@ func (s stubProvider) Complete(ctx context.Context, req provider.TurnRequest) (p
 		}
 		req.Stream.OnContent(s.resp)
 	}
-	return provider.TurnResult{Content: s.resp, Thinking: "hidden-thought"}, nil
+	return protocol.TurnResult{Content: s.resp, Thinking: "hidden-thought"}, nil
 }
 
 func TestRunTurnEmitsPlaceholderPhasesWithoutProvider(t *testing.T) {

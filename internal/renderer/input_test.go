@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"charm.land/bubbletea/v2"
-	"github.com/riipandi/elph/internal/constants"
+	"github.com/riipandi/elph/internal/uiconst"
 	"github.com/stretchr/testify/require"
 )
 
@@ -44,7 +44,7 @@ func TestEnterSubmitsEvenWhenMultiline(t *testing.T) {
 	require.NotNil(t, cmd)
 	require.Len(t, m.messages, 2)
 	require.Equal(t, "line one\nline two", m.messages[0].text)
-	require.Equal(t, constants.MessageThinking, m.messages[1].kind)
+	require.Equal(t, uiconst.MessageThinking, m.messages[1].kind)
 }
 
 func TestMultilinePreservesContentOnSubmit(t *testing.T) {
@@ -55,7 +55,7 @@ func TestMultilinePreservesContentOnSubmit(t *testing.T) {
 	require.NotNil(t, cmd)
 	require.Len(t, m.messages, 2)
 	require.Equal(t, "alpha\nbeta", m.messages[0].text)
-	require.Equal(t, constants.MessageThinking, m.messages[1].kind)
+	require.Equal(t, uiconst.MessageThinking, m.messages[1].kind)
 }
 
 func TestMultilineInputShrinksAfterClear(t *testing.T) {
@@ -226,7 +226,7 @@ func TestEnterSubmitsSingleLine(t *testing.T) {
 	require.True(t, m.agent.Busy)
 	require.Len(t, m.messages, 2)
 	require.Equal(t, "hello", m.messages[0].text)
-	require.Equal(t, constants.MessageThinking, m.messages[1].kind)
+	require.Equal(t, uiconst.MessageThinking, m.messages[1].kind)
 	require.Empty(t, m.input.Value())
 }
 

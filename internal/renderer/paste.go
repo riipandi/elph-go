@@ -2,140 +2,10 @@ package renderer
 
 import (
 	"fmt"
-	"regexp"
-	"strconv"
 	"strings"
+
+	"github.com/riipandi/elph/internal/inputui"
 )
-
-const (
-	pasteCollapseMinLines = 4
-	pasteCollapseMinRunes = 400
-)
-
-var pasteTokenRe = regexp.MustCompile(`\[\[paste:(\d+)\]\]`)
-
-func pasteLineCount(text string) int {
-	if text == "" {
-		return 0
-	}
-	return strings.Count(text, "\n") + 1
-}
-
-func shouldCollapsePaste(text string) bool {
-	if pasteLineCount(text) >= pasteCollapseMinLines {
-		return true
-	}
-	return len([]rune(text)) >= pasteCollapseMinRunes
-}
-
-func pasteToken(id int) string {
-	return fmt.Sprintf("[[paste:%d]]", id)
-}
-
-func pasteDisplayToken(id int, lines int, pastes map[int]string) string {
-	if pastes != nil {
-		if text, ok := pastes[id]; ok {
-			lines = pasteLineCount(text)
-		}
-	}
-	return fmt.Sprintf("[Pasted: %d lines]", lines)
-}
-
-func overlayInputPasteTokens(view, val string, pastes map[int]string) string {
-	if len(pastes) == 0 || view == "" {
-		return view
-	}
-	out := view
-	for _, loc := range pasteTokenRe.FindAllStringSubmatchIndex(val, -1) {
-		if len(loc) < 4 {
-			continue
-		}
-		token := val[loc[0]:loc[1]]
-		id, err := strconv.Atoi(val[loc[2]:loc[3]])
-		if err != nil {
-			continue
-		}
-		display := pasteDisplayToken(id, 0, pastes)
-		out = strings.ReplaceAll(out, token, display)
-	}
-	return out
-}
-
-func pasteDisplayValue(val string, pastes map[int]string) string {
-	return pasteTokenRe.ReplaceAllStringFunc(val, func(match string) string {
-		sub := pasteTokenRe.FindStringSubmatch(match)
-		if len(sub) < 2 {
-			return match
-		}
-		id, err := strconv.Atoi(sub[1])
-		if err != nil {
-			return match
-		}
-		return pasteDisplayToken(id, 0, pastes)
-	})
-}
-
-func expandInputPastes(val string, pastes map[int]string) string {
-	return pasteTokenRe.ReplaceAllStringFunc(val, func(match string) string {
-		sub := pasteTokenRe.FindStringSubmatch(match)
-		if len(sub) < 2 {
-			return match
-		}
-		id, err := strconv.Atoi(sub[1])
-		if err != nil {
-			return match
-		}
-		if text, ok := pastes[id]; ok {
-			return text
-		}
-		return match
-	})
-}
-
-func pasteIDAtOffset(val string, offset int) (int, bool) {
-	for _, loc := range pasteTokenRe.FindAllStringSubmatchIndex(val, -1) {
-		if len(loc) < 4 {
-			continue
-		}
-		start, end := loc[0], loc[1]
-		if offset >= start && offset <= end {
-			id, err := strconv.Atoi(val[loc[2]:loc[3]])
-			if err != nil {
-				return 0, false
-			}
-			return id, true
-		}
-	}
-	return 0, false
-}
-
-func pasteIDsInValue(val string) []int {
-	var ids []int
-	for _, loc := range pasteTokenRe.FindAllStringSubmatchIndex(val, -1) {
-		if len(loc) < 4 {
-			continue
-		}
-		id, err := strconv.Atoi(val[loc[2]:loc[3]])
-		if err != nil {
-			continue
-		}
-		ids = append(ids, id)
-	}
-	return ids
-}
-
-func pasteIDOnLine(val string, lineIdx int) (int, bool) {
-	lines := strings.Split(val, "\n")
-	if lineIdx < 0 || lineIdx >= len(lines) {
-		return 0, false
-	}
-	sub := pasteTokenRe.FindStringSubmatch(lines[lineIdx])
-	if len(sub) < 2 {
-		return 0, false
-	}
-	id, err := strconv.Atoi(sub[1])
-	return id, err == nil
-}
 
 func (m Model) pasteIDForEdit() (int, bool) {
 	val := m.input.Value()
@@ -159,7 +29,7 @@ func (m Model) pasteIDForEdit() (int, bool) {
 }
 
 func (m Model) restoreInputCursorLineCol(line, col int) Model {
-	lines := strings.Split(m.input.Value(), "\n")
+	lines := splitInputLines(m.input.Value())
 	if len(lines) == 0 {
 		m.input.MoveToBegin()
 		return m
@@ -192,8 +62,8 @@ func (m Model) setInputCursorByteOffset(off int) Model {
 		return m
 	}
 	off = max(0, min(off, len(val)))
-	targetLine := strings.Count(val[:off], "\n")
-	lineStart := strings.LastIndex(val[:off], "\n") + 1
+	targetLine := countNewlinesBefore(val, off)
+	lineStart := lastNewlineBefore(val, off) + 1
 	targetCol := len([]rune(val[lineStart:off]))
 	return m.restoreInputCursorLineCol(targetLine, targetCol)
 }
@@ -208,26 +78,7 @@ func (m Model) placeCursorOnPasteToken(id int) Model {
 }
 
 func (m Model) pruneInputPastes() Model {
-	if len(m.inputPastes) == 0 {
-		return m
-	}
-	val := m.input.Value()
-	seen := make(map[int]struct{})
-	for _, loc := range pasteTokenRe.FindAllStringSubmatchIndex(val, -1) {
-		if len(loc) < 4 {
-			continue
-		}
-		id, err := strconv.Atoi(val[loc[2]:loc[3]])
-		if err != nil {
-			continue
-		}
-		seen[id] = struct{}{}
-	}
-	for id := range m.inputPastes {
-		if _, ok := seen[id]; !ok {
-			delete(m.inputPastes, id)
-		}
-	}
+	inputui.PrunePastes(m.input.Value(), m.inputPastes)
 	return m
 }
 
@@ -257,21 +108,7 @@ func (m Model) insertCollapsedPaste(text string) Model {
 }
 
 func (m Model) replacePasteToken(id int, text string) Model {
-	token := pasteToken(id)
-	val := m.input.Value()
-	replaced := false
-	out := pasteTokenRe.ReplaceAllStringFunc(val, func(match string) string {
-		sub := pasteTokenRe.FindStringSubmatch(match)
-		if len(sub) < 2 {
-			return match
-		}
-		matchID, err := strconv.Atoi(sub[1])
-		if err != nil || matchID != id {
-			return match
-		}
-		replaced = true
-		return token
-	})
+	out, replaced := inputui.ReplacePasteToken(m.input.Value(), id, text)
 	if replaced {
 		m.input.SetValue(out)
 	}
@@ -295,4 +132,27 @@ func (m Model) pasteHintView() string {
 	}
 	lines := pasteLineCount(m.inputPastes[id])
 	return dimStyle.Render(fmt.Sprintf("Pasted block · %d lines · ctrl+o to preview/edit", lines))
+}
+
+func splitInputLines(s string) []string {
+	return strings.Split(s, "\n")
+}
+
+func countNewlinesBefore(s string, off int) int {
+	n := 0
+	for i := 0; i < off && i < len(s); i++ {
+		if s[i] == '\n' {
+			n++
+		}
+	}
+	return n
+}
+
+func lastNewlineBefore(s string, off int) int {
+	for i := off - 1; i >= 0; i-- {
+		if s[i] == '\n' {
+			return i
+		}
+	}
+	return -1
 }

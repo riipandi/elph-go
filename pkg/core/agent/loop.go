@@ -5,16 +5,25 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/riipandi/elph/pkg/ai/provider"
+	"github.com/riipandi/elph/pkg/ai/protocol"
 	"github.com/riipandi/elph/pkg/tools"
 )
 
-const maxToolIterations = 8
+// DefaultMaxToolIterations is the default max autonomous tool rounds per turn.
+const DefaultMaxToolIterations = 25
+
+// maxToolIterationsFor returns the effective tool round limit from opts or default.
+func maxToolIterationsFor(opts TurnOptions) int {
+	if opts.MaxToolIterations > 0 {
+		return opts.MaxToolIterations
+	}
+	return DefaultMaxToolIterations
+}
 
 // toolRoundCountsTowardLimit reports whether a provider tool round should consume
 // iteration budget. AskUser-only rounds are excluded because they wait on the
 // user rather than autonomous agent work.
-func toolRoundCountsTowardLimit(calls []provider.ToolCall) bool {
+func toolRoundCountsTowardLimit(calls []protocol.ToolCall) bool {
 	if len(calls) == 0 {
 		return false
 	}
@@ -43,11 +52,12 @@ func runProviderLoop(ctx context.Context, opts TurnOptions, ch chan<- Event) {
 	}
 
 	var (
-		finalResult provider.TurnResult
-		usage       provider.TurnUsage
+		finalResult protocol.TurnResult
+		usage       protocol.TurnUsage
 	)
 
-	for step := 0; step < maxToolIterations; {
+	maxIter := maxToolIterationsFor(opts)
+	for step := 0; step < maxIter; {
 		thinking := opts.Thinking
 		showThinking := opts.ShowThinking
 		if step > 0 {
@@ -56,11 +66,11 @@ func runProviderLoop(ctx context.Context, opts TurnOptions, ch chan<- Event) {
 			if !sendEvent(ctx, ch, ActivityEvent(ActivityThinking)) {
 				return
 			}
-			thinking = provider.ThinkingConfig{}
+			thinking = protocol.ThinkingConfig{}
 			showThinking = false
 		}
 
-		stream := &provider.TurnStream{
+		stream := &protocol.TurnStream{
 			OnContent: func(chunk string) {
 				sendEvent(ctx, ch, ResponseDeltaEvent(chunk))
 			},
@@ -73,7 +83,7 @@ func runProviderLoop(ctx context.Context, opts TurnOptions, ch chan<- Event) {
 
 		logProviderRequest(opts.LogProvider, step, opts.Model, len(providerTools), len(messages), thinking)
 
-		result, err := completeProviderWithRetry(ctx, opts.LogProvider, step, opts.Provider, provider.TurnRequest{
+		result, err := completeProviderWithRetry(ctx, opts.LogProvider, step, opts.Provider, protocol.TurnRequest{
 			SystemPrompt: opts.SystemPrompt,
 			UserPrompt:   opts.UserPrompt,
 			Model:        opts.Model,
@@ -84,7 +94,7 @@ func runProviderLoop(ctx context.Context, opts TurnOptions, ch chan<- Event) {
 			Tools:        providerTools,
 		}, opts.ProviderRetryConfig(), func(attempt int) {
 			sendEvent(ctx, ch, ActivityEvent(ActivityConnecting))
-		})
+		}, nil)
 		if ctx.Err() != nil {
 			logProviderCancel(opts.LogProvider, step, ctx.Err())
 			return
@@ -107,7 +117,7 @@ func runProviderLoop(ctx context.Context, opts TurnOptions, ch chan<- Event) {
 				finalResult.Thinking = ""
 			}
 			if strings.TrimSpace(result.Content) != "" {
-				messages = append(messages, provider.ChatMessage{
+				messages = append(messages, protocol.ChatMessage{
 					Role:    "assistant",
 					Content: result.Content,
 				})
@@ -116,10 +126,10 @@ func runProviderLoop(ctx context.Context, opts TurnOptions, ch chan<- Event) {
 			return
 		}
 
-		messages = append(messages, provider.ChatMessage{
+		messages = append(messages, protocol.ChatMessage{
 			Role:      "assistant",
 			Content:   result.Content,
-			ToolCalls: append([]provider.ToolCall(nil), result.ToolCalls...),
+			ToolCalls: append([]protocol.ToolCall(nil), result.ToolCalls...),
 		})
 
 		for _, call := range result.ToolCalls {
@@ -138,7 +148,7 @@ func runProviderLoop(ctx context.Context, opts TurnOptions, ch chan<- Event) {
 				return
 			}
 
-			messages = append(messages, provider.ChatMessage{
+			messages = append(messages, protocol.ChatMessage{
 				Role:       "tool",
 				ToolCallID: call.ID,
 				Content:    ToolResultMessage(runResult),
@@ -147,16 +157,22 @@ func runProviderLoop(ctx context.Context, opts TurnOptions, ch chan<- Event) {
 		messages = CompactMessages(messages)
 		if toolRoundCountsTowardLimit(result.ToolCalls) {
 			step++
+			// Record goal turn if callback is configured
+			if opts.RecordGoalTurn != nil {
+				totalTokens := usage.InputTokens + usage.OutputTokens
+				opts.RecordGoalTurn(int(totalTokens))
+			}
 		}
 	}
 
-	sendEvent(ctx, ch, TurnDoneWithHistoryEvent(provider.TurnResult{
-		Content: fmt.Sprintf("Stopped after %d tool rounds.", maxToolIterations),
+
+	sendEvent(ctx, ch, TurnDoneWithHistoryEvent(protocol.TurnResult{
+		Content: fmt.Sprintf("Stopped after %d tool rounds.", maxToolIterationsFor(opts)),
 		Usage:   usage,
 	}, CompactMessages(messages)))
 }
 
-func runToolCall(ctx context.Context, opts TurnOptions, ch chan<- Event, call provider.ToolCall) ToolRunResult {
+func runToolCall(ctx context.Context, opts TurnOptions, ch chan<- Event, call protocol.ToolCall) ToolRunResult {
 	args, err := ParseToolArguments(call.Arguments)
 	if err != nil {
 		return ToolRunResult{Err: err}
@@ -204,7 +220,7 @@ func runToolCall(ctx context.Context, opts TurnOptions, ch chan<- Event, call pr
 	return opts.ExecuteTool(ctx, call.Name, args)
 }
 
-func mergeUsage(total, delta provider.TurnUsage) provider.TurnUsage {
+func mergeUsage(total, delta protocol.TurnUsage) protocol.TurnUsage {
 	total.InputTokens += delta.InputTokens
 	total.OutputTokens += delta.OutputTokens
 	return total

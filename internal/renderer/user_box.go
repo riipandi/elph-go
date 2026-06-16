@@ -5,7 +5,7 @@ import (
 
 	"charm.land/lipgloss/v2"
 	"charm.land/lipgloss/v2/compat"
-	"github.com/riipandi/elph/internal/constants"
+	"github.com/riipandi/elph/internal/uiconst"
 )
 
 const userLeftBarWidth = 1
@@ -22,7 +22,7 @@ func renderUserLeftBarColumn(lineCount int, bg, accent compat.AdaptiveColor) str
 	if lineCount < 1 {
 		lineCount = 1
 	}
-	style := constants.UserLeftBarStyle(bg, accent).Width(userLeftBarWidth).MaxHeight(1)
+	style := uiconst.UserLeftBarStyle(bg, accent).Width(userLeftBarWidth).MaxHeight(1)
 	lines := make([]string, lineCount)
 	for i := range lines {
 		lines[i] = style.Render("▎")

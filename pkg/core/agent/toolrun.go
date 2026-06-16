@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/riipandi/elph/pkg/ai/provider"
+	"github.com/riipandi/elph/pkg/ai/protocol"
 )
 
 // ToolDeniedMessage is the tool-role payload after the user rejects an approval dialog.
@@ -24,7 +24,7 @@ func ToolResultMessage(result ToolRunResult) string {
 
 // ParseToolArguments decodes provider tool arguments.
 func ParseToolArguments(raw json.RawMessage) (map[string]any, error) {
-	raw = provider.NormalizeToolArguments(raw)
+	raw = protocol.NormalizeToolArguments(raw)
 	if len(raw) == 0 {
 		return map[string]any{}, nil
 	}

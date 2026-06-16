@@ -3,7 +3,7 @@ package renderer
 import (
 	"testing"
 
-	"github.com/riipandi/elph/internal/constants"
+	"github.com/riipandi/elph/internal/appconst"
 	"github.com/riipandi/elph/pkg/ai/provider"
 	"github.com/stretchr/testify/require"
 )
@@ -44,7 +44,7 @@ func TestApplyTurnUsageAccumulates(t *testing.T) {
 
 func TestFooterClickCyclesMode(t *testing.T) {
 	m := testInputModel(t)
-	m.mode = constants.ModeBuild
+	m.mode = appconst.ModeBuild
 	m.ready = true
 	m = m.syncLayout(false)
 
@@ -62,7 +62,7 @@ func TestFooterClickCyclesMode(t *testing.T) {
 	updated, cmd := m.handleFooterClick(modeRect.startX+1, top+modeRect.row)
 	m = updated
 	require.Nil(t, cmd)
-	require.Equal(t, constants.ModePlan, m.mode)
+	require.Equal(t, appconst.ModePlan, m.mode)
 }
 
 func TestFooterClickCopiesSessionID(t *testing.T) {

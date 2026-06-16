@@ -112,6 +112,52 @@
 				}
 			},
 			"additionalProperties": false
+		},
+		"maxToolIterations": {
+			"type": "integer",
+			"minimum": 0,
+			"default": 0,
+			"description": "Max autonomous tool rounds per turn. 0 uses the built-in default (25). Increase if the agent stops prematurely with 'Stopped after N tool rounds.'"
+		},
+		"autoCompactContext": {
+			"type": "boolean",
+			"default": true,
+			"description": "When true (default), Elph automatically compacts conversation history and retries when the provider reports a context-limit error, instead of showing the error to the user."
+		},
+		"autoCompactLimit": {
+			"type": "integer",
+			"minimum": 10,
+			"maximum": 100,
+			"default": 80,
+			"description": "Compaction target as percentage of history budget. Lower = more aggressive compaction. Used by both auto-compaction and /compact slash command."
+		},
+		"footerTokenDisplay": {
+			"type": "string",
+			"enum": [
+				"percentage",
+				"both",
+				"count"
+			],
+			"default": "both",
+			"description": "How token usage is displayed in the footer. Context limit is always shown. both: '131k | 0.0% | 262k' (used tokens + percentage); percentage: '0.0% | 262k'; count: '131k | 262k' (used tokens only)."
+		},
+		"provider": {
+			"type": "object",
+			"description": "Provider-level settings: retries and timeouts.",
+			"properties": {
+				"maxRetries": {
+					"type": "integer",
+					"minimum": 0,
+					"default": 3,
+					"description": "Max retries for transient provider failures (rate limit, server error). 0 = no retries."
+				},
+				"defaultTimeout": {
+					"type": "string",
+					"default": "5m",
+					"description": "Go duration for stream stall timeout (e.g. 5m, 120s)."
+				}
+			},
+			"additionalProperties": false
 		}
 	},
 	"additionalProperties": false

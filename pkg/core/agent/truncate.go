@@ -4,7 +4,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/riipandi/elph/pkg/ai/provider"
+	"github.com/riipandi/elph/pkg/ai/protocol"
 	"github.com/riipandi/elph/pkg/skill"
 )
 
@@ -48,7 +48,7 @@ func LimitToolRunResult(result ToolRunResult, maxBytes int) ToolRunResult {
 	return out
 }
 
-func messageUTF8Size(msg provider.ChatMessage) int {
+func messageUTF8Size(msg protocol.ChatMessage) int {
 	n := len(msg.Content)
 	for _, img := range msg.Images {
 		n += len(img.Data) + len(img.MIME)
@@ -60,7 +60,7 @@ func messageUTF8Size(msg provider.ChatMessage) int {
 	return n
 }
 
-func historyUTF8Size(messages []provider.ChatMessage) int {
+func historyUTF8Size(messages []protocol.ChatMessage) int {
 	total := 0
 	for _, msg := range messages {
 		total += messageUTF8Size(msg)
@@ -68,7 +68,7 @@ func historyUTF8Size(messages []provider.ChatMessage) int {
 	return total
 }
 
-func truncateHistoryMessage(msg provider.ChatMessage) provider.ChatMessage {
+func truncateHistoryMessage(msg protocol.ChatMessage) protocol.ChatMessage {
 	switch msg.Role {
 	case "tool":
 		limit := MaxProviderToolBytes
@@ -85,18 +85,26 @@ func truncateHistoryMessage(msg provider.ChatMessage) provider.ChatMessage {
 }
 
 // removeOldestTurn drops the first user turn (user + following assistant/tool messages).
-func removeOldestTurn(messages []provider.ChatMessage) []provider.ChatMessage {
+// It ensures tool messages are never orphaned: if the first message is not a user,
+// it skips all non-user messages until the first user turn, so paired
+// assistant(tool_calls) → tool responses are removed as a unit.
+func removeOldestTurn(messages []protocol.ChatMessage) []protocol.ChatMessage {
 	if len(messages) == 0 {
 		return nil
 	}
-	if messages[0].Role != "user" {
-		if len(messages) == 1 {
-			return nil
-		}
-		return messages[1:]
+
+	// When the first message is not a user (e.g. after prior compaction removed users),
+	// skip all non-user messages to find the first user turn boundary. This prevents
+	// orphaning tool messages by removing just their preceding assistant(tool_calls).
+	start := 0
+	for start < len(messages) && messages[start].Role != "user" {
+		start++
+	}
+	if start >= len(messages) {
+		return nil
 	}
 
-	i := 1
+	i := start + 1
 	for i < len(messages) && messages[i].Role != "user" {
 		i++
 	}
@@ -104,12 +112,12 @@ func removeOldestTurn(messages []provider.ChatMessage) []provider.ChatMessage {
 }
 
 // CompactMessages trims large payloads and drops oldest turns to stay within limits.
-func CompactMessages(messages []provider.ChatMessage) []provider.ChatMessage {
+func CompactMessages(messages []protocol.ChatMessage) []protocol.ChatMessage {
 	if len(messages) == 0 {
 		return nil
 	}
 
-	out := make([]provider.ChatMessage, len(messages))
+	out := make([]protocol.ChatMessage, len(messages))
 	for i, msg := range messages {
 		out[i] = truncateHistoryMessage(msg)
 	}
@@ -129,7 +137,7 @@ func CompactMessages(messages []provider.ChatMessage) []provider.ChatMessage {
 }
 
 // stripHistoryImages drops image bytes from older user turns so history stays bounded.
-func stripHistoryImages(messages []provider.ChatMessage) []provider.ChatMessage {
+func stripHistoryImages(messages []protocol.ChatMessage) []protocol.ChatMessage {
 	if len(messages) == 0 {
 		return messages
 	}
@@ -145,6 +153,105 @@ func stripHistoryImages(messages []provider.ChatMessage) []provider.ChatMessage 
 		}
 	}
 	return messages
+}
+
+// CompactMessagesForContext aggressively reduces history when the provider
+// reports a context-limit error. Returns the compacted messages and whether
+// anything was removed.
+func CompactMessagesForContext(messages []protocol.ChatMessage, attempt int, ratio int) ([]protocol.ChatMessage, bool) {
+	if len(messages) == 0 {
+		return messages, false
+	}
+
+	// Start with standard compaction.
+	out := CompactMessages(messages)
+
+	var minMessages, minBytes int
+	var factor int
+	if ratio > 0 && ratio < 100 {
+		// Use explicit ratio (e.g., 50 = 50% of max).
+		minMessages = MaxHistoryMessages * ratio / 100
+		minBytes = MaxHistoryBytes * ratio / 100
+		factor = 100 / ratio // for proportional tool truncation
+	} else {
+		// Scale limits by attempt: each retry doubles aggressiveness.
+		factor = 1 << (attempt + 1) // 2, 4, 8, ...
+		minMessages = MaxHistoryMessages / factor
+		minBytes = MaxHistoryBytes / factor
+	}
+	if minMessages < 4 {
+		minMessages = 4
+	}
+	if minBytes < 16<<10 {
+		minBytes = 16 << 10 // 16KB floor
+	}
+
+	// Drop oldest turns while exceeding scaled limits.
+	changed := false
+	for historyUTF8Size(out) > minBytes || len(out) > minMessages {
+		next := removeOldestTurn(out)
+		if len(next) >= len(out) {
+			break
+		}
+		out = next
+		changed = true
+		if len(out) == 0 {
+			break
+		}
+	}
+
+	out = stripHistoryImages(out)
+
+	// More aggressive tool-result truncation.
+	var toolLimit int
+	if ratio > 0 && ratio < 100 {
+		toolLimit = MaxProviderToolBytes * ratio / 100
+	} else {
+		truncateFactor := factor * 2
+		toolLimit = MaxProviderToolBytes / truncateFactor
+	}
+	if toolLimit < 4<<10 {
+		toolLimit = 4 << 10 // 4KB floor for tool results
+	}
+	for i, msg := range out {
+		if msg.Role == "tool" && len(msg.Content) > toolLimit {
+			out[i].Content = TruncateWithNotice(msg.Content, toolLimit)
+			changed = true
+		}
+	}
+
+	return out, changed
+}
+
+// CompactMessagesToRatio compacts history to a target percentage of the default
+// history limits. ratio is 1-99, where 50 means compact to 50% of MaxHistoryBytes.
+func CompactMessagesToRatio(messages []protocol.ChatMessage, ratio int) []protocol.ChatMessage {
+	if ratio <= 0 || ratio >= 100 {
+		return CompactMessages(messages)
+	}
+
+	out := CompactMessages(messages)
+	targetBytes := MaxHistoryBytes * ratio / 100
+	targetMessages := MaxHistoryMessages * ratio / 100
+	if targetMessages < 4 {
+		targetMessages = 4
+	}
+	if targetBytes < 16<<10 {
+		targetBytes = 16 << 10
+	}
+
+	for historyUTF8Size(out) > targetBytes || len(out) > targetMessages {
+		next := removeOldestTurn(out)
+		if len(next) >= len(out) {
+			break
+		}
+		out = next
+		if len(out) == 0 {
+			break
+		}
+	}
+
+	return stripHistoryImages(out)
 }
 
 // ToolResultMessage formats a tool result for provider follow-up messages.

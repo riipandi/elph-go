@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/riipandi/elph/internal/constants"
+	"github.com/riipandi/elph/internal/appconst"
 	"github.com/stretchr/testify/require"
 )
 
@@ -14,8 +14,8 @@ func TestSessionDefaults(t *testing.T) {
 
 	cfg, err := Load()
 	require.NoError(t, err)
-	require.Equal(t, constants.ModeBuild, cfg.AgentMode())
-	require.Equal(t, constants.ThinkingHigh, cfg.ThinkingLevel())
+	require.Equal(t, appconst.ModeBuild, cfg.AgentMode())
+	require.Equal(t, appconst.ThinkingHigh, cfg.ThinkingLevel())
 	require.Empty(t, cfg.ActiveProviderID())
 	require.Empty(t, cfg.ActiveModelID())
 }
@@ -36,22 +36,22 @@ func TestSetAgentModePersists(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
 
-	require.NoError(t, SetAgentMode(constants.ModePlan))
+	require.NoError(t, SetAgentMode(appconst.ModePlan))
 
 	cfg, err := Load()
 	require.NoError(t, err)
-	require.Equal(t, constants.ModePlan, cfg.AgentMode())
+	require.Equal(t, appconst.ModePlan, cfg.AgentMode())
 }
 
 func TestSetThinkingLevelPersists(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
 
-	require.NoError(t, SetThinkingLevel(constants.ThinkingLow))
+	require.NoError(t, SetThinkingLevel(appconst.ThinkingLow))
 
 	cfg, err := Load()
 	require.NoError(t, err)
-	require.Equal(t, constants.ThinkingLow, cfg.ThinkingLevel())
+	require.Equal(t, appconst.ThinkingLow, cfg.ThinkingLevel())
 }
 
 func TestSessionNormalizesInvalidValues(t *testing.T) {
@@ -67,8 +67,8 @@ func TestSessionNormalizesInvalidValues(t *testing.T) {
 
 	cfg, err := Load()
 	require.NoError(t, err)
-	require.Equal(t, constants.ModeBuild, cfg.AgentMode())
-	require.Equal(t, constants.ThinkingHigh, cfg.ThinkingLevel())
+	require.Equal(t, appconst.ModeBuild, cfg.AgentMode())
+	require.Equal(t, appconst.ThinkingHigh, cfg.ThinkingLevel())
 }
 
 func TestSessionRoundTripPreservesOtherFields(t *testing.T) {
@@ -82,8 +82,8 @@ func TestSessionRoundTripPreservesOtherFields(t *testing.T) {
 	}))
 
 	require.NoError(t, SetActiveModel("openai", "gpt-4o"))
-	require.NoError(t, SetAgentMode(constants.ModeAsk))
-	require.NoError(t, SetThinkingLevel(constants.ThinkingMedium))
+	require.NoError(t, SetAgentMode(appconst.ModeAsk))
+	require.NoError(t, SetThinkingLevel(appconst.ThinkingMedium))
 
 	cfg, err := Load()
 	require.NoError(t, err)
@@ -91,8 +91,8 @@ func TestSessionRoundTripPreservesOtherFields(t *testing.T) {
 	require.Equal(t, "6h", cfg.SyncInterval)
 	require.Equal(t, "openai", cfg.ActiveProviderID())
 	require.Equal(t, "gpt-4o", cfg.ActiveModelID())
-	require.Equal(t, constants.ModeAsk, cfg.AgentMode())
-	require.Equal(t, constants.ThinkingMedium, cfg.ThinkingLevel())
+	require.Equal(t, appconst.ModeAsk, cfg.AgentMode())
+	require.Equal(t, appconst.ThinkingMedium, cfg.ThinkingLevel())
 
 	raw, err := os.ReadFile(mustPath(t))
 	require.NoError(t, err)

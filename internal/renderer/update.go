@@ -2,35 +2,35 @@ package renderer
 
 import (
 	"fmt"
+	"github.com/riipandi/elph/internal/runtime/toolresult"
 	"strings"
 	"sync"
 	"time"
 
 	"charm.land/bubbles/v2/stopwatch"
 	tea "charm.land/bubbletea/v2"
-	"github.com/riipandi/elph/internal/constants"
-	"github.com/riipandi/elph/internal/runtime"
 	"github.com/riipandi/elph/internal/settings"
 	"github.com/riipandi/elph/internal/theme"
+	"github.com/riipandi/elph/internal/uiconst"
 	"github.com/riipandi/elph/pkg/core/agent"
 )
 
 // Pre-computed key-binding map for O(1) lookup on every keystroke.
 var (
-	keyActionMap   map[string]constants.KeyAction
+	keyActionMap   map[string]uiconst.KeyAction
 	initKeyMapOnce sync.Once
 )
 
 func initKeyMap() {
-	keyActionMap = make(map[string]constants.KeyAction, len(constants.DefaultKeyBindings))
-	for _, kb := range constants.DefaultKeyBindings {
+	keyActionMap = make(map[string]uiconst.KeyAction, len(uiconst.DefaultKeyBindings))
+	for _, kb := range uiconst.DefaultKeyBindings {
 		if _, exists := keyActionMap[kb.Key]; !exists {
 			keyActionMap[kb.Key] = kb.Action
 		}
 	}
 }
 
-func resolveKeyAction(msg tea.KeyPressMsg) constants.KeyAction {
+func resolveKeyAction(msg tea.KeyPressMsg) uiconst.KeyAction {
 	initKeyMapOnce.Do(initKeyMap)
 	if action, ok := keyActionMap[msg.String()]; ok {
 		return action
@@ -50,6 +50,8 @@ func (m Model) handleAgentTurnClosed() (Model, tea.Cmd) {
 		m.agent.Activity = agent.ActivityIdle
 		m.agent.SpinnerFrame = 0
 		m = m.stopActivityStopwatch()
+		// Accumulate tool call count across turns
+		m.toolCallCount += len(m.agent.TurnToolCalls)
 		m = m.syncLayout(true)
 	}
 	m.agent.Events = nil
@@ -84,7 +86,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if paste, ok := msg.(tea.PasteMsg); ok {
 		if m.pasteEditorActive() {
 			var cmd tea.Cmd
-			m.pasteEditor.input, cmd = m.pasteEditor.input.Update(paste)
+			m.pasteEditor.Input, cmd = m.pasteEditor.Input.Update(paste)
 			return m, cmd
 		}
 		if m.input.Focused() && !m.agent.Busy && !m.shell.Running {
@@ -335,7 +337,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		action := resolveKeyAction(msg)
 
 		switch action {
-		case constants.ActionQuit:
+		case uiconst.ActionQuit:
 			hasInput := m.input.Value() != ""
 
 			if m.ctrlCPress == 1 && (hasInput || len(m.pendingAttachments) > 0) {
@@ -360,7 +362,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return ctrlCResetMsg{}
 			}))
 
-		case constants.ActionExit:
+		case uiconst.ActionExit:
 			// Let ctrl+d pass through to textarea when editing text (delete
 			// character forward). Only exit when input is empty.
 			if m.input.Focused() && m.input.Value() != "" {
@@ -368,17 +370,17 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			m.quitting = true
 			return m, tea.Sequence(disableTerminalFeatures(), tea.Quit)
-		case constants.ActionSwitchMode:
+		case uiconst.ActionSwitchMode:
 			m.mode = nextMode(m.mode)
 			_ = settings.SetAgentMode(m.mode)
 			m, cmd := m.withMessage(fmt.Sprintf("Switched to %s mode", m.mode))
 			return m, cmd
 
-		case constants.ActionCycleThink:
+		case uiconst.ActionCycleThink:
 			m, cmd := m.cycleThinkingLevel()
 			return m, cmd
 
-		case constants.ActionCycleTheme:
+		case uiconst.ActionCycleTheme:
 			m.themePreference = theme.Next(m.themePreference)
 			_ = settings.SetTheme(m.themePreference)
 			m = m.applyResolvedTheme(theme.DetectTerminal())
@@ -387,7 +389,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m, cmd := m.withMessage(fmt.Sprintf("Theme: %s", m.themePreference))
 			return m, cmd
 
-		case constants.ActionSubmit:
+		case uiconst.ActionSubmit:
 			if isInputNewlineKey(msg) {
 				break
 			}
@@ -410,19 +412,19 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, cmd
 			}
 
-		case constants.ActionNewline:
+		case uiconst.ActionNewline:
 			if !m.input.Focused() {
 				break
 			}
 			m, cmd := m.handleInputNewlineMsg(msg)
 			return m, cmd
 
-		case constants.ActionCopy:
+		case uiconst.ActionCopy:
 			if idx := m.lastAIMessageIndex(); idx >= 0 {
 				return m.copyMessageAt(idx)
 			}
 
-		case constants.ActionOpenModelSelector:
+		case uiconst.ActionOpenModelSelector:
 			return m.triggerModelSelector()
 
 		}
@@ -461,7 +463,7 @@ func (m Model) addUserMessageAt(text string, at time.Time) Model {
 	}
 	m.messages = append(m.messages, message{
 		text:           text,
-		kind:           constants.MessageUser,
+		kind:           uiconst.MessageUser,
 		at:             at,
 		detailExpanded: false,
 	})
@@ -475,20 +477,20 @@ func (m Model) addDetailMessage(label, body string) Model {
 }
 
 func (m Model) addDetailMessageAt(label, body string, at time.Time) Model {
-	return m.addDetailMessageWithStatusAt(label, body, constants.DetailStatusNeutral, at)
+	return m.addDetailMessageWithStatusAt(label, body, uiconst.DetailStatusNeutral, at)
 }
 
-func (m Model) addDetailMessageWithStatus(label, body string, status constants.DetailStatus) Model {
+func (m Model) addDetailMessageWithStatus(label, body string, status uiconst.DetailStatus) Model {
 	return m.addDetailMessageWithStatusAt(label, body, status, time.Now())
 }
 
-func (m Model) addDetailMessageWithStatusAt(label, body string, status constants.DetailStatus, at time.Time) Model {
+func (m Model) addDetailMessageWithStatusAt(label, body string, status uiconst.DetailStatus, at time.Time) Model {
 	if at.IsZero() {
 		at = time.Now()
 	}
 	m.messages = append(m.messages, message{
 		text:         body,
-		kind:         constants.MessageDetail,
+		kind:         uiconst.MessageDetail,
 		detailLabel:  label,
 		detailStatus: status,
 		at:           at,
@@ -518,17 +520,17 @@ func (m Model) toggleLastDetailExpand() (Model, bool) {
 }
 
 func (m Model) addAIMessage(text string) Model {
-	m.messages = append(m.messages, message{text: text, kind: constants.MessageAI})
+	m.messages = append(m.messages, message{text: text, kind: uiconst.MessageAI})
 	m.session.AppendLog("ai", text)
 	m.layout.ContentDirty = true
 	return m
 }
 
 func (m Model) addToolDetailMessage(toolName, body string) Model {
-	return m.addToolDetailMessageWithStatus(toolName, body, constants.DetailStatusSuccess)
+	return m.addToolDetailMessageWithStatus(toolName, body, uiconst.DetailStatusSuccess)
 }
 
-func (m Model) addToolDetailMessageWithStatus(toolName, body string, status constants.DetailStatus) Model {
+func (m Model) addToolDetailMessageWithStatus(toolName, body string, status uiconst.DetailStatus) Model {
 	m = m.addDetailMessageWithStatusAt(toolName, body, status, time.Now())
 	idx := len(m.messages) - 1
 	m.messages[idx].detailExpanded = toolDetailExpandedByDefault(toolName, body)
@@ -536,8 +538,8 @@ func (m Model) addToolDetailMessageWithStatus(toolName, body string, status cons
 	return m
 }
 
-func (m Model) addToolDetailFromResult(toolName string, result runtime.ToolResult) Model {
-	body := runtime.FormatToolDetailBodyFromResult(result)
+func (m Model) addToolDetailFromResult(toolName string, result toolresult.ToolResult) Model {
+	body := toolresult.FormatToolDetailBodyFromResult(result)
 	return m.addToolDetailMessageWithStatus(toolName, body, toolDetailStatus(result))
 }
 
@@ -552,7 +554,7 @@ func (m Model) thinkingExpandedByDefault() bool {
 func (m Model) addThinkingMessage(text string) Model {
 	m.messages = append(m.messages, message{
 		text:           text,
-		kind:           constants.MessageThinking,
+		kind:           uiconst.MessageThinking,
 		detailLabel:    "Thinking",
 		detailExpanded: m.thinkingExpandedByDefault(),
 	})
@@ -561,7 +563,7 @@ func (m Model) addThinkingMessage(text string) Model {
 }
 
 func (m Model) withMessage(text string) (Model, tea.Cmd) {
-	m.messages = append(m.messages, message{text: text, kind: constants.MessageSystem})
+	m.messages = append(m.messages, message{text: text, kind: uiconst.MessageSystem})
 	m.session.AppendLog("system", text)
 	m.layout.ContentDirty = true
 	m = m.syncLayout(true)
@@ -569,7 +571,7 @@ func (m Model) withMessage(text string) (Model, tea.Cmd) {
 }
 
 func (m Model) replaceNotice(text string) (Model, tea.Cmd) {
-	newMsg := message{text: text, kind: constants.MessageSystem}
+	newMsg := message{text: text, kind: uiconst.MessageSystem}
 	if m.ctrlCNoticeID >= 0 && m.ctrlCNoticeID < len(m.messages) {
 		m.messages[m.ctrlCNoticeID] = newMsg
 	} else {

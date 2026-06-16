@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/riipandi/elph/internal/constants"
+	"github.com/riipandi/elph/internal/uiconst"
 	"github.com/stretchr/testify/require"
 )
 
@@ -17,7 +17,7 @@ func scrollableTestModel(t *testing.T) Model {
 	for i := range 30 {
 		m.messages = append(m.messages, message{
 			text: fmt.Sprintf("scroll test line %d", i),
-			kind: constants.MessageUser,
+			kind: uiconst.MessageUser,
 		})
 	}
 	m.layout.ContentDirty = true

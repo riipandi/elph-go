@@ -4,29 +4,29 @@ import (
 	"context"
 	"time"
 
-	"github.com/riipandi/elph/pkg/ai/provider"
+	"github.com/riipandi/elph/pkg/ai/protocol"
 )
 
 // ToolExecuteFunc runs one provider-native tool invocation.
 type ToolExecuteFunc func(ctx context.Context, name string, args map[string]any) ToolRunResult
 
 // ToolExecuteStreamFunc runs a tool and streams stdout/stderr chunks to onChunk.
-type ToolExecuteStreamFunc func(ctx context.Context, call provider.ToolCall, args map[string]any, onChunk func(string)) ToolRunResult
+type ToolExecuteStreamFunc func(ctx context.Context, call protocol.ToolCall, args map[string]any, onChunk func(string)) ToolRunResult
 
 // TurnOptions configures a single agent turn.
 type TurnOptions struct {
 	SystemPrompt           string
 	UserPrompt             string
 	Model                  string
-	Provider               provider.Provider
+	Provider               protocol.Provider
 	ShowThinking           bool
-	Thinking               provider.ThinkingConfig
-	Compat                 provider.Compat
+	Thinking               protocol.ThinkingConfig
+	Compat                 protocol.Compat
 	ToolsEnabled           bool
 	WorkDir                string
-	Messages               []provider.ChatMessage
-	UserImages             []provider.ImageAttachment
-	Tools                  []provider.ToolDefinition
+	Messages               []protocol.ChatMessage
+	UserImages             []protocol.ImageAttachment
+	Tools                  []protocol.ToolDefinition
 	ExecuteTool            ToolExecuteFunc
 	ExecuteToolStream      ToolExecuteStreamFunc
 	InteractTool           ToolInteractFunc
@@ -34,6 +34,10 @@ type TurnOptions struct {
 	LogProvider            TurnLogFunc   // optional provider/tool trace (requests log)
 	ProviderMaxRetries     int           // retriable failures to retry (0 = default)
 	ProviderDefaultTimeout time.Duration // provider inactivity limit (0 = default)
+	MaxToolIterations      int           // max autonomous tool rounds per turn (0 = default MaxToolIterationsDefault)
+	AutoCompactContext     bool          // compact conversation history on context-limit error and retry
+	RecordGoalTurn       func(tokens int) // optional: called after each tool round to record goal turn progress
+	AutoCompactLimit       int           // compaction target percentage (0 = use default 80)
 }
 
 // ProviderRetryConfig returns retry settings for upstream provider calls.
@@ -41,5 +45,7 @@ func (o TurnOptions) ProviderRetryConfig() ProviderRetryConfig {
 	return ProviderRetryConfig{
 		MaxRetries:         o.ProviderMaxRetries,
 		StreamStallTimeout: o.ProviderDefaultTimeout,
+		AutoCompactContext: o.AutoCompactContext,
+		AutoCompactLimit:   o.AutoCompactLimit,
 	}
 }

@@ -12,7 +12,9 @@ See [prompt-templates.md](./prompt-templates.md) for template format and argumen
 |-----------------------------|---------------|---------------------|-----------------------------------------------------------------------------------------|
 | `/help`                     | —             | **Implemented**     | List all slash commands                                                                 |
 | `/model`                    | —             | **Implemented**     | Open model selector (or filter by args)                                                 |
+| `/goal`                     | `/goals`      | **Implemented**     | Manage session goals: status, pause, resume, cancel, replace, next                      |
 | `/exit`                     | `/quit`, `/q` | **Implemented**     | Quit the application                                                                    |
+| `/compact`                  | `/c`          | **Implemented**     | Compact conversation history; optional percentage arg (e.g. `/compact 50`)              |
 | `/diagnostic:list-tools`    | —             | **Implemented**     | List agent and diagnostic tools in a collapsible detail box (expanded by default)       |
 | `/diagnostic:system-prompt` | —             | **Implemented**     | Show assembled system prompt in a collapsible detail box (collapsed by default)         |
 | `/diagnostic:open-log`      | —             | **Implemented**     | Tail session or requests log (`system`, `thinking`, `ai`, `requests`, `thinking_delta`) |
@@ -20,6 +22,21 @@ See [prompt-templates.md](./prompt-templates.md) for template format and argumen
 | `/settings`                 | `/config`     | **Not implemented** | Shows placeholder message                                                               |
 | `/diff`                     | —             | **Not implemented** | Shows placeholder message                                                               |
 | `/diagnostic:debug`         | —             | **Not implemented** | Shows placeholder message                                                               |
+
+### `/goal` subcommands
+
+| Subcommand                  | Description                                                          |
+|----------------------------|----------------------------------------------------------------------|
+| `/goal` or `/goal status`  | Display current goal with status, elapsed time, turn count, tokens   |
+| `/goal pause`              | Pause an active goal                                                 |
+| `/goal resume`             | Resume a paused or blocked goal                                      |
+| `/goal cancel`             | Remove the current goal                                              |
+| `/goal replace <objective>`| Replace the current goal with a new objective                        |
+| `/goal next <objective>`   | Queue an upcoming goal (starts immediately if no active goal)        |
+| `/goal <objective>`        | Create a new goal from the argument text                             |
+
+Inspired by [Kimi Code CLI](https://moonshotai.github.io/kimi-code/en/reference/slash-commands.html#autonomous-goal).
+
 
 ## Prompt templates
 

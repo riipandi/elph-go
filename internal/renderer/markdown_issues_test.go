@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/riipandi/elph/internal/constants"
+	"github.com/riipandi/elph/internal/uiconst"
 	"github.com/stretchr/testify/require"
 )
 
@@ -17,7 +17,7 @@ func TestInlineStylesComplete(t *testing.T) {
 	}
 	for name, md := range cases {
 		t.Run(name, func(t *testing.T) {
-			raw := m.renderMessage(message{text: md, kind: constants.MessageAI})
+			raw := m.renderMessage(message{text: md, kind: uiconst.MessageAI})
 			plain := stripANSI(raw)
 			require.NotContains(t, plain, "**")
 			require.NotContains(t, plain, "~~")
@@ -52,7 +52,7 @@ func TestBlockStructuresUseMarkdownRenderer(t *testing.T) {
 			case "nested_quote":
 				md = "> Outer quote\n> > Nested quote\n> Still outer"
 			}
-			plain := stripANSI(m.renderMessage(message{text: md, kind: constants.MessageAI}))
+			plain := stripANSI(m.renderMessage(message{text: md, kind: uiconst.MessageAI}))
 			for _, w := range wants {
 				require.Contains(t, plain, w)
 			}
@@ -68,7 +68,7 @@ func TestStreamingKeepsRawMarkdownUntilComplete(t *testing.T) {
 	m := testModel()
 	m.agent.Busy = true
 	m.agent.ResponseMsgID = 0
-	m.messages = []message{{text: "***live***", kind: constants.MessageAI}}
+	m.messages = []message{{text: "***live***", kind: uiconst.MessageAI}}
 	raw := m.renderMessageAt(0)
 	require.Contains(t, stripANSI(raw), "***live***")
 }

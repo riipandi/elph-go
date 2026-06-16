@@ -3,7 +3,7 @@ package renderer
 import (
 	"testing"
 
-	"github.com/riipandi/elph/internal/constants"
+	"github.com/riipandi/elph/internal/uiconst"
 	"github.com/riipandi/elph/pkg/core/agent"
 	"github.com/stretchr/testify/require"
 )
@@ -24,9 +24,9 @@ func TestToolInteractOfferShowsAskUserDialog(t *testing.T) {
 		},
 		RespCh: make(chan agent.ToolInteractResponse, 1),
 	}
-	bridge.inbox <- offer
+	bridge.Inbox <- offer
 
-	updated, _ := m.Update(toolInteractOfferMsg{offer: offer})
+	updated, _ := m.Update(toolInteractOfferMsg{Offer: offer})
 	m = updated.(Model)
 
 	require.True(t, m.toolInteractDialogActive())
@@ -47,7 +47,7 @@ func TestToolInteractOfferMsgReturnsWithoutFallingThrough(t *testing.T) {
 	m.height = 24
 	m.width = 100
 	m.ready = true
-	m.messages = []message{{text: "hi", kind: constants.MessageUser}}
+	m.messages = []message{{text: "hi", kind: uiconst.MessageUser}}
 
 	offer := toolInteractOffer{
 		Req: agent.ToolInteractRequest{
@@ -57,7 +57,7 @@ func TestToolInteractOfferMsgReturnsWithoutFallingThrough(t *testing.T) {
 		RespCh: make(chan agent.ToolInteractResponse, 1),
 	}
 
-	updated, cmd := m.Update(toolInteractOfferMsg{offer: offer})
+	updated, cmd := m.Update(toolInteractOfferMsg{Offer: offer})
 	m = updated.(Model)
 	require.True(t, m.toolInteractDialogActive())
 	require.NotNil(t, cmd)

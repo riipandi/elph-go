@@ -2,11 +2,11 @@ package renderer
 
 import (
 	tea "charm.land/bubbletea/v2"
-	"github.com/riipandi/elph/internal/constants"
+	"github.com/riipandi/elph/internal/uiconst"
 )
 
 func isToggleDetailKey(msg tea.KeyPressMsg) bool {
-	if resolveKeyAction(msg) == constants.ActionToggleDetail {
+	if resolveKeyAction(msg) == uiconst.ActionToggleDetail {
 		return true
 	}
 	return (msg.Code == 'o' || msg.Code == 0x0f) && msg.Mod.Contains(tea.ModCtrl)

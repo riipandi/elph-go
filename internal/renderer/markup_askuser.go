@@ -4,7 +4,7 @@ import (
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
-	"github.com/riipandi/elph/internal/constants"
+	"github.com/riipandi/elph/internal/appconst"
 	"github.com/riipandi/elph/pkg/core/agent"
 	"github.com/riipandi/elph/pkg/tools"
 )
@@ -20,7 +20,7 @@ func (m Model) tryQueueMarkupAskUser(call agent.ParsedToolCall) (Model, bool) {
 	if !ok {
 		return m, false
 	}
-	kind, needs := agent.ToolInteractKindFor(canonical, m.mode == constants.ModeBrave || m.agent.SessionAllowTools)
+	kind, needs := agent.ToolInteractKindFor(canonical, m.mode == appconst.ModeBrave || m.agent.SessionAllowTools)
 	if !needs || kind != agent.ToolInteractAskUser {
 		return m, false
 	}
@@ -52,7 +52,7 @@ func (m Model) handleMarkupAskUserCmd() (Model, tea.Cmd) {
 	if _, ok := m.lookupResolvedAskUser(req); ok {
 		return m, nil
 	}
-	return m.offerToolInteract(toolInteractOfferMsg{offer: toolInteractOffer{
+	return m.offerToolInteract(toolInteractOfferMsg{Offer: toolInteractOffer{
 		Req:        req,
 		FromMarkup: true,
 	}})
@@ -73,7 +73,7 @@ func (m Model) completeMarkupAskUser(req agent.ToolInteractRequest, resp agent.T
 	m = m.recordAskUserResolution(req, resp)
 	fields := parseAskUserArgs(req.Args)
 	var body strings.Builder
-	body.WriteString(fields.question)
+	body.WriteString(fields.Question)
 	switch {
 	case resp.Cancelled:
 		body.WriteString("\n\n(cancelled)")

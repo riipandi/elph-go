@@ -8,24 +8,24 @@ import (
 	"time"
 
 	"charm.land/lipgloss/v2"
-	"github.com/riipandi/elph/internal/constants"
+	"github.com/riipandi/elph/internal/uiconst"
 )
 
 var (
-	doctorTitleStyle   = lipgloss.NewStyle().Bold(true).Foreground(constants.PrimaryText)
-	doctorSectionStyle = lipgloss.NewStyle().Bold(true).Foreground(constants.BrightText)
-	doctorDetailStyle  = lipgloss.NewStyle().Foreground(constants.BrightText)
-	doctorDimStyle     = lipgloss.NewStyle().Foreground(constants.DimText)
-	doctorOkStyle      = lipgloss.NewStyle().Foreground(constants.Green).Bold(true)
-	doctorWarnStyle    = lipgloss.NewStyle().Foreground(constants.Yellow).Bold(true)
-	doctorFailStyle    = lipgloss.NewStyle().Foreground(constants.Red).Bold(true)
+	doctorTitleStyle   = lipgloss.NewStyle().Bold(true).Foreground(uiconst.PrimaryText)
+	doctorSectionStyle = lipgloss.NewStyle().Bold(true).Foreground(uiconst.BrightText)
+	doctorDetailStyle  = lipgloss.NewStyle().Foreground(uiconst.BrightText)
+	doctorDimStyle     = lipgloss.NewStyle().Foreground(uiconst.DimText)
+	doctorOkStyle      = lipgloss.NewStyle().Foreground(uiconst.Green).Bold(true)
+	doctorWarnStyle    = lipgloss.NewStyle().Foreground(uiconst.Yellow).Bold(true)
+	doctorFailStyle    = lipgloss.NewStyle().Foreground(uiconst.Red).Bold(true)
 	doctorBoxStyle     = lipgloss.NewStyle().
 				Border(lipgloss.RoundedBorder()).
-				BorderForeground(constants.DimText).
+				BorderForeground(uiconst.DimText).
 				Padding(1, 2)
-	doctorSummaryOkStyle   = lipgloss.NewStyle().Foreground(constants.Green)
-	doctorSummaryWarnStyle = lipgloss.NewStyle().Foreground(constants.Yellow)
-	doctorSummaryFailStyle = lipgloss.NewStyle().Foreground(constants.Red)
+	doctorSummaryOkStyle   = lipgloss.NewStyle().Foreground(uiconst.Green)
+	doctorSummaryWarnStyle = lipgloss.NewStyle().Foreground(uiconst.Yellow)
+	doctorSummaryFailStyle = lipgloss.NewStyle().Foreground(uiconst.Red)
 )
 
 func doctorStatusIcon(status doctorStatus) string {

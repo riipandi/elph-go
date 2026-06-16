@@ -5,7 +5,7 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/riipandi/elph/pkg/ai/provider"
+	"github.com/riipandi/elph/pkg/ai/protocol"
 	"github.com/riipandi/elph/pkg/ai/utils"
 )
 
@@ -18,7 +18,7 @@ func ProviderCancelError(err error) bool {
 	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 		return true
 	}
-	var pe *provider.ProviderError
+	var pe *protocol.ProviderError
 	if errors.As(err, &pe) && pe != nil {
 		if isStreamStallFailure(pe.Cause) || pe.Title == "stream stalled" {
 			return false

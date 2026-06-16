@@ -7,7 +7,7 @@ import (
 )
 
 func TestBuiltinCatalogMatchesDocs(t *testing.T) {
-	require.Len(t, All(), 15)
+	require.Len(t, All(), 19)
 
 	cases := []struct {
 		name                 string
@@ -16,11 +16,11 @@ func TestBuiltinCatalogMatchesDocs(t *testing.T) {
 		description          string
 		requiresConfirmation bool
 	}{
-		{Read, CategoryFile, ApprovalAutoAllow, "Read a text file's contents", false},
-		{Write, CategoryFile, ApprovalRequiresApproval, "Create or overwrite a file", false},
-		{Edit, CategoryFile, ApprovalRequiresApproval, "Precise string replacement", false},
+		{Read, CategoryFile, ApprovalAutoAllow, "Read a text file. Fails on directories — use Glob first to find files inside a directory", false},
+		{Write, CategoryFile, ApprovalRequiresApproval, "Create or overwrite a file. Fails if the path is an existing directory", false},
+		{Edit, CategoryFile, ApprovalRequiresApproval, "Edit a file using string replacement. Fails on directories — only use on existing files", false},
 		{Grep, CategoryFile, ApprovalAutoAllow, "ripgrep powered full-text search", false},
-		{Glob, CategoryFile, ApprovalAutoAllow, "Find files by glob pattern", false},
+		{Glob, CategoryFile, ApprovalAutoAllow, "Find files and list directory contents by glob pattern. Use pattern 'dir/**' to recursively list all files in a directory. Often used before Read to explore unknown paths", false},
 		{ReadMediaFile, CategoryFile, ApprovalAutoAllow, "Read an image or video file", false},
 		{Bash, CategoryShell, ApprovalRequiresApproval, "Execute a shell command", false},
 		{FetchURL, CategoryWeb, ApprovalAutoAllow, "Fetch the content of a specified URL", false},
@@ -31,6 +31,10 @@ func TestBuiltinCatalogMatchesDocs(t *testing.T) {
 		{TodoList, CategoryStateManagement, ApprovalAutoAllow, "Manage a task to-do list", false},
 		{AskUser, CategoryCollaboration, ApprovalAutoAllow, "Ask the user a question with optional suggested choices and free-text fallback", false},
 		{Skill, CategoryCollaboration, ApprovalAutoAllow, "Invoke a registered inline Skill", false},
+		{CreateGoal, CategoryGoal, ApprovalAutoAllow, "Create a new goal with a verifiable objective", false},
+		{GetGoal, CategoryGoal, ApprovalAutoAllow, "Get the current goal status and usage", false},
+		{UpdateGoal, CategoryGoal, ApprovalAutoAllow, "Update the goal lifecycle status (active, complete, paused, blocked)", false},
+		{SetGoalBudget, CategoryGoal, ApprovalAutoAllow, "Set a token, turn, or time budget for the current goal", false},
 	}
 
 	for _, tc := range cases {
@@ -42,7 +46,6 @@ func TestBuiltinCatalogMatchesDocs(t *testing.T) {
 		require.Equal(t, tc.requiresConfirmation, def.RequiresConfirmation, "confirmation for %q", tc.name)
 	}
 }
-
 func TestByCategory(t *testing.T) {
 	require.Len(t, ByCategory(CategoryFile), 6)
 	require.Len(t, ByCategory(CategoryShell), 1)
@@ -50,6 +53,7 @@ func TestByCategory(t *testing.T) {
 	require.Len(t, ByCategory(CategoryPlanMode), 2)
 	require.Len(t, ByCategory(CategoryStateManagement), 1)
 	require.Len(t, ByCategory(CategoryCollaboration), 2)
+	require.Len(t, ByCategory(CategoryGoal), 4)
 }
 
 func TestRequiresApproval(t *testing.T) {
@@ -74,5 +78,6 @@ func TestNamesPreservesCatalogOrder(t *testing.T) {
 		EnterPlanMode, ExitPlanMode,
 		TodoList,
 		AskUser, Skill,
+		CreateGoal, GetGoal, UpdateGoal, SetGoalBudget,
 	}, Names())
 }

@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"charm.land/lipgloss/v2"
-	"github.com/riipandi/elph/internal/constants"
+	"github.com/riipandi/elph/internal/uiconst"
 	"github.com/riipandi/elph/pkg/ai/provider"
 )
 
@@ -16,11 +16,11 @@ const (
 )
 
 var (
-	progressDimStyle    = lipgloss.NewStyle().Foreground(constants.DimText)
-	progressMutedStyle  = lipgloss.NewStyle().Foreground(constants.DimText)
-	progressActiveStyle = lipgloss.NewStyle().Foreground(constants.BrightText)
-	progressOkStyle     = lipgloss.NewStyle().Foreground(constants.Green)
-	progressSkipStyle   = lipgloss.NewStyle().Foreground(constants.Gray)
+	progressDimStyle    = lipgloss.NewStyle().Foreground(uiconst.DimText)
+	progressMutedStyle  = lipgloss.NewStyle().Foreground(uiconst.DimText)
+	progressActiveStyle = lipgloss.NewStyle().Foreground(uiconst.BrightText)
+	progressOkStyle     = lipgloss.NewStyle().Foreground(uiconst.Green)
+	progressSkipStyle   = lipgloss.NewStyle().Foreground(uiconst.Gray)
 )
 
 func formatCompactElapsed(d time.Duration) string {

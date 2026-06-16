@@ -3,7 +3,7 @@ package agent
 import (
 	"context"
 
-	"github.com/riipandi/elph/pkg/ai/provider"
+	"github.com/riipandi/elph/pkg/ai/protocol"
 	"github.com/riipandi/elph/pkg/tools"
 )
 
@@ -18,7 +18,7 @@ const (
 // ToolInteractRequest asks the host (TUI) to collect user input or approval.
 type ToolInteractRequest struct {
 	Kind     ToolInteractKind
-	ToolCall provider.ToolCall
+	ToolCall protocol.ToolCall
 	Name     string
 	Args     map[string]any
 }

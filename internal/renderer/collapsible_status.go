@@ -3,7 +3,7 @@ package renderer
 import (
 	"strings"
 
-	"github.com/riipandi/elph/internal/constants"
+	"github.com/riipandi/elph/internal/uiconst"
 )
 
 func (m Model) thinkingInFlight(index int) bool {
@@ -11,7 +11,7 @@ func (m Model) thinkingInFlight(index int) bool {
 }
 
 func (m Model) thinkingShowsLiveBody(msg message, index int) bool {
-	if msg.kind != constants.MessageThinking {
+	if msg.kind != uiconst.MessageThinking {
 		return false
 	}
 	if !msg.detailExpanded {
@@ -26,22 +26,22 @@ func (m Model) thinkingShowsLiveBody(msg message, index int) bool {
 
 func (m Model) collapsibleShowsStatusPreview(msg message, index int) bool {
 	switch msg.kind {
-	case constants.MessageThinking:
+	case uiconst.MessageThinking:
 		if strings.TrimSpace(msg.text) != "" {
 			return false
 		}
 		return m.thinkingInFlight(index)
-	case constants.MessageDetail:
-		if msg.detailStatus == constants.DetailStatusRunning && isRunningDetailPlaceholder(msg.text) {
+	case uiconst.MessageDetail:
+		if msg.detailStatus == uiconst.DetailStatusRunning && isRunningDetailPlaceholder(msg.text) {
 			return true
 		}
 		if msg.detailExpanded {
 			return false
 		}
 		switch msg.detailStatus {
-		case constants.DetailStatusRunning:
+		case uiconst.DetailStatusRunning:
 			return true
-		case constants.DetailStatusError, constants.DetailStatusWarning, constants.DetailStatusUnavailable:
+		case uiconst.DetailStatusError, uiconst.DetailStatusWarning, uiconst.DetailStatusUnavailable:
 			return true
 		default:
 			return false
@@ -69,7 +69,7 @@ func (m Model) nativeToolOutputStreaming(index int) bool {
 		return false
 	}
 	msg := m.messages[index]
-	if msg.kind != constants.MessageDetail || msg.detailStatus != constants.DetailStatusRunning {
+	if msg.kind != uiconst.MessageDetail || msg.detailStatus != uiconst.DetailStatusRunning {
 		return false
 	}
 	return !isRunningDetailPlaceholder(msg.text)

@@ -31,11 +31,13 @@ func IsExecutable(name string) bool {
 	switch def.Name {
 	case catalog.Read, catalog.Write, catalog.Edit, catalog.Grep, catalog.Glob,
 		catalog.ReadMediaFile, catalog.Bash, catalog.FetchURL, catalog.WebSearch,
-		catalog.CodeSearch, catalog.AskUser, catalog.Skill, catalog.TodoList:
+		catalog.CodeSearch, catalog.AskUser, catalog.Skill, catalog.TodoList,
+		catalog.CreateGoal, catalog.GetGoal, catalog.UpdateGoal, catalog.SetGoalBudget:
 		return true
 	default:
 		return false
 	}
+
 }
 
 func titleCaseToolName(name string) string {

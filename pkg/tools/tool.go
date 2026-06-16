@@ -12,7 +12,7 @@
 package tools
 
 import (
-	"github.com/riipandi/elph/pkg/ai/provider"
+	"github.com/riipandi/elph/pkg/ai/protocol"
 	"github.com/riipandi/elph/pkg/tools/catalog"
 	"github.com/riipandi/elph/pkg/tools/exposure"
 	"github.com/riipandi/elph/pkg/tools/schema"
@@ -31,6 +31,7 @@ const (
 	CategoryPlanMode        = catalog.CategoryPlanMode
 	CategoryStateManagement = catalog.CategoryStateManagement
 	CategoryCollaboration   = catalog.CategoryCollaboration
+	CategoryGoal           = catalog.CategoryGoal
 
 	ApprovalAutoAllow        = catalog.ApprovalAutoAllow
 	ApprovalRequiresApproval = catalog.ApprovalRequiresApproval
@@ -51,6 +52,10 @@ const (
 	AskUser       = catalog.AskUser
 	Skill         = catalog.Skill
 	TodoList      = catalog.TodoList
+	CreateGoal    = catalog.CreateGoal
+	GetGoal       = catalog.GetGoal
+	UpdateGoal    = catalog.UpdateGoal
+	SetGoalBudget = catalog.SetGoalBudget
 )
 
 func Get(name string) (Definition, bool)                    { return catalog.Get(name) }
@@ -61,7 +66,7 @@ func RequiresApproval(name string) bool                     { return catalog.Req
 func ResolveName(raw string) (canonical string, known bool) { return exposure.ResolveName(raw) }
 func IsExecutable(name string) bool                         { return exposure.IsExecutable(name) }
 func IsProviderExposed(name string) bool                    { return schema.IsProviderExposed(name) }
-func ProviderDefinitions() []provider.ToolDefinition        { return schema.ProviderDefinitions() }
-func FilterProviderTools(tools []provider.ToolDefinition) []provider.ToolDefinition {
+func ProviderDefinitions() []protocol.ToolDefinition        { return schema.ProviderDefinitions() }
+func FilterProviderTools(tools []protocol.ToolDefinition) []protocol.ToolDefinition {
 	return schema.FilterProviderTools(tools)
 }

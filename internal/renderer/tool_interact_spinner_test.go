@@ -64,7 +64,7 @@ func TestOfferToolInteractStartsSpinner(t *testing.T) {
 		RespCh: make(chan agent.ToolInteractResponse, 1),
 	}
 
-	m, cmd := m.offerToolInteract(toolInteractOfferMsg{offer: offer})
+	m, cmd := m.offerToolInteract(toolInteractOfferMsg{Offer: offer})
 	require.True(t, m.toolInteractDialogActive())
 	require.NotNil(t, cmd)
 

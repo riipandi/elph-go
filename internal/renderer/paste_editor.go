@@ -1,41 +1,13 @@
 package renderer
 
 import (
-	"strings"
-
-	"charm.land/bubbles/v2/textarea"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	"github.com/riipandi/elph/internal/inputui"
 )
-
-type pasteEditorState struct {
-	Active           bool
-	PasteID          int
-	input            textarea.Model
-	savedInputLine   int
-	savedInputColumn int
-}
 
 func (m Model) pasteEditorActive() bool {
 	return m.pasteEditor.Active
-}
-
-func newPasteEditor(text string, width, maxHeight int) textarea.Model {
-	ta := textarea.New()
-	ta.SetValue(text)
-	ta.Prompt = ""
-	ta.Placeholder = ""
-	ta.ShowLineNumbers = false
-	ta.CharLimit = 0
-	ta.SetStyles(noBgStyles())
-	ta.KeyMap.InsertNewline.SetKeys("ctrl+j", "shift+enter")
-	configureInputKeyMap(&ta)
-	ta.SetWidth(max(width, 1))
-	lines := pasteLineCount(text)
-	h := min(max(lines, 1), max(maxHeight, 1))
-	ta.SetHeight(h)
-	ta.Focus()
-	return ta
 }
 
 func (m Model) pasteEditorHeight() int {
@@ -56,7 +28,7 @@ func (m Model) pasteEditorView() string {
 	border := cachedInputBorder(m.mode)
 	boxW := borderedChromeWidth(m.chromeOuterWidth())
 	header := dimStyle.Render("Pasted content — ctrl+o or Esc to save")
-	body := m.pasteEditor.input.View()
+	body := m.pasteEditor.Input.View()
 	inner := lipgloss.JoinVertical(lipgloss.Top, header, body)
 	return border.Width(boxW).Render(inner)
 }
@@ -71,9 +43,9 @@ func (m Model) openPasteEditor(id int) Model {
 	m.pasteEditor = pasteEditorState{
 		Active:           true,
 		PasteID:          id,
-		input:            newPasteEditor(text, m.layout.InputWidth, maxH),
-		savedInputLine:   m.input.Line(),
-		savedInputColumn: m.input.Column(),
+		Input:            inputui.NewPasteEditor(text, m.layout.InputWidth, maxH, noBgStyles),
+		SavedInputLine:   m.input.Line(),
+		SavedInputColumn: m.input.Column(),
 	}
 	return m
 }
@@ -83,10 +55,10 @@ func (m Model) closePasteEditor(save bool) Model {
 		return m
 	}
 	id := m.pasteEditor.PasteID
-	savedLine := m.pasteEditor.savedInputLine
-	savedCol := m.pasteEditor.savedInputColumn
+	savedLine := m.pasteEditor.SavedInputLine
+	savedCol := m.pasteEditor.SavedInputColumn
 	if save {
-		text := m.pasteEditor.input.Value()
+		text := m.pasteEditor.Input.Value()
 		m.inputPastes[id] = text
 		m = m.replacePasteToken(id, text)
 	}
@@ -112,9 +84,9 @@ func (m Model) preparePasteEditorHeightForNewline() Model {
 		return m
 	}
 	maxH := min(m.maxInputHeight(), maxInputLines)
-	nextH := min(max(m.pasteEditor.input.LineCount()+1, 1), maxH)
-	if m.pasteEditor.input.Height() < nextH {
-		m.pasteEditor.input.SetHeight(nextH)
+	nextH := min(max(m.pasteEditor.Input.LineCount()+1, 1), maxH)
+	if m.pasteEditor.Input.Height() < nextH {
+		m.pasteEditor.Input.SetHeight(nextH)
 	}
 	return m
 }
@@ -129,12 +101,12 @@ func (m Model) handlePasteEditorNewlineMsg(msg tea.Msg) (Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyPressMsg:
 		if isLiteralNewlineKeyMsg(msg) {
-			m.pasteEditor.input, cmd = m.pasteEditor.input.Update(msg)
+			m.pasteEditor.Input, cmd = m.pasteEditor.Input.Update(msg)
 		} else {
-			m.pasteEditor.input, cmd = m.pasteEditor.input.Update(ctrlJ)
+			m.pasteEditor.Input, cmd = m.pasteEditor.Input.Update(ctrlJ)
 		}
 	default:
-		m.pasteEditor.input, cmd = m.pasteEditor.input.Update(ctrlJ)
+		m.pasteEditor.Input, cmd = m.pasteEditor.Input.Update(ctrlJ)
 	}
 	if chromeH := m.chromeHeight(); chromeH != m.layout.ChromeH {
 		m = m.syncLayout(m.content.AtBottom())
@@ -158,7 +130,7 @@ func (m Model) handlePasteEditorKey(key tea.KeyPressMsg) (Model, tea.Cmd, bool) 
 		return m.closePasteEditor(true), nil, true
 	}
 	var cmd tea.Cmd
-	m.pasteEditor.input, cmd = m.pasteEditor.input.Update(key)
+	m.pasteEditor.Input, cmd = m.pasteEditor.Input.Update(key)
 	return m, cmd, true
 }
 
@@ -183,14 +155,5 @@ func (m Model) pasteEditorInputRows() int {
 	if !m.pasteEditorActive() {
 		return 0
 	}
-	val := m.pasteEditor.input.Value()
-	if val == "" {
-		return 1
-	}
-	w := max(m.layout.InputWidth, 1)
-	rows := 0
-	for _, line := range strings.Split(val, "\n") {
-		rows += wrappedInputRows(line, w)
-	}
-	return max(rows, 1)
+	return inputui.PasteEditorRows(m.pasteEditor.Input.Value(), m.layout.InputWidth)
 }

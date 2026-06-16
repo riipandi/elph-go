@@ -2,6 +2,7 @@ package renderer
 
 import (
 	tea "charm.land/bubbletea/v2"
+	"github.com/riipandi/elph/internal/rendermd"
 	"github.com/riipandi/elph/internal/theme"
 )
 
@@ -20,6 +21,6 @@ func (m Model) invalidateThemeCaches() Model {
 	for i := range m.messages {
 		m.messages[i].renderCache = messageRenderCache{}
 	}
-	resetMarkdownCache()
+	rendermd.ResetCache()
 	return m.clearStreamPrefixCache()
 }

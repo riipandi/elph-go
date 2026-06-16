@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/riipandi/elph/internal/constants"
+	"github.com/riipandi/elph/internal/uiconst"
 	"github.com/stretchr/testify/require"
 )
 
@@ -89,7 +89,7 @@ func plainContainsCollapsed(plain, want string) bool {
 
 func TestComprehensiveMarkdownRenders(t *testing.T) {
 	m := testModel()
-	raw := m.renderMessage(message{text: comprehensiveMarkdown, kind: constants.MessageAI})
+	raw := m.renderMessage(message{text: comprehensiveMarkdown, kind: uiconst.MessageAI})
 	plain := stripANSI(raw)
 
 	checks := []string{
@@ -122,7 +122,7 @@ func TestComprehensiveMarkdownDebugOutput(t *testing.T) {
 		t.Skip("debug output")
 	}
 	m := testModel()
-	plain := stripANSI(m.renderMessage(message{text: comprehensiveMarkdown, kind: constants.MessageAI}))
+	plain := stripANSI(m.renderMessage(message{text: comprehensiveMarkdown, kind: uiconst.MessageAI}))
 	t.Logf("\n%s\n", plain)
 	_ = strings.TrimSpace(plain)
 }

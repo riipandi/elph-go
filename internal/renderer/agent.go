@@ -7,13 +7,15 @@ import (
 
 	"charm.land/bubbles/v2/stopwatch"
 	tea "charm.land/bubbletea/v2"
-	"github.com/riipandi/elph/internal/constants"
+	"github.com/riipandi/elph/internal/appconst"
+	"github.com/riipandi/elph/internal/rendermd"
 	"github.com/riipandi/elph/internal/settings"
+	"github.com/riipandi/elph/internal/uiconst"
 	"github.com/riipandi/elph/pkg/ai/provider"
 	"github.com/riipandi/elph/pkg/core/agent"
 )
 
-const spinnerInterval = 80 * time.Millisecond
+const spinnerInterval = 200 * time.Millisecond
 
 var spinnerFrames = []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
 
@@ -58,7 +60,7 @@ func (m Model) showThinkingEnabled() bool {
 }
 
 func (m Model) thinkingTurnEnabled() bool {
-	return m.showThinkingEnabled() && m.thinkingLevel != constants.ThinkingOff
+	return m.showThinkingEnabled() && m.thinkingLevel != appconst.ThinkingOff
 }
 
 func (m Model) buildTurnOptions(prompt string, images []provider.ImageAttachment, bridge *toolInteractBridge) agent.TurnOptions {
@@ -70,11 +72,14 @@ func (m Model) buildTurnOptions(prompt string, images []provider.ImageAttachment
 		Model:            m.session.ModelID,
 		Provider:         m.session.Provider,
 		ShowThinking:     showThinking,
-		SkipToolApproval: m.mode == constants.ModeBrave || m.agent.SessionAllowTools,
+		SkipToolApproval: m.mode == appconst.ModeBrave || m.agent.SessionAllowTools,
 	}
 	if prefErr == nil {
 		opts.ProviderMaxRetries = prefs.ProviderMaxRetries()
 		opts.ProviderDefaultTimeout = prefs.ProviderDefaultTimeout()
+		opts.MaxToolIterations = prefs.ToolRoundsLimit()
+		opts.AutoCompactContext = prefs.AutoCompactContextEnabled()
+		opts.AutoCompactLimit = prefs.CompactLimit()
 	}
 	if bridge != nil {
 		opts.InteractTool = bridge.Interact
@@ -109,7 +114,7 @@ func (m Model) agentTurnCmds(prompt string, images []provider.ImageAttachment) (
 	ctx, cancel := context.WithCancel(context.Background())
 	m.agent.Cancel = cancel
 	bridge := newToolInteractBridge()
-	bridge.resolvedAskUsers = m.ensureResolvedAskUsers()
+	bridge.ResolvedAskUsers = m.ensureResolvedAskUsers()
 	m.agent.ToolInteractBridge = bridge
 	if m.thinkingTurnEnabled() && m.agent.ThinkingMsgID < 0 {
 		m = m.addThinkingMessage("")
@@ -306,7 +311,7 @@ func (m Model) finishAgentTurn(thinking, response string, providerErr error) (Mo
 	m.agent.ResponseMsgID = -1
 	m.layout.StreamFlushPending = false
 	m = m.clearStreamPrefixCache()
-	resetMarkdownCache()
+	rendermd.ResetCache()
 	m.layout.ContentDirty = true
 	m = m.syncLayout(true)
 
@@ -370,7 +375,7 @@ func (m Model) appendAgentResponseDelta(delta string) Model {
 	}
 
 	if m.agent.ResponseMsgID < 0 {
-		m.messages = append(m.messages, message{text: safe, kind: constants.MessageAI})
+		m.messages = append(m.messages, message{text: safe, kind: uiconst.MessageAI})
 		m.agent.ResponseMsgID = len(m.messages) - 1
 		m.layout.ContentDirty = true
 	} else {

@@ -3,7 +3,7 @@ package provider
 import (
 	"testing"
 
-	"github.com/riipandi/elph/internal/constants"
+	"github.com/riipandi/elph/pkg/ai/protocol"
 	"github.com/stretchr/testify/require"
 )
 
@@ -21,8 +21,8 @@ func TestTrimCatalogForRuntimeSlimsInactiveModels(t *testing.T) {
 				Enabled:    true,
 				Name:       "GPT-4o",
 				ProviderID: "openai",
-				ThinkingLevelMap: map[constants.ThinkingLevel]ThinkingMapValue{
-					constants.ThinkingHigh: {},
+				ThinkingLevelMap: map[protocol.ThinkingLevel]ThinkingMapValue{
+					protocol.ThinkingHigh: {},
 				},
 				Headers: map[string]string{"x-test": "1"},
 			},

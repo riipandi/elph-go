@@ -3,7 +3,7 @@ package renderer
 import (
 	"testing"
 
-	"github.com/riipandi/elph/internal/constants"
+	"github.com/riipandi/elph/internal/appconst"
 	"github.com/riipandi/elph/pkg/core/agent"
 	"github.com/stretchr/testify/require"
 )
@@ -35,10 +35,10 @@ func TestSessionAllowPersistsAcrossTurns(t *testing.T) {
 		AllowSession: true,
 	})
 	require.True(t, m.agent.SessionAllowTools)
-	require.True(t, bridge.skipSessionApproval)
+	require.True(t, bridge.SkipSessionApproval)
 	require.True(t, (<-respCh).AllowSession)
 
 	opts := m.buildTurnOptions("next", nil, newToolInteractBridge())
 	require.True(t, opts.SkipToolApproval)
-	require.Equal(t, constants.ModeBuild, m.mode)
+	require.Equal(t, appconst.ModeBuild, m.mode)
 }

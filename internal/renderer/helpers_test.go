@@ -8,22 +8,22 @@ import (
 
 	"charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
-	"github.com/riipandi/elph/internal/constants"
+	"github.com/riipandi/elph/internal/appconst"
 	"github.com/stretchr/testify/require"
 )
 
 func TestNextAndPrevMode(t *testing.T) {
-	require.Equal(t, constants.ModePlan, nextMode(constants.ModeBuild))
-	require.Equal(t, constants.ModeAsk, nextMode(constants.ModePlan))
-	require.Equal(t, constants.ModeBrave, nextMode(constants.ModeAsk))
-	require.Equal(t, constants.ModeBuild, nextMode(constants.ModeBrave))
-	require.Equal(t, constants.ModeBuild, nextMode("unknown"))
+	require.Equal(t, appconst.ModePlan, nextMode(appconst.ModeBuild))
+	require.Equal(t, appconst.ModeAsk, nextMode(appconst.ModePlan))
+	require.Equal(t, appconst.ModeBrave, nextMode(appconst.ModeAsk))
+	require.Equal(t, appconst.ModeBuild, nextMode(appconst.ModeBrave))
+	require.Equal(t, appconst.ModeBuild, nextMode("unknown"))
 
-	require.Equal(t, constants.ModeBrave, prevMode(constants.ModeBuild))
-	require.Equal(t, constants.ModeBuild, prevMode(constants.ModePlan))
-	require.Equal(t, constants.ModePlan, prevMode(constants.ModeAsk))
-	require.Equal(t, constants.ModeAsk, prevMode(constants.ModeBrave))
-	require.Equal(t, constants.ModeBrave, prevMode("unknown"))
+	require.Equal(t, appconst.ModeBrave, prevMode(appconst.ModeBuild))
+	require.Equal(t, appconst.ModeBuild, prevMode(appconst.ModePlan))
+	require.Equal(t, appconst.ModePlan, prevMode(appconst.ModeAsk))
+	require.Equal(t, appconst.ModeAsk, prevMode(appconst.ModeBrave))
+	require.Equal(t, appconst.ModeBrave, prevMode("unknown"))
 }
 
 func TestInitReturnsCommands(t *testing.T) {

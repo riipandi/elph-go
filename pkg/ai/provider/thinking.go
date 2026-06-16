@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/riipandi/elph/internal/constants"
+	"github.com/riipandi/elph/pkg/ai/protocol"
 )
 
 // ThinkingMapState describes a per-level entry in thinkingLevelMap.
@@ -23,29 +23,29 @@ type ThinkingMapValue struct {
 	Value string
 }
 
-var defaultThinkingBudgets = map[constants.ThinkingLevel]int{
-	constants.ThinkingMinimal: 1024,
-	constants.ThinkingLow:     4096,
-	constants.ThinkingMedium:  10240,
-	constants.ThinkingHigh:    32768,
-	constants.ThinkingXHigh:   65536,
+var defaultThinkingBudgets = map[protocol.ThinkingLevel]int{
+	protocol.ThinkingMinimal: 1024,
+	protocol.ThinkingLow:     4096,
+	protocol.ThinkingMedium:  10240,
+	protocol.ThinkingHigh:    32768,
+	protocol.ThinkingXHigh:   65536,
 }
 
-var thinkingLevelOrder = []constants.ThinkingLevel{
-	constants.ThinkingOff,
-	constants.ThinkingMinimal,
-	constants.ThinkingLow,
-	constants.ThinkingMedium,
-	constants.ThinkingHigh,
-	constants.ThinkingXHigh,
+var thinkingLevelOrder = []protocol.ThinkingLevel{
+	protocol.ThinkingOff,
+	protocol.ThinkingMinimal,
+	protocol.ThinkingLow,
+	protocol.ThinkingMedium,
+	protocol.ThinkingHigh,
+	protocol.ThinkingXHigh,
 }
 
 // ParseThinkingLevelMap decodes Pi-style tristate thinkingLevelMap values.
-func ParseThinkingLevelMap(raw map[string]json.RawMessage) map[constants.ThinkingLevel]ThinkingMapValue {
+func ParseThinkingLevelMap(raw map[string]json.RawMessage) map[protocol.ThinkingLevel]ThinkingMapValue {
 	if len(raw) == 0 {
 		return nil
 	}
-	out := make(map[constants.ThinkingLevel]ThinkingMapValue, len(raw))
+	out := make(map[protocol.ThinkingLevel]ThinkingMapValue, len(raw))
 	for key, value := range raw {
 		level, ok := parseThinkingLevelKey(key)
 		if !ok {
@@ -56,20 +56,20 @@ func ParseThinkingLevelMap(raw map[string]json.RawMessage) map[constants.Thinkin
 	return out
 }
 
-func parseThinkingLevelKey(key string) (constants.ThinkingLevel, bool) {
+func parseThinkingLevelKey(key string) (protocol.ThinkingLevel, bool) {
 	switch strings.TrimSpace(key) {
-	case string(constants.ThinkingOff):
-		return constants.ThinkingOff, true
-	case string(constants.ThinkingMinimal):
-		return constants.ThinkingMinimal, true
-	case string(constants.ThinkingLow):
-		return constants.ThinkingLow, true
-	case string(constants.ThinkingMedium):
-		return constants.ThinkingMedium, true
-	case string(constants.ThinkingHigh):
-		return constants.ThinkingHigh, true
-	case string(constants.ThinkingXHigh):
-		return constants.ThinkingXHigh, true
+	case string(protocol.ThinkingOff):
+		return protocol.ThinkingOff, true
+	case string(protocol.ThinkingMinimal):
+		return protocol.ThinkingMinimal, true
+	case string(protocol.ThinkingLow):
+		return protocol.ThinkingLow, true
+	case string(protocol.ThinkingMedium):
+		return protocol.ThinkingMedium, true
+	case string(protocol.ThinkingHigh):
+		return protocol.ThinkingHigh, true
+	case string(protocol.ThinkingXHigh):
+		return protocol.ThinkingXHigh, true
 	default:
 		return "", false
 	}
@@ -90,8 +90,8 @@ func parseThinkingLevelMapEntry(raw json.RawMessage) ThinkingMapValue {
 }
 
 // IsThinkingLevelSupported reports whether level is available for model.
-func IsThinkingLevelSupported(level constants.ThinkingLevel, model ResolvedModel) bool {
-	if !model.Reasoning && level != constants.ThinkingOff {
+func IsThinkingLevelSupported(level protocol.ThinkingLevel, model ResolvedModel) bool {
+	if !model.Reasoning && level != protocol.ThinkingOff {
 		return false
 	}
 	if entry, ok := model.ThinkingLevelMap[level]; ok && entry.State == ThinkingMapUnsupported {
@@ -101,7 +101,7 @@ func IsThinkingLevelSupported(level constants.ThinkingLevel, model ResolvedModel
 }
 
 // ClampThinkingLevel returns the nearest supported thinking level for the model.
-func ClampThinkingLevel(level constants.ThinkingLevel, model ResolvedModel) constants.ThinkingLevel {
+func ClampThinkingLevel(level protocol.ThinkingLevel, model ResolvedModel) protocol.ThinkingLevel {
 	if IsThinkingLevelSupported(level, model) {
 		return level
 	}
@@ -118,14 +118,14 @@ func ClampThinkingLevel(level constants.ThinkingLevel, model ResolvedModel) cons
 			return candidate
 		}
 	}
-	return constants.ThinkingOff
+	return protocol.ThinkingOff
 }
 
 // NextSupportedThinkingLevel cycles forward, skipping unsupported levels.
-func NextSupportedThinkingLevel(current constants.ThinkingLevel, model ResolvedModel) constants.ThinkingLevel {
+func NextSupportedThinkingLevel(current protocol.ThinkingLevel, model ResolvedModel) protocol.ThinkingLevel {
 	next := current
 	for range len(thinkingLevelOrder) {
-		next = constants.NextThinkingLevel(next)
+		next = protocol.NextThinkingLevel(next)
 		if IsThinkingLevelSupported(next, model) {
 			return next
 		}
@@ -134,10 +134,10 @@ func NextSupportedThinkingLevel(current constants.ThinkingLevel, model ResolvedM
 }
 
 // PrevSupportedThinkingLevel cycles backward, skipping unsupported levels.
-func PrevSupportedThinkingLevel(current constants.ThinkingLevel, model ResolvedModel) constants.ThinkingLevel {
+func PrevSupportedThinkingLevel(current protocol.ThinkingLevel, model ResolvedModel) protocol.ThinkingLevel {
 	next := current
 	for range len(thinkingLevelOrder) {
-		next = constants.PrevThinkingLevel(next)
+		next = protocol.PrevThinkingLevel(next)
 		if IsThinkingLevelSupported(next, model) {
 			return next
 		}
@@ -145,7 +145,7 @@ func PrevSupportedThinkingLevel(current constants.ThinkingLevel, model ResolvedM
 	return current
 }
 
-func thinkingLevelIndex(level constants.ThinkingLevel) int {
+func thinkingLevelIndex(level protocol.ThinkingLevel) int {
 	for i, candidate := range thinkingLevelOrder {
 		if candidate == level {
 			return i
@@ -155,9 +155,9 @@ func thinkingLevelIndex(level constants.ThinkingLevel) int {
 }
 
 // ResolveThinking maps the UI thinking level to provider request parameters.
-func ResolveThinking(model ResolvedModel, level constants.ThinkingLevel, budgets map[string]int) ThinkingConfig {
+func ResolveThinking(model ResolvedModel, level protocol.ThinkingLevel, budgets map[string]int) ThinkingConfig {
 	level = ClampThinkingLevel(level, model)
-	if level == constants.ThinkingOff || !model.Reasoning {
+	if level == protocol.ThinkingOff || !model.Reasoning {
 		return ThinkingConfig{}
 	}
 
@@ -190,7 +190,7 @@ func ResolveThinking(model ResolvedModel, level constants.ThinkingLevel, budgets
 	return cfg
 }
 
-func mapEntry(m map[constants.ThinkingLevel]ThinkingMapValue, level constants.ThinkingLevel) ThinkingMapValue {
+func mapEntry(m map[protocol.ThinkingLevel]ThinkingMapValue, level protocol.ThinkingLevel) ThinkingMapValue {
 	if m == nil {
 		return ThinkingMapValue{State: ThinkingMapDefault}
 	}
@@ -214,25 +214,25 @@ func thinkingFormatFor(model ResolvedModel) ThinkingFormat {
 	}
 }
 
-func resolveAdaptiveEffort(level constants.ThinkingLevel, entry ThinkingMapValue) string {
+func resolveAdaptiveEffort(level protocol.ThinkingLevel, entry ThinkingMapValue) string {
 	if entry.State == ThinkingMapExplicit && entry.Value != "" {
 		return entry.Value
 	}
 	switch level {
-	case constants.ThinkingMinimal, constants.ThinkingLow:
+	case protocol.ThinkingMinimal, protocol.ThinkingLow:
 		return "low"
-	case constants.ThinkingMedium:
+	case protocol.ThinkingMedium:
 		return "medium"
-	case constants.ThinkingHigh:
+	case protocol.ThinkingHigh:
 		return "high"
-	case constants.ThinkingXHigh:
+	case protocol.ThinkingXHigh:
 		return "max"
 	default:
 		return "medium"
 	}
 }
 
-func resolveBudgetTokens(level constants.ThinkingLevel, entry ThinkingMapValue, budgets map[string]int) int {
+func resolveBudgetTokens(level protocol.ThinkingLevel, entry ThinkingMapValue, budgets map[string]int) int {
 	if entry.State == ThinkingMapExplicit && entry.Value != "" {
 		if tokens, err := strconv.Atoi(entry.Value); err == nil && tokens > 0 {
 			return tokens
@@ -244,10 +244,10 @@ func resolveBudgetTokens(level constants.ThinkingLevel, entry ThinkingMapValue, 
 	if token, ok := defaultThinkingBudgets[level]; ok && token > 0 {
 		return token
 	}
-	return defaultThinkingBudgets[constants.ThinkingHigh]
+	return defaultThinkingBudgets[protocol.ThinkingHigh]
 }
 
-func resolveOpenAIThinking(cfg ThinkingConfig, model ResolvedModel, level constants.ThinkingLevel, entry ThinkingMapValue) ThinkingConfig {
+func resolveOpenAIThinking(cfg ThinkingConfig, model ResolvedModel, level protocol.ThinkingLevel, entry ThinkingMapValue) ThinkingConfig {
 	effort := resolveReasoningEffort(level, entry)
 	switch cfg.ThinkingFormat {
 	case ThinkingFormatQwen:
@@ -271,20 +271,20 @@ func resolveOpenAIThinking(cfg ThinkingConfig, model ResolvedModel, level consta
 	}
 }
 
-func resolveReasoningEffort(level constants.ThinkingLevel, entry ThinkingMapValue) string {
+func resolveReasoningEffort(level protocol.ThinkingLevel, entry ThinkingMapValue) string {
 	if entry.State == ThinkingMapExplicit && entry.Value != "" {
 		return entry.Value
 	}
 	switch level {
-	case constants.ThinkingMinimal:
+	case protocol.ThinkingMinimal:
 		return "minimal"
-	case constants.ThinkingLow:
+	case protocol.ThinkingLow:
 		return "low"
-	case constants.ThinkingMedium:
+	case protocol.ThinkingMedium:
 		return "medium"
-	case constants.ThinkingHigh:
+	case protocol.ThinkingHigh:
 		return "high"
-	case constants.ThinkingXHigh:
+	case protocol.ThinkingXHigh:
 		return "high"
 	default:
 		return ""

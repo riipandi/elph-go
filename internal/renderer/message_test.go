@@ -7,7 +7,7 @@ import (
 
 	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
-	"github.com/riipandi/elph/internal/constants"
+	"github.com/riipandi/elph/internal/uiconst"
 	"github.com/stretchr/testify/require"
 )
 
@@ -20,12 +20,12 @@ func testModel() Model {
 
 func TestMessageKindsNoPipePrefix(t *testing.T) {
 	m := testModel()
-	kinds := []constants.MessageKind{
-		constants.MessageUser,
-		constants.MessageAI,
-		constants.MessageSystem,
-		constants.MessageTool,
-		constants.MessageThinking,
+	kinds := []uiconst.MessageKind{
+		uiconst.MessageUser,
+		uiconst.MessageAI,
+		uiconst.MessageSystem,
+		uiconst.MessageTool,
+		uiconst.MessageThinking,
 	}
 	for _, kind := range kinds {
 		rendered := m.renderMessage(message{text: "sample text", kind: kind})
@@ -36,30 +36,30 @@ func TestMessageKindsNoPipePrefix(t *testing.T) {
 
 func TestMessageKindsNoChevronPrefix(t *testing.T) {
 	m := testModel()
-	rendered := m.renderMessage(message{text: "Copied to clipboard", kind: constants.MessageSystem})
+	rendered := m.renderMessage(message{text: "Copied to clipboard", kind: uiconst.MessageSystem})
 	require.False(t, strings.HasPrefix(strings.TrimSpace(stripANSI(rendered)), ">"),
 		"system message should not use > prefix: %q", stripANSI(rendered))
 }
 
 func TestUserMessageStyled(t *testing.T) {
 	m := testModel()
-	rendered := m.renderMessage(message{text: "hello from user", kind: constants.MessageUser})
+	rendered := m.renderMessage(message{text: "hello from user", kind: uiconst.MessageUser})
 	require.Contains(t, rendered, "hello from user")
 }
 
 func TestAIMessageRendersText(t *testing.T) {
 	m := testModel()
-	rendered := m.renderMessage(message{text: "response from agent", kind: constants.MessageAI})
+	rendered := m.renderMessage(message{text: "response from agent", kind: uiconst.MessageAI})
 	require.Contains(t, rendered, "response from agent")
 }
 
 func TestResponseMessageVerticalSpacing(t *testing.T) {
 	m := testModel()
 	messages := []message{
-		promptSpacingMessage("thinking step", constants.MessageThinking),
-		{text: "from agent", kind: constants.MessageAI},
-		{text: "from user", kind: constants.MessageUser},
-		{text: "reply", kind: constants.MessageAI},
+		promptSpacingMessage("thinking step", uiconst.MessageThinking),
+		{text: "from agent", kind: uiconst.MessageAI},
+		{text: "from user", kind: uiconst.MessageUser},
+		{text: "reply", kind: uiconst.MessageAI},
 	}
 	m.messages = messages
 	content := normalizeSpacingLines(stripANSI(m.messagesView()))
@@ -73,18 +73,18 @@ func TestResponseMessageVerticalSpacing(t *testing.T) {
 
 func TestAIMessageNoHorizontalPadding(t *testing.T) {
 	m := testModel()
-	rendered := stripANSI(m.renderMessage(message{text: "response from agent", kind: constants.MessageAI}))
+	rendered := stripANSI(m.renderMessage(message{text: "response from agent", kind: uiconst.MessageAI}))
 	require.False(t, strings.HasPrefix(rendered, " "), "AI message should not have horizontal padding: %q", rendered)
-	require.Equal(t, m.messageAreaWidth(), lipgloss.Width(m.renderMessage(message{text: "response from agent", kind: constants.MessageAI})))
+	require.Equal(t, m.messageAreaWidth(), lipgloss.Width(m.renderMessage(message{text: "response from agent", kind: uiconst.MessageAI})))
 }
 
 func TestAIMessageHasBottomPaddingOnly(t *testing.T) {
 	m := testModel()
-	single := m.renderMessage(message{text: "only line", kind: constants.MessageAI})
-	twoParas := m.renderMessage(message{text: "First paragraph ends.\n\nSecond paragraph starts.", kind: constants.MessageAI})
+	single := m.renderMessage(message{text: "only line", kind: uiconst.MessageAI})
+	twoParas := m.renderMessage(message{text: "First paragraph ends.\n\nSecond paragraph starts.", kind: uiconst.MessageAI})
 	multiLine := m.renderMessage(message{
 		text: strings.Repeat("word ", 20) + "\n\n" + strings.Repeat("more ", 20),
-		kind: constants.MessageAI,
+		kind: uiconst.MessageAI,
 	})
 	require.Greater(t, lipgloss.Height(twoParas), lipgloss.Height(single),
 		"paragraph gaps should add visible height")
@@ -96,7 +96,7 @@ func TestThinkingMessageUsesCollapsibleBox(t *testing.T) {
 	m := testModel()
 	rendered := m.renderMessage(message{
 		text:        "reasoning",
-		kind:        constants.MessageThinking,
+		kind:        uiconst.MessageThinking,
 		detailLabel: "Thinking",
 	})
 	require.GreaterOrEqual(t, lipgloss.Height(rendered), 3)
@@ -105,16 +105,16 @@ func TestThinkingMessageUsesCollapsibleBox(t *testing.T) {
 
 func TestBoxedMessageSingleLineHeight(t *testing.T) {
 	m := testModel()
-	rendered := m.renderMessage(message{text: "hello", kind: constants.MessageUser})
+	rendered := m.renderMessage(message{text: "hello", kind: uiconst.MessageUser})
 	require.Equal(t, 3, lipgloss.Height(rendered), "single-line user block includes vertical padding")
 }
 
 func TestUserMessageVerticalSpacing(t *testing.T) {
 	m := testModel()
 	messages := []message{
-		{text: "from agent", kind: constants.MessageAI},
-		{text: "from user", kind: constants.MessageUser},
-		{text: "reply", kind: constants.MessageAI},
+		{text: "from agent", kind: uiconst.MessageAI},
+		{text: "from user", kind: uiconst.MessageUser},
+		{text: "reply", kind: uiconst.MessageAI},
 	}
 	m.messages = messages
 	content := normalizeSpacingLines(stripANSI(m.messagesView()))
@@ -129,8 +129,8 @@ func TestUserMessageVerticalSpacing(t *testing.T) {
 func TestSystemMessageVerticalSpacing(t *testing.T) {
 	m := testModel()
 	m.messages = []message{
-		{text: "from agent", kind: constants.MessageAI},
-		{text: "Copied to clipboard", kind: constants.MessageSystem},
+		{text: "from agent", kind: uiconst.MessageAI},
+		{text: "Copied to clipboard", kind: uiconst.MessageSystem},
 	}
 	content := normalizeSpacingLines(stripANSI(m.messagesView()))
 	require.Contains(t, content, "from agent\n\n\n"+aiCopyHintText+"\n\nCopied to clipboard")
@@ -138,7 +138,7 @@ func TestSystemMessageVerticalSpacing(t *testing.T) {
 
 func TestUserMessageMultiline(t *testing.T) {
 	m := testModel()
-	collapsed := m.renderMessage(message{text: "line one\nline two", kind: constants.MessageUser})
+	collapsed := m.renderMessage(message{text: "line one\nline two", kind: uiconst.MessageUser})
 	plain := stripANSI(collapsed)
 	require.Contains(t, plain, "line one")
 	require.NotContains(t, plain, "line two")
@@ -146,7 +146,7 @@ func TestUserMessageMultiline(t *testing.T) {
 
 	expanded := m.renderMessage(message{
 		text:           "line one\nline two",
-		kind:           constants.MessageUser,
+		kind:           uiconst.MessageUser,
 		detailExpanded: true,
 	})
 	require.GreaterOrEqual(t, lipgloss.Height(expanded), 4,
@@ -158,7 +158,7 @@ func TestUserMessageMultiline(t *testing.T) {
 
 func TestUserMessageWidthMatchesChrome(t *testing.T) {
 	m := testModel()
-	m.messages = []message{{text: "hello", kind: constants.MessageUser}}
+	m.messages = []message{{text: "hello", kind: uiconst.MessageUser}}
 	assertChromeWidthsMatch(t, m)
 }
 
@@ -169,7 +169,7 @@ func TestUserMessageWidthMatchesChromeWithScrollbar(t *testing.T) {
 	for i := range 30 {
 		m.messages = append(m.messages, message{
 			text: fmt.Sprintf("message %d", i),
-			kind: constants.MessageUser,
+			kind: uiconst.MessageUser,
 		})
 	}
 	m = m.syncLayout(false)
@@ -194,7 +194,7 @@ func TestMessageWidthUsesContentAreaWidth(t *testing.T) {
 	for i := range 30 {
 		m.messages = append(m.messages, message{
 			text: fmt.Sprintf("message %d", i),
-			kind: constants.MessageUser,
+			kind: uiconst.MessageUser,
 		})
 	}
 	m = m.syncLayout(false)
@@ -203,12 +203,12 @@ func TestMessageWidthUsesContentAreaWidth(t *testing.T) {
 	msgW := m.messageAreaWidth()
 	require.Equal(t, m.width-scrollBarWidth, areaW)
 	require.Equal(t, areaW-messageScrollInset, msgW)
-	for _, kind := range []constants.MessageKind{
-		constants.MessageUser,
-		constants.MessageAI,
-		constants.MessageSystem,
-		constants.MessageTool,
-		constants.MessageThinking,
+	for _, kind := range []uiconst.MessageKind{
+		uiconst.MessageUser,
+		uiconst.MessageAI,
+		uiconst.MessageSystem,
+		uiconst.MessageTool,
+		uiconst.MessageThinking,
 	} {
 		renderedW := lipgloss.Width(m.renderMessage(message{text: "hello", kind: kind}))
 		require.Equal(t, msgW, renderedW, "kind %d width", kind)
@@ -217,14 +217,14 @@ func TestMessageWidthUsesContentAreaWidth(t *testing.T) {
 
 func TestUserMessageHorizontalPadding(t *testing.T) {
 	m := testModel()
-	rendered := stripANSI(m.renderMessage(message{text: "hello", kind: constants.MessageUser}))
+	rendered := stripANSI(m.renderMessage(message{text: "hello", kind: uiconst.MessageUser}))
 	require.True(t, strings.HasPrefix(rendered, "▎"), "user message should render a left accent bar: %q", rendered)
 	require.Contains(t, rendered, "hello")
 }
 
 func TestToolMessageBlockPadding(t *testing.T) {
 	m := testModel()
-	rendered := m.renderMessage(message{text: "$ ls\nfile.txt", kind: constants.MessageTool})
+	rendered := m.renderMessage(message{text: "$ ls\nfile.txt", kind: uiconst.MessageTool})
 	require.GreaterOrEqual(t, lipgloss.Height(rendered), 4,
 		"multiline tool message should include vertical padding")
 	plain := stripANSI(rendered)
@@ -237,9 +237,9 @@ func TestToolMessageBlockPadding(t *testing.T) {
 }
 
 func TestUserMsgBgConstant(t *testing.T) {
-	require.NotEqual(t, constants.DimText, constants.UserMsgBg,
+	require.NotEqual(t, uiconst.DimText, uiconst.UserMsgBg,
 		"user message background should differ from dim text")
-	_ = lipgloss.NewStyle().Background(constants.UserMsgBg).Render("x")
+	_ = lipgloss.NewStyle().Background(uiconst.UserMsgBg).Render("x")
 }
 
 // normalizeSpacingLines collapses whitespace-only lines so spacing assertions

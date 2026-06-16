@@ -6,8 +6,8 @@ import (
 
 	"charm.land/lipgloss/v2"
 	"github.com/riipandi/elph/internal/command"
-	"github.com/riipandi/elph/internal/constants"
 	"github.com/riipandi/elph/internal/prompt/template"
+	"github.com/riipandi/elph/internal/uiconst"
 	"github.com/stretchr/testify/require"
 )
 
@@ -180,7 +180,7 @@ func TestEnterExecutesSelectedArg(t *testing.T) {
 	require.Empty(t, updated.input.Value())
 	require.Len(t, updated.messages, 2)
 	require.Equal(t, "/diagnostic:open-log system", updated.messages[0].text)
-	require.Equal(t, constants.MessageDetail, updated.messages[1].kind)
+	require.Equal(t, uiconst.MessageDetail, updated.messages[1].kind)
 	require.True(t, updated.messages[1].detailExpanded)
 	require.Contains(t, updated.messages[1].text, ".agents/elph/metadata/")
 }

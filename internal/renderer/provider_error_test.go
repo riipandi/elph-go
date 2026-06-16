@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/riipandi/elph/internal/constants"
+	"github.com/riipandi/elph/internal/uiconst"
 	"github.com/riipandi/elph/pkg/ai/provider"
 	"github.com/riipandi/elph/pkg/core/agent"
 	"github.com/stretchr/testify/require"
@@ -24,13 +24,13 @@ func TestFinishAgentTurnProviderErrorDetail(t *testing.T) {
 	m, _ = m.finishAgentTurn("", provider.ProviderErrorSummary(err), err)
 
 	require.Len(t, m.messages, 2)
-	require.Equal(t, constants.MessageAI, m.messages[0].kind)
+	require.Equal(t, uiconst.MessageAI, m.messages[0].kind)
 	require.Contains(t, m.messages[0].text, "Provider error:")
 	require.Contains(t, m.messages[0].text, "unexpected end of JSON input")
 
-	require.Equal(t, constants.MessageDetail, m.messages[1].kind)
+	require.Equal(t, uiconst.MessageDetail, m.messages[1].kind)
 	require.Equal(t, "Provider error", m.messages[1].detailLabel)
-	require.Equal(t, constants.DetailStatusError, m.messages[1].detailStatus)
+	require.Equal(t, uiconst.DetailStatusError, m.messages[1].detailStatus)
 	require.Contains(t, m.messages[1].text, "Provider request failed")
 	require.Contains(t, m.messages[1].text, "https://opencode.ai/zen/go/v1/chat/completions")
 }
@@ -38,10 +38,10 @@ func TestFinishAgentTurnProviderErrorDetail(t *testing.T) {
 func TestProviderErrorDetailCollapsedShowsFailedPreview(t *testing.T) {
 	m := testModel()
 	m.messages = []message{{
-		kind:         constants.MessageDetail,
+		kind:         uiconst.MessageDetail,
 		detailLabel:  "Provider error",
 		text:         "Provider request failed\n\nunexpected end of JSON input",
-		detailStatus: constants.DetailStatusError,
+		detailStatus: uiconst.DetailStatusError,
 	}}
 
 	rendered := stripANSI(m.renderMessageAt(0))
@@ -52,10 +52,10 @@ func TestProviderErrorDetailCollapsedShowsFailedPreview(t *testing.T) {
 func TestProviderErrorDetailExpandedShowsBody(t *testing.T) {
 	m := testModel()
 	m.messages = []message{{
-		kind:           constants.MessageDetail,
+		kind:           uiconst.MessageDetail,
 		detailLabel:    "Provider error",
 		text:           "Provider request failed\n\nunexpected end of JSON input",
-		detailStatus:   constants.DetailStatusError,
+		detailStatus:   uiconst.DetailStatusError,
 		detailExpanded: true,
 	}}
 

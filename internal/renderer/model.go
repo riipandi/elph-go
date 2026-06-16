@@ -1,6 +1,7 @@
 package renderer
 
 import (
+	"github.com/riipandi/elph/internal/runtime/session"
 	"math/rand"
 	"os"
 	"time"
@@ -10,12 +11,13 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/huh/v2"
 	"charm.land/lipgloss/v2"
+	"github.com/riipandi/elph/internal/appconst"
 	"github.com/riipandi/elph/internal/command"
-	"github.com/riipandi/elph/internal/constants"
+	"github.com/riipandi/elph/internal/inputui"
 	"github.com/riipandi/elph/internal/prompt/template"
-	"github.com/riipandi/elph/internal/runtime"
 	"github.com/riipandi/elph/internal/settings"
 	"github.com/riipandi/elph/internal/theme"
+	"github.com/riipandi/elph/internal/uiconst"
 	"github.com/riipandi/elph/pkg/ai/provider"
 	"go.jetify.com/typeid/v2"
 )
@@ -24,19 +26,19 @@ import (
 var rng = rand.New(rand.NewSource(42))
 
 func randomTip() string {
-	return constants.Tips[rng.Intn(len(constants.Tips))]
+	return uiconst.Tips[rng.Intn(len(uiconst.Tips))]
 }
 
 // ─── Mode Ordering ───────────────────────────────────────────────────────────
 
-var modes = []constants.AgentMode{
-	constants.ModeBuild,
-	constants.ModePlan,
-	constants.ModeAsk,
-	constants.ModeBrave,
+var modes = []appconst.AgentMode{
+	appconst.ModeBuild,
+	appconst.ModePlan,
+	appconst.ModeAsk,
+	appconst.ModeBrave,
 }
 
-func nextMode(m constants.AgentMode) constants.AgentMode {
+func nextMode(m appconst.AgentMode) appconst.AgentMode {
 	for i, mode := range modes {
 		if mode == m {
 			return modes[(i+1)%len(modes)]
@@ -45,7 +47,7 @@ func nextMode(m constants.AgentMode) constants.AgentMode {
 	return modes[0]
 }
 
-func prevMode(m constants.AgentMode) constants.AgentMode {
+func prevMode(m appconst.AgentMode) appconst.AgentMode {
 	for i, mode := range modes {
 		if mode == m {
 			prev := i - 1
@@ -66,35 +68,37 @@ type ctrlCResetMsg struct{}
 
 type message struct {
 	text            string
-	kind            constants.MessageKind
+	kind            uiconst.MessageKind
 	detailLabel     string
 	detailExpanded  bool
-	detailStatus    constants.DetailStatus
+	detailStatus    uiconst.DetailStatus
 	at              time.Time
 	renderCache     messageRenderCache
 	markdownPending bool
 }
 
 type Model struct {
-	ready              bool
-	width              int
-	height             int
-	content            viewport.Model
-	input              textarea.Model
-	messages           []message
-	modelName          string
-	provider           string
-	mode               constants.AgentMode
-	thinkingLevel      constants.ThinkingLevel
-	sessionID          typeid.TypeID
-	workDir            string
-	branch             string
-	tip                string
-	contextUsed        float64 // 0.0 – 1.0
-	contextWindow      int
-	tokensUsed         int
-	sessionCost        float64
-	turnCount          int
+	ready         bool
+	width         int
+	height        int
+	content       viewport.Model
+	input         textarea.Model
+	messages      []message
+	modelName     string
+	provider      string
+	mode          appconst.AgentMode
+	thinkingLevel appconst.ThinkingLevel
+	sessionID     typeid.TypeID
+	workDir       string
+	branch        string
+	tip           string
+	contextUsed   float64 // 0.0 – 1.0
+	contextWindow int
+	tokensUsed    int
+	sessionCost   float64
+	turnCount     int
+	toolCallCount int
+
 	modelSupportsImage bool
 	modelCost          provider.Cost
 	gitAdded           int
@@ -103,7 +107,7 @@ type Model struct {
 	showPromptPrefix   bool   // show prompt prefix in input
 	layout             LayoutCache
 	shell              ShellState
-	suggest            SuggestState
+	suggest            inputui.SuggestState
 	agent              AgentState
 	modelSelector      ModelSelectorState
 	themePreference    theme.Mode
@@ -111,7 +115,7 @@ type Model struct {
 	mouseEnabled  bool // mouse capture for viewport wheel/scroll
 	selectingText bool // shift held — mouse released for terminal selection
 
-	session         runtime.Session
+	session         session.Session
 	promptTemplates []template.Template
 	slashSkills     []command.SlashSkill
 
@@ -131,6 +135,7 @@ type Model struct {
 	pendingAttachments []inputAttachment
 	useRawPaste        bool
 	stickyScroll       bool
+	footerTokenDisplay string
 
 	inputPastes map[int]string
 	nextPasteID int
@@ -157,7 +162,7 @@ func noBgStyles() textarea.Styles {
 		EndOfBuffer:      noBgStyle,
 		LineNumber:       noBgStyle,
 		Placeholder: lipgloss.NewStyle().
-			Foreground(constants.DimText).
+			Foreground(uiconst.DimText).
 			Background(lipgloss.NoColor{}),
 		Prompt: noBgStyle,
 		Text:   noBgStyle,
@@ -177,7 +182,7 @@ func New() Model {
 	if err != nil {
 		prefs = settings.Settings{}
 	}
-	session := runtime.NewSession(wd)
+	session := session.NewSession(wd)
 
 	vp := viewport.New()
 	vp.MouseWheelEnabled = true
@@ -223,9 +228,10 @@ func New() Model {
 			ThinkingMsgID: -1,
 			ResponseMsgID: -1,
 		},
-		branch:       "—", // refreshed asynchronously in Init (avoids blocking startup on go-git)
-		useRawPaste:  prefs.UseRawPasteEnabled(),
-		stickyScroll: prefs.StickyScrollEnabled(),
+		branch:             "—", // refreshed asynchronously in Init (avoids blocking startup on go-git)
+		useRawPaste:        prefs.UseRawPasteEnabled(),
+		stickyScroll:       prefs.StickyScrollEnabled(),
+		footerTokenDisplay: string(prefs.FooterTokenDisplayMode()),
 	}
 	m = m.syncActiveModelMetadata()
 	if model, ok := m.session.Catalog.Model(m.session.ProviderID, m.session.ModelID); ok {

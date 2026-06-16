@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/riipandi/elph/pkg/ai/provider"
+	"github.com/riipandi/elph/pkg/ai/protocol"
 )
 
 // TurnLogFunc writes a tagged diagnostic line (e.g. to the session requests log).
@@ -17,7 +17,7 @@ func logProvider(fn TurnLogFunc, kind, text string) {
 	fn(kind, text)
 }
 
-func logProviderRequest(fn TurnLogFunc, step int, model string, toolCount, messageCount int, thinking provider.ThinkingConfig) {
+func logProviderRequest(fn TurnLogFunc, step int, model string, toolCount, messageCount int, thinking protocol.ThinkingConfig) {
 	if fn == nil {
 		return
 	}
@@ -51,7 +51,7 @@ func logProviderCancel(fn TurnLogFunc, step int, err error) {
 	logProvider(fn, "provider_cancel", fmt.Sprintf("step=%d reason=%v", step, err))
 }
 
-func logProviderResult(fn TurnLogFunc, step int, result provider.TurnResult, err error) {
+func logProviderResult(fn TurnLogFunc, step int, result protocol.TurnResult, err error) {
 	if fn == nil {
 		return
 	}
@@ -70,14 +70,14 @@ func logProviderResult(fn TurnLogFunc, step int, result provider.TurnResult, err
 	))
 }
 
-func logToolStart(fn TurnLogFunc, step int, call provider.ToolCall) {
+func logToolStart(fn TurnLogFunc, step int, call protocol.ToolCall) {
 	if fn == nil {
 		return
 	}
 	logProvider(fn, "tool_start", fmt.Sprintf("step=%d name=%s id=%s", step, call.Name, call.ID))
 }
 
-func logToolDone(fn TurnLogFunc, step int, call provider.ToolCall, result ToolRunResult) {
+func logToolDone(fn TurnLogFunc, step int, call protocol.ToolCall, result ToolRunResult) {
 	if fn == nil {
 		return
 	}

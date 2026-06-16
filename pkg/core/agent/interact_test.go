@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/riipandi/elph/pkg/ai/provider"
+	"github.com/riipandi/elph/pkg/ai/protocol"
 	"github.com/riipandi/elph/pkg/tools"
 	"github.com/stretchr/testify/require"
 )
@@ -27,16 +27,16 @@ func TestToolInteractKindFor(t *testing.T) {
 }
 
 func TestRunTurnAskUserInteract(t *testing.T) {
-	stub := &loopStubProvider{steps: []provider.TurnResult{
+	stub := &loopStubProvider{steps: []protocol.TurnResult{
 		{
-			StopReason: provider.StopReasonToolUse,
-			ToolCalls: []provider.ToolCall{{
+			StopReason: protocol.StopReasonToolUse,
+			ToolCalls: []protocol.ToolCall{{
 				ID:        "call_ask",
 				Name:      "AskUser",
 				Arguments: json.RawMessage(`{"question":"Pick one","options":["a","b"]}`),
 			}},
 		},
-		{Content: "Thanks.", StopReason: provider.StopReasonEndTurn},
+		{Content: "Thanks.", StopReason: protocol.StopReasonEndTurn},
 	}}
 
 	events := RunTurn(context.Background(), TurnOptions{
@@ -67,16 +67,16 @@ func TestRunTurnAskUserInteract(t *testing.T) {
 }
 
 func TestRunTurnBashApprovalDenied(t *testing.T) {
-	stub := &loopStubProvider{steps: []provider.TurnResult{
+	stub := &loopStubProvider{steps: []protocol.TurnResult{
 		{
-			StopReason: provider.StopReasonToolUse,
-			ToolCalls: []provider.ToolCall{{
+			StopReason: protocol.StopReasonToolUse,
+			ToolCalls: []protocol.ToolCall{{
 				ID:        "call_bash",
 				Name:      "Bash",
 				Arguments: json.RawMessage(`{"command":"echo no"}`),
 			}},
 		},
-		{Content: "OK", StopReason: provider.StopReasonEndTurn},
+		{Content: "OK", StopReason: protocol.StopReasonEndTurn},
 	}}
 
 	events := RunTurn(context.Background(), TurnOptions{

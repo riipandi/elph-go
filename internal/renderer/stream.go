@@ -5,7 +5,7 @@ import (
 	"time"
 
 	tea "charm.land/bubbletea/v2"
-	"github.com/riipandi/elph/internal/constants"
+	"github.com/riipandi/elph/internal/uiconst"
 	"github.com/riipandi/elph/pkg/core/agent"
 )
 
@@ -165,8 +165,9 @@ func (m Model) handleStreamFlush() (Model, tea.Cmd) {
 	m = m.refreshStreamPrefixCache()
 	m = m.syncLayout(m.content.AtBottom())
 
+	// Re-arm the flush tick while either agent or shell is actively streaming.
 	var cmds []tea.Cmd
-	if m.layout.ContentDirty && m.agent.Busy {
+	if m.layout.ContentDirty && (m.agent.Busy || m.shell.Running) {
 		m.layout.StreamFlushPending = true
 		cmds = append(cmds, streamFlushTick())
 	}
@@ -179,15 +180,15 @@ func (m Model) handleStreamFlush() (Model, tea.Cmd) {
 
 // renderStreamingMessage paints an in-flight message in one pass. Avoids
 // per-line Lip Gloss work on every token while the response grows.
-func renderStreamingMessage(blockWidth int, kind constants.MessageKind, text string) string {
-	if kind == constants.MessageAI || kind == constants.MessageThinking {
+func renderStreamingMessage(blockWidth int, kind uiconst.MessageKind, text string) string {
+	if kind == uiconst.MessageAI || kind == uiconst.MessageThinking {
 		text = agent.SanitizeAssistantDisplay(text)
 	}
-	if kind == constants.MessageAI {
+	if kind == uiconst.MessageAI {
 		return renderAIMessage(blockWidth, text, true, false)
 	}
 	vPad, hPad := messageBlockPadding(kind)
-	return constants.MessageStyle(kind).
+	return uiconst.MessageStyle(kind).
 		Padding(vPad, hPad).
 		Width(blockWidth).
 		Render(text)

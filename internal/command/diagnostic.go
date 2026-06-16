@@ -2,19 +2,18 @@ package command
 
 import (
 	"fmt"
+	"github.com/riipandi/elph/internal/runtime/log"
 	"os"
 	"strings"
 
-	"github.com/riipandi/elph/internal/runtime"
 	inttools "github.com/riipandi/elph/internal/tools"
 	"github.com/riipandi/elph/pkg/tools"
 )
 
 const (
-	DiagnosticListTools    = "diagnostic:list-tools"
-	DiagnosticSystemPrompt = "diagnostic:system-prompt"
-	DiagnosticOpenLog      = "diagnostic:open-log"
-	DiagnosticDebug        = "diagnostic:debug"
+	DiagnosticListTools = "diagnostic:list-tools"
+	DiagnosticOpenLog   = "diagnostic:open-log"
+	DiagnosticDebug     = "diagnostic:debug"
 )
 
 var openLogArgs = []ArgChoice{
@@ -38,16 +37,6 @@ func diagnosticListTools(ctx *Context, _ string) string {
 	ctx.pendingDetailLabel = "Available tools"
 	ctx.pendingDetailBody = strings.TrimRight(b.String(), "\n")
 	ctx.pendingDetailExpanded = true
-	return ""
-}
-
-func diagnosticSystemPrompt(ctx *Context, _ string) string {
-	if strings.TrimSpace(ctx.SystemPrompt) == "" {
-		return fmt.Sprintf("/%s: not yet implemented", DiagnosticSystemPrompt)
-	}
-
-	ctx.pendingDetailLabel = "System prompt"
-	ctx.pendingDetailBody = ctx.SystemPrompt
 	return ""
 }
 
@@ -93,7 +82,7 @@ func displayLogFile(ctx *Context, path, label string, missing func(string) strin
 		return fmt.Sprintf("/%s: %s not available", DiagnosticOpenLog, strings.ToLower(label))
 	}
 
-	content, err := runtime.ReadLogTail(path, 0)
+	content, err := log.ReadLogTail(path, 0)
 	if err != nil {
 		if os.IsNotExist(err) && missing != nil {
 			return missing(path)
@@ -116,7 +105,7 @@ func displayFilteredLog(ctx *Context, path, kind string) string {
 		return fmt.Sprintf("/%s: session log not available", DiagnosticOpenLog)
 	}
 
-	content, err := runtime.FilterLogByKind(path, kind, 0)
+	content, err := log.FilterLogByKind(path, kind, 0)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return fmt.Sprintf("Session log (%s) has not been created yet — send a message to the agent first.", path)

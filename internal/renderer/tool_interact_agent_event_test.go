@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/riipandi/elph/internal/constants"
+	"github.com/riipandi/elph/internal/uiconst"
 	"github.com/riipandi/elph/pkg/ai/provider"
 	"github.com/riipandi/elph/pkg/core/agent"
 	"github.com/stretchr/testify/require"
@@ -25,7 +25,7 @@ func TestToolCallStartProcessedWhileApprovalDialogOpen(t *testing.T) {
 		},
 		RespCh: make(chan agent.ToolInteractResponse, 1),
 	}
-	updated, _ := m.Update(toolInteractOfferMsg{offer: offer})
+	updated, _ := m.Update(toolInteractOfferMsg{Offer: offer})
 	m = updated.(Model)
 	require.True(t, m.toolInteractDialogActive())
 
@@ -41,7 +41,7 @@ func TestToolCallStartProcessedWhileApprovalDialogOpen(t *testing.T) {
 
 	idx := m.agent.NativeToolMsgIDs["call_echo"]
 	require.Contains(t, m.messages[idx].text, "(running...)")
-	require.Equal(t, constants.DetailStatusRunning, m.messages[idx].detailStatus)
+	require.Equal(t, uiconst.DetailStatusRunning, m.messages[idx].detailStatus)
 
 	view := stripANSI(m.contentView())
 	require.Contains(t, view, "$ echo hi")
@@ -63,7 +63,7 @@ func TestResponseDeltaProcessedWhileApprovalDialogOpen(t *testing.T) {
 		},
 		RespCh: make(chan agent.ToolInteractResponse, 1),
 	}
-	updated, _ := m.Update(toolInteractOfferMsg{offer: offer})
+	updated, _ := m.Update(toolInteractOfferMsg{Offer: offer})
 	m = updated.(Model)
 
 	updated, cmd := m.Update(agentEventMsg{event: agent.ResponseDeltaEvent("partial")})

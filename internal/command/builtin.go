@@ -32,11 +32,6 @@ var builtin = []SlashCommand{
 		Handler:     diagnosticListTools,
 	},
 	{
-		Name:        DiagnosticSystemPrompt,
-		Description: "Show the assembled system prompt for this session",
-		Handler:     diagnosticSystemPrompt,
-	},
-	{
 		Name:        DiagnosticOpenLog,
 		Description: "Open a session log (requests or system)",
 		Args:        openLogArgs,
@@ -54,4 +49,23 @@ var builtin = []SlashCommand{
 		Quits:       true,
 		Handler:     func(*Context, string) string { return "" },
 	},
+	{
+		Name:        "compact",
+		Aliases:     []string{"c"},
+		Description: "Compress conversation history to save context window space",
+		Handler:     compactHandler,
+	},
+	{
+		Name:        "context",
+		Description: "View context usage and token breakdown",
+		Handler:     contextHandler,
+	},
+	{
+		Name:        "goal",
+		Aliases:     []string{"goals"},
+		Description: "Manage session goals: status, pause, resume, cancel, replace, next",
+		ArgumentHint: "<subcommand> [args]",
+		Handler:     goalHandler,
+	},
+
 }

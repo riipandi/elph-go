@@ -6,19 +6,19 @@ var builtin = []Definition{
 		Name:            Read,
 		Category:        CategoryFile,
 		DefaultApproval: ApprovalAutoAllow,
-		Description:     "Read a text file's contents",
+		Description:     "Read a text file. Fails on directories — use Glob first to find files inside a directory",
 	},
 	{
 		Name:            Write,
 		Category:        CategoryFile,
 		DefaultApproval: ApprovalRequiresApproval,
-		Description:     "Create or overwrite a file",
+		Description:     "Create or overwrite a file. Fails if the path is an existing directory",
 	},
 	{
 		Name:            Edit,
 		Category:        CategoryFile,
 		DefaultApproval: ApprovalRequiresApproval,
-		Description:     "Precise string replacement",
+		Description:     "Edit a file using string replacement. Fails on directories — only use on existing files",
 	},
 	{
 		Name:            Grep,
@@ -30,7 +30,7 @@ var builtin = []Definition{
 		Name:            Glob,
 		Category:        CategoryFile,
 		DefaultApproval: ApprovalAutoAllow,
-		Description:     "Find files by glob pattern",
+		Description:     "Find files and list directory contents by glob pattern. Use pattern 'dir/**' to recursively list all files in a directory. Often used before Read to explore unknown paths",
 	},
 	{
 		Name:            ReadMediaFile,
@@ -102,6 +102,32 @@ var builtin = []Definition{
 		Category:        CategoryCollaboration,
 		DefaultApproval: ApprovalAutoAllow,
 		Description:     "Invoke a registered inline Skill",
+	},
+
+	// Goal tools
+	{
+		Name:            CreateGoal,
+		Category:        CategoryGoal,
+		DefaultApproval: ApprovalAutoAllow,
+		Description:     "Create a new goal with a verifiable objective",
+	},
+	{
+		Name:            GetGoal,
+		Category:        CategoryGoal,
+		DefaultApproval: ApprovalAutoAllow,
+		Description:     "Get the current goal status and usage",
+	},
+	{
+		Name:            UpdateGoal,
+		Category:        CategoryGoal,
+		DefaultApproval: ApprovalAutoAllow,
+		Description:     "Update the goal lifecycle status (active, complete, paused, blocked)",
+	},
+	{
+		Name:            SetGoalBudget,
+		Category:        CategoryGoal,
+		DefaultApproval: ApprovalAutoAllow,
+		Description:     "Set a token, turn, or time budget for the current goal",
 	},
 }
 

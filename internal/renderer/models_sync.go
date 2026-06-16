@@ -8,8 +8,8 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/huh/v2"
 	"charm.land/lipgloss/v2"
-	"github.com/riipandi/elph/internal/constants"
 	"github.com/riipandi/elph/internal/settings"
+	"github.com/riipandi/elph/internal/uiconst"
 	"github.com/riipandi/elph/pkg/ai/provider"
 )
 
@@ -220,8 +220,8 @@ func (m Model) declineModelsSync() Model {
 
 func (m Model) modelsSyncDialogBody() string {
 	formView := trimTrailingLineSpaces(strings.TrimSuffix(m.modelsSyncForm.View(), "\n\n"))
-	labelLine := lipgloss.NewStyle().Foreground(constants.Yellow).Bold(true).Render(modelsSyncDialogLabel)
-	hintLine := lipgloss.NewStyle().Foreground(constants.DimText).Render("y update · n skip · c cancel · 1-3 · ↑/↓ · Enter · Esc")
+	labelLine := lipgloss.NewStyle().Foreground(uiconst.Yellow).Bold(true).Render(modelsSyncDialogLabel)
+	hintLine := lipgloss.NewStyle().Foreground(uiconst.DimText).Render("y update · n skip · c cancel · 1-3 · ↑/↓ · Enter · Esc")
 	return lipgloss.JoinVertical(lipgloss.Left, labelLine, "", formView, "", hintLine)
 }
 
@@ -248,7 +248,7 @@ func (m Model) startModelsSync() (Model, tea.Cmd) {
 }
 
 func (m Model) setModelsSyncMessage(text string) (Model, tea.Cmd) {
-	msg := message{text: text, kind: constants.MessageSystem}
+	msg := message{text: text, kind: uiconst.MessageSystem}
 	if m.modelsSyncMsgID >= 0 && m.modelsSyncMsgID < len(m.messages) {
 		m.messages[m.modelsSyncMsgID] = msg
 	} else {

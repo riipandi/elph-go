@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/riipandi/elph/pkg/ai/provider"
+	"github.com/riipandi/elph/pkg/ai/protocol"
 )
 
 const PhaseDelay = 400 * time.Millisecond
@@ -33,7 +33,7 @@ func runTurn(ctx context.Context, opts TurnOptions, ch chan<- Event) {
 	defer close(ch)
 
 	if IsShellContextPrompt(opts.UserPrompt) {
-		sendEvent(ctx, ch, TurnDoneEvent(provider.TurnResult{Content: PlaceholderResponse(opts.UserPrompt)}))
+		sendEvent(ctx, ch, TurnDoneEvent(protocol.TurnResult{Content: PlaceholderResponse(opts.UserPrompt)}))
 		return
 	}
 
@@ -54,7 +54,7 @@ func runTurn(ctx context.Context, opts TurnOptions, ch chan<- Event) {
 		return
 	}
 
-	stream := &provider.TurnStream{
+	stream := &protocol.TurnStream{
 		OnContent: func(chunk string) {
 			sendEvent(ctx, ch, ResponseDeltaEvent(chunk))
 		},
@@ -69,7 +69,7 @@ func runTurn(ctx context.Context, opts TurnOptions, ch chan<- Event) {
 
 	logProviderRequest(opts.LogProvider, 0, opts.Model, 0, len(messages), opts.Thinking)
 
-	result, err := completeProviderWithRetry(ctx, opts.LogProvider, 0, opts.Provider, provider.TurnRequest{
+	result, err := completeProviderWithRetry(ctx, opts.LogProvider, 0, opts.Provider, protocol.TurnRequest{
 		SystemPrompt: opts.SystemPrompt,
 		UserPrompt:   opts.UserPrompt,
 		Model:        opts.Model,
@@ -77,7 +77,7 @@ func runTurn(ctx context.Context, opts TurnOptions, ch chan<- Event) {
 		Compat:       opts.Compat,
 		Stream:       stream,
 		Messages:     messages,
-	}, opts.ProviderRetryConfig(), nil)
+	}, opts.ProviderRetryConfig(), nil, nil)
 	if ctx.Err() != nil {
 		logProviderCancel(opts.LogProvider, 0, ctx.Err())
 		return
@@ -111,7 +111,7 @@ func runPlaceholderTurn(ctx context.Context, prompt string, ch chan<- Event) {
 	if !waitUntil(ctx, start, PhaseDelay*time.Duration(len(TurnPhases))) {
 		return
 	}
-	sendEvent(ctx, ch, TurnDoneEvent(provider.TurnResult{Content: PlaceholderResponse(prompt)}))
+	sendEvent(ctx, ch, TurnDoneEvent(protocol.TurnResult{Content: PlaceholderResponse(prompt)}))
 }
 
 func waitUntil(ctx context.Context, start time.Time, target time.Duration) bool {

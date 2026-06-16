@@ -8,16 +8,10 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/riipandi/elph/internal/clipboardmedia"
+	"github.com/riipandi/elph/internal/inputui"
 	"github.com/riipandi/elph/internal/mediaimage"
 	"github.com/riipandi/elph/pkg/ai/provider"
 )
-
-type inputAttachment struct {
-	AbsPath string
-	RelPath string
-	MIME    string
-	Name    string
-}
 
 func (m Model) handlePasteKey() (Model, bool) {
 	if !m.input.Focused() || m.agent.Busy || m.shell.Running || m.pasteEditorActive() {
@@ -76,14 +70,7 @@ func (m Model) handlePasteContent(text string) (Model, bool) {
 }
 
 func (m Model) attachmentsDisplaySuffix() string {
-	if len(m.pendingAttachments) == 0 {
-		return ""
-	}
-	names := make([]string, len(m.pendingAttachments))
-	for i, att := range m.pendingAttachments {
-		names[i] = att.Name
-	}
-	return "\n[images: " + strings.Join(names, ", ") + "]"
+	return inputui.DisplaySuffix(m.pendingAttachments)
 }
 
 func (m Model) promptForSubmit(val string) string {
@@ -92,23 +79,6 @@ func (m Model) promptForSubmit(val string) string {
 		return prompt + runtimeMediaNote(m.pendingAttachments)
 	}
 	return prompt
-}
-
-func runtimeMediaNote(atts []inputAttachment) string {
-	if len(atts) == 0 {
-		return ""
-	}
-	paths := make([]string, len(atts))
-	for i, att := range atts {
-		paths[i] = att.RelPath
-	}
-	var b strings.Builder
-	b.WriteString("\n\nAttached images (use ReadMediaFile to view):")
-	for _, p := range paths {
-		b.WriteString("\n- ")
-		b.WriteString(p)
-	}
-	return b.String()
 }
 
 func (m Model) userImagesForTurn() []provider.ImageAttachment {

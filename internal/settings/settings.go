@@ -22,6 +22,7 @@ const (
 )
 
 // Settings is persisted at ~/.elph/settings.json.
+// Settings is persisted at ~/.elph/settings.json.
 type Settings struct {
 	SyncInterval             string            `json:"syncInterval,omitempty"`
 	Models                   *ModelsSettings   `json:"models,omitempty"`
@@ -34,6 +35,13 @@ type Settings struct {
 	ThinkingBudgets          map[string]int    `json:"thinkingBudgets,omitempty"`
 	Provider                 *ProviderSettings `json:"provider,omitempty"`
 	Session                  SessionSettings   `json:"session,omitempty"`
+	MaxToolIterations        *int              `json:"maxToolIterations,omitempty"`
+	AutoCompactContext       *bool             `json:"autoCompactContext,omitempty"`
+	AutoCompactLimit         *int              `json:"autoCompactLimit,omitempty"`
+	CompactMinMessages       *int              `json:"compactMinMessages,omitempty"`  // Minimum messages before auto-compact
+	CompactMinBytes          *int              `json:"compactMinBytes,omitempty"`     // Minimum bytes before auto-compact
+	CompactContextUsage      *int              `json:"compactContextUsage,omitempty"` // Context usage % threshold (0-100)
+	FooterTokenDisplay       string            `json:"footerTokenDisplay,omitempty"`
 }
 
 // ModelsSettings holds legacy settings migrated on load.
@@ -168,6 +176,21 @@ func (s Settings) withDefaults() Settings {
 			s.Provider.DefaultTimeout = DefaultProviderTimeout.String()
 		}
 	}
+	if s.MaxToolIterations == nil {
+		v := 0 // 0 = use DefaultMaxToolIterations in loop
+		s.MaxToolIterations = &v
+	}
+	if s.AutoCompactContext == nil {
+		v := true
+		s.AutoCompactContext = &v
+	}
+	if s.AutoCompactLimit == nil {
+		v := 80 // default 80%
+		s.AutoCompactLimit = &v
+	}
+	if s.FooterTokenDisplay == "" {
+		s.FooterTokenDisplay = string(FooterTokenBoth)
+	}
 	return s
 }
 
@@ -196,6 +219,88 @@ func (s Settings) StickyScrollEnabled() bool {
 // ResponseLanguage returns the default language for assistant replies.
 func (s Settings) ResponseLanguage() string {
 	return s.withDefaults().PreferedResponseLanguage
+}
+
+// ToolRoundsLimit returns the configured max tool rounds (0 = use default).
+func (s Settings) ToolRoundsLimit() int {
+	cfg := s.withDefaults()
+	if cfg.MaxToolIterations == nil {
+		return 0
+	}
+	return *cfg.MaxToolIterations
+}
+
+// AutoCompactContextEnabled reports whether the agent automatically compacts
+// conversation history and retries when the provider reports context-limit errors.
+func (s Settings) AutoCompactContextEnabled() bool {
+	cfg := s.withDefaults()
+	return cfg.AutoCompactContext != nil && *cfg.AutoCompactContext
+}
+
+// CompactLimit returns the compaction target percentage (1-100, default 80).
+func (s Settings) CompactLimit() int {
+	cfg := s.withDefaults()
+	if cfg.AutoCompactLimit == nil {
+		return 80
+	}
+	limit := *cfg.AutoCompactLimit
+	if limit < 10 {
+		return 10
+	}
+	if limit > 100 {
+		return 100
+	}
+	return limit
+}
+
+// GetCompactMinMessages returns the minimum messages before auto-compact, defaulting to 10.
+func (s Settings) GetCompactMinMessages() int {
+	cfg := s.withDefaults()
+	if cfg.CompactMinMessages == nil {
+		return 10
+	}
+	min := *cfg.CompactMinMessages
+	if min < 4 {
+		return 4
+	}
+	if min > 50 {
+		return 50
+	}
+	return min
+}
+
+// GetCompactMinBytes returns the minimum bytes before auto-compact, defaulting to 64KB.
+func (s Settings) GetCompactMinBytes() int {
+	cfg := s.withDefaults()
+	if cfg.CompactMinBytes == nil {
+		return 64 * 1024 // 64KB
+	}
+	min := *cfg.CompactMinBytes
+	if min < 1024 {
+		return 1024 // 1KB minimum
+	}
+	return min
+}
+
+// GetCompactContextUsage returns the context usage % threshold for auto-compact, defaulting to 70.
+func (s Settings) GetCompactContextUsage() int {
+	cfg := s.withDefaults()
+	if cfg.CompactContextUsage == nil {
+		return 70
+	}
+	usage := *cfg.CompactContextUsage
+	if usage < 50 {
+		return 50
+	}
+	if usage > 95 {
+		return 95
+	}
+	return usage
+}
+
+// FooterTokenDisplayMode returns the footer token display mode, defaulting to "both".
+func (s Settings) FooterTokenDisplayMode() FooterTokenDisplay {
+	return ParseFooterTokenDisplay(s.withDefaults().FooterTokenDisplay)
 }
 
 // ThinkingBudgetOverrides returns custom token budgets per thinking level.

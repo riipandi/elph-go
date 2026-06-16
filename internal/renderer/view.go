@@ -10,7 +10,8 @@ import (
 	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/riipandi/elph/internal/config"
-	"github.com/riipandi/elph/internal/constants"
+	"github.com/riipandi/elph/internal/rendermd"
+	"github.com/riipandi/elph/internal/uiconst"
 	"github.com/riipandi/elph/pkg/core/agent"
 )
 
@@ -19,16 +20,16 @@ import (
 var (
 	cachedBannerBorder = lipgloss.NewStyle().
 				Border(lipgloss.RoundedBorder()).
-				BorderForeground(constants.Blue).
+				BorderForeground(uiconst.Blue).
 				Padding(1, 2)
 
-	dimStyle       = lipgloss.NewStyle().Foreground(constants.DimText)
-	valStyle       = lipgloss.NewStyle().Foreground(constants.BrightText)
-	primarySty     = lipgloss.NewStyle().Foreground(constants.PrimaryText)
-	primaryBoldSty = lipgloss.NewStyle().Foreground(constants.PrimaryText).Bold(true)
-	sidSty         = lipgloss.NewStyle().Foreground(constants.DimText)
-	yellowSty      = lipgloss.NewStyle().Foreground(constants.Yellow).Italic(true)
-	metaSty        = lipgloss.NewStyle().Foreground(constants.DimText)
+	dimStyle       = lipgloss.NewStyle().Foreground(uiconst.DimText)
+	valStyle       = lipgloss.NewStyle().Foreground(uiconst.BrightText)
+	primarySty     = lipgloss.NewStyle().Foreground(uiconst.PrimaryText)
+	primaryBoldSty = lipgloss.NewStyle().Foreground(uiconst.PrimaryText).Bold(true)
+	sidSty         = lipgloss.NewStyle().Foreground(uiconst.DimText)
+	yellowSty      = lipgloss.NewStyle().Foreground(uiconst.Yellow).Italic(true)
+	metaSty        = lipgloss.NewStyle().Foreground(uiconst.DimText)
 )
 
 // ─── View ────────────────────────────────────────────────────────────────────
@@ -100,7 +101,8 @@ func (m Model) syncLayout(follow bool) Model {
 	atBottom := m.content.AtBottom()
 
 	prevH := m.content.Height()
-	m.content.SetHeight(max(m.height-m.chromeHeight(), 1))
+	chromeH := m.chromeHeight()
+	m.content.SetHeight(max(m.height-chromeH, 1))
 
 	// Build content at guttered width immediately so message backgrounds never
 	// span the scrollbar column. Always reserve the gutter (targetContentWidth)
@@ -121,12 +123,24 @@ func (m Model) syncLayout(follow bool) Model {
 
 	// Bubble Tea drops lines from the top when output exceeds terminal height,
 	// which clips the banner border. Shrink the viewport until the frame fits.
-	for m.renderedViewHeight() > m.height && m.content.Height() > 1 {
+	//
+	// No loop: measuredRenderedHeight already includes viewport + chrome lines,
+	// so overflow = measuredRenderedHeight - m.height — set height directly.
+	measuredH := m.renderedViewHeight()
+	overflow := measuredH - m.height
+	if overflow > 0 && m.content.Height() > overflow+1 {
+		m.content.SetHeight(m.content.Height() - overflow)
+	} else if overflow > 0 && m.content.Height() > 1 {
+		// Fallback: at least shrink by 1 if we can't shrink by full overflow.
 		m.content.SetHeight(m.content.Height() - 1)
 	}
 
+	// Cache chrome height. Note: chromeH was already computed above — this is
+	// a cheap struct field store (the re-computation below detects post-rebuild
+	// activity/dialog changes).
 	m.layout.ChromeH = m.chromeHeight()
-	m = m.syncInputWidth()
+	// syncInputWidth called above — no need to call again; nothing inside
+	// syncLayout changes input dimensions after the initial sync.
 
 	if follow || atBottom {
 		m.content.GotoBottom()
@@ -203,13 +217,13 @@ func (m Model) messagesView() string {
 func (m Model) renderMessage(msg message) string {
 	width := m.messageAreaWidth()
 	switch msg.kind {
-	case constants.MessageAI:
+	case uiconst.MessageAI:
 		return renderAIMessageFooter(width, renderAIMessage(width, msg.text, false, false), true)
-	case constants.MessageDetail:
+	case uiconst.MessageDetail:
 		return renderDetailMessage(width, collapsibleLabel(msg), msg.text, msg.detailExpanded, msg.detailStatus, msg.at, collapsibleRenderOpts{})
-	case constants.MessageThinking:
+	case uiconst.MessageThinking:
 		return renderThinkingMessage(width, collapsibleLabel(msg), msg.text, msg.detailExpanded, collapsibleRenderOpts{})
-	case constants.MessageUser:
+	case uiconst.MessageUser:
 		return renderUserCollapsible(width, msg.text, msg.detailExpanded, msg.at)
 	default:
 		return renderStyledMessage(width, msg.kind, msg.text)
@@ -224,7 +238,7 @@ func (m *Model) renderMessageAt(index int) string {
 	opts := m.collapsibleRenderOpts(msg, index)
 	if c := msg.renderCache; c.hit(width, streaming, len(msg.text), msg.detailExpanded, msg.detailStatus, msg.at, opts) {
 		out := c.output
-		if msg.kind == constants.MessageAI {
+		if msg.kind == uiconst.MessageAI {
 			return renderAIMessageFooter(width, out, !streaming)
 		}
 		return out
@@ -232,20 +246,20 @@ func (m *Model) renderMessageAt(index int) string {
 
 	var out string
 	switch {
-	case streaming && msg.kind != constants.MessageThinking:
+	case streaming && msg.kind != uiconst.MessageThinking:
 		out = renderStreamingMessage(width, msg.kind, msg.text)
-	case msg.kind == constants.MessageAI:
+	case msg.kind == uiconst.MessageAI:
 		out = renderAIMessage(width, msg.text, false, msg.markdownPending)
 		out = renderAIMessageFooter(width, out, !streaming)
-	case msg.kind == constants.MessageDetail:
+	case msg.kind == uiconst.MessageDetail:
 		out = renderDetailMessage(width, collapsibleLabel(msg), msg.text, msg.detailExpanded, msg.detailStatus, msg.at, opts)
-	case msg.kind == constants.MessageThinking:
+	case msg.kind == uiconst.MessageThinking:
 		if opts.showLiveBody {
 			out = renderThinkingLiveStream(width, collapsibleLabel(msg), msg.text, msg.detailExpanded, opts)
 		} else {
 			out = renderThinkingMessage(width, collapsibleLabel(msg), msg.text, msg.detailExpanded, opts)
 		}
-	case msg.kind == constants.MessageUser:
+	case msg.kind == uiconst.MessageUser:
 		out = renderUserCollapsible(width, msg.text, msg.detailExpanded, msg.at)
 	default:
 		out = renderStyledMessage(width, msg.kind, msg.text)
@@ -267,15 +281,15 @@ func (m *Model) renderMessageAt(index int) string {
 }
 
 func aiContentWidth(blockWidth int) int {
-	_, hPad := messageBlockPadding(constants.MessageAI)
+	_, hPad := messageBlockPadding(uiconst.MessageAI)
 	return max(blockWidth-2*hPad, 1)
 }
 
-func messageBlockPadding(kind constants.MessageKind) (vertical, horizontal int) {
+func messageBlockPadding(kind uiconst.MessageKind) (vertical, horizontal int) {
 	switch kind {
-	case constants.MessageUser, constants.MessageTool, constants.MessageDetail, constants.MessageThinking:
+	case uiconst.MessageUser, uiconst.MessageTool, uiconst.MessageDetail, uiconst.MessageThinking:
 		return 1, 2
-	case constants.MessageAI:
+	case uiconst.MessageAI:
 		return 0, 0
 	default:
 		return 0, 1
@@ -294,7 +308,7 @@ const aiParagraphGap = 1
 // in addition to explicit blank lines from formatAIProse.
 func isAIGapLine(line string) bool {
 	plain := strings.TrimSpace(ansi.Strip(line))
-	return plain == "" || isAIProseSeparatorLine(plain)
+	return plain == "" || rendermd.IsProseSeparatorLine(plain)
 }
 
 // splitAIBlockParagraphs groups rendered lines into paragraph blocks. Blank lines,
@@ -322,9 +336,9 @@ func splitAIBlockParagraphs(body string) []string {
 }
 
 func renderAIBlock(blockWidth int, body string, horizontalApplied bool) string {
-	base := constants.MessageStyle(constants.MessageAI)
+	base := uiconst.MessageStyle(uiconst.MessageAI)
 	if !horizontalApplied {
-		_, hPad := messageBlockPadding(constants.MessageAI)
+		_, hPad := messageBlockPadding(uiconst.MessageAI)
 		base = base.PaddingLeft(hPad).PaddingRight(hPad)
 	}
 	lineStyle := base.Width(blockWidth)
@@ -361,9 +375,9 @@ func renderAIBlock(blockWidth int, body string, horizontalApplied bool) string {
 // renderAIPreformattedBlock paints markdown output without re-wrapping lines.
 // lipgloss Width() per line breaks tables, blockquote bars, and ANSI styling.
 func renderAIPreformattedBlock(blockWidth int, body string, horizontalApplied bool) string {
-	base := constants.MessageStyle(constants.MessageAI)
+	base := uiconst.MessageStyle(uiconst.MessageAI)
 	if !horizontalApplied {
-		_, hPad := messageBlockPadding(constants.MessageAI)
+		_, hPad := messageBlockPadding(uiconst.MessageAI)
 		base = base.PaddingLeft(hPad).PaddingRight(hPad)
 	}
 	body = strings.TrimRight(body, "\n")
@@ -385,12 +399,12 @@ func renderAIPreformattedBlock(blockWidth int, body string, horizontalApplied bo
 
 // renderStyledMessage paints each message block. Vertical spacing between blocks
 // comes from messageBlockGap; boxed kinds also get internal vertical padding.
-func renderStyledMessage(width int, kind constants.MessageKind, text string) string {
+func renderStyledMessage(width int, kind uiconst.MessageKind, text string) string {
 	vPad, hPad := messageBlockPadding(kind)
 	// Use a single Render call — Width() already applies per-line padding,
 	// so the per-line loop below is unnecessary and creates O(n) string
 	// allocations that add GC pressure on every content rebuild.
-	return constants.MessageStyle(kind).
+	return uiconst.MessageStyle(kind).
 		Padding(vPad, hPad).
 		Width(width).
 		Render(text)
@@ -452,13 +466,13 @@ func (m Model) bannerView() string {
 
 	versionLine := fmt.Sprintf("Welcome to %s v%s", config.AppName, config.AppVersion)
 	if updateAvailable {
-		updateNotice := lipgloss.NewStyle().Foreground(constants.Yellow).Italic(true).Bold(false).Render("(update available)")
+		updateNotice := lipgloss.NewStyle().Foreground(uiconst.Yellow).Italic(true).Bold(false).Render("(update available)")
 		versionLine = fmt.Sprintf("Welcome to %s v%s %s", config.AppName, config.AppVersion, updateNotice)
 	}
 
 	logo := lipgloss.JoinVertical(lipgloss.Left,
-		lipgloss.NewStyle().Foreground(constants.GreenLt).Render(constants.LogoLine1),
-		lipgloss.NewStyle().Foreground(constants.GreenLt).Render(constants.LogoLine2),
+		lipgloss.NewStyle().Foreground(uiconst.GreenLt).Render(uiconst.LogoLine1),
+		lipgloss.NewStyle().Foreground(uiconst.GreenLt).Render(uiconst.LogoLine2),
 	)
 	logoBlock := lipgloss.NewStyle().MarginRight(2).Render(logo)
 	topW := max(innerW-lipgloss.Width(logoBlock), 10)
@@ -489,7 +503,7 @@ func (m Model) activityView() string {
 		return ""
 	}
 	frame := spinnerFrames[m.agent.SpinnerFrame%len(spinnerFrames)]
-	spinner := lipgloss.NewStyle().Foreground(constants.Yellow).Render(frame)
+	spinner := lipgloss.NewStyle().Foreground(uiconst.Yellow).Render(frame)
 	label := dimStyle.Render(" " + m.activityLabel())
 	elapsed := ""
 	if m.agent.Stopwatch.Running() {
@@ -600,7 +614,7 @@ func (m Model) footerView() string {
 
 	cw := footerContentWidth(m.width)
 
-	modelSty := lipgloss.NewStyle().Foreground(constants.ThinkingColor(m.thinkingLevel))
+	modelSty := lipgloss.NewStyle().Foreground(uiconst.ThinkingColor(m.thinkingLevel))
 	imgLabel := m.footerImageLabel()
 	if !m.modelSupportsImage {
 		imgLabel = dimStyle.Render(imgLabel)
@@ -608,11 +622,11 @@ func (m Model) footerView() string {
 	line1Left := modelSty.Render(m.modelName) + metaSty.Render(fmt.Sprintf(" | %s | T: %s | %s", m.provider, m.thinkingLevel, imgLabel))
 
 	ctxFrac := m.displayContextFraction()
-	ctxColor := constants.ContextUsageColor(ctxFrac)
+	ctxColor := uiconst.ContextUsageColor(ctxFrac)
 	ctxSty := lipgloss.NewStyle().Foreground(ctxColor)
-	line1Right := ctxSty.Render(fmt.Sprintf("%s | %.1f%% (%s)", m.footerCostLabel(), ctxFrac*100, m.contextWindowLabel()))
+	line1Right := ctxSty.Render(fmt.Sprintf("%s | %s", m.footerCostLabel(), m.footerTokenUsageLabel(ctxFrac, m.tokensUsed)))
 
-	modeSty := lipgloss.NewStyle().Foreground(constants.ModeBorderColor(m.mode)).Bold(true)
+	modeSty := lipgloss.NewStyle().Foreground(uiconst.ModeBorderColor(m.mode)).Bold(true)
 	line2Left := primaryBoldSty.Render(wd) + sidSty.Render(fmt.Sprintf(" [%s] ", sidVal)) + modeSty.Render(string(m.mode))
 
 	gitStr := "[-]"
@@ -622,13 +636,13 @@ func (m Model) footerView() string {
 	var gitColor color.Color
 	switch {
 	case m.gitAdded > 0 && m.gitDeleted == 0:
-		gitColor = constants.Green
+		gitColor = uiconst.Green
 	case m.gitDeleted > 0 && m.gitAdded == 0:
-		gitColor = constants.Red
+		gitColor = uiconst.Red
 	case m.gitAdded > 0 && m.gitDeleted > 0:
-		gitColor = constants.Yellow
+		gitColor = uiconst.Yellow
 	default:
-		gitColor = constants.Gray
+		gitColor = uiconst.Gray
 	}
 	gitSty := lipgloss.NewStyle().Foreground(gitColor)
 	line2Right := primarySty.Render(fmt.Sprintf("turn: %d | %s ", m.turnCount, m.branch)) + gitSty.Render(gitStr)

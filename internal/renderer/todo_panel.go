@@ -5,19 +5,19 @@ import (
 
 	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
-	"github.com/riipandi/elph/internal/constants"
+	"github.com/riipandi/elph/internal/uiconst"
 	"github.com/riipandi/elph/pkg/tools/todolist"
 )
 
 var (
 	todoPanelBorder = lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).
-			BorderForeground(constants.DimText).
+			BorderForeground(uiconst.DimText).
 			Padding(0, 1)
-	todoPanelTitleStyle = lipgloss.NewStyle().Foreground(constants.BrightText).Bold(true)
-	todoDoneStyle       = lipgloss.NewStyle().Foreground(constants.Green)
-	todoActiveStyle     = lipgloss.NewStyle().Foreground(constants.Yellow).Bold(true)
-	todoPendingStyle    = lipgloss.NewStyle().Foreground(constants.DimText)
+	todoPanelTitleStyle = lipgloss.NewStyle().Foreground(uiconst.BrightText).Bold(true)
+	todoDoneStyle       = lipgloss.NewStyle().Foreground(uiconst.Green)
+	todoActiveStyle     = lipgloss.NewStyle().Foreground(uiconst.Yellow).Bold(true)
+	todoPendingStyle    = lipgloss.NewStyle().Foreground(uiconst.DimText)
 )
 
 func (m Model) showsTodoPanel() bool {
@@ -38,7 +38,7 @@ func formatTodosCompletedMessage(todos []todolist.Todo) string {
 }
 
 func (m Model) addTodoCompletionMessage(text string) Model {
-	m.messages = append(m.messages, message{text: text, kind: constants.MessageSystem})
+	m.messages = append(m.messages, message{text: text, kind: uiconst.MessageSystem})
 	m.session.AppendLog("system", text)
 	m.layout.ContentDirty = true
 	return m

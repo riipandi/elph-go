@@ -1,19 +1,24 @@
 package renderer
 
 import (
+	"fmt"
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"charm.land/lipgloss/v2/compat"
+
 	"github.com/riipandi/elph/internal/command"
-	"github.com/riipandi/elph/internal/constants"
+	"github.com/riipandi/elph/internal/settings"
+	"github.com/riipandi/elph/internal/uiconst"
 	"github.com/riipandi/elph/pkg/ai/provider"
+	"github.com/riipandi/elph/pkg/core/agent"
+	"github.com/riipandi/elph/pkg/tools"
 )
 
 var (
-	cmdPaletteSelected = lipgloss.NewStyle().Foreground(constants.Blue).Bold(true)
-	cmdPaletteName     = lipgloss.NewStyle().Foreground(constants.PrimaryText)
+	cmdPaletteSelected = lipgloss.NewStyle().Foreground(uiconst.Blue).Bold(true)
+	cmdPaletteName     = lipgloss.NewStyle().Foreground(uiconst.PrimaryText)
 	// Lifted gray for selected summary — softer than command highlight.
 	cmdPaletteSummarySelected = lipgloss.NewStyle().Foreground(compat.AdaptiveColor{
 		Light: lipgloss.Color("#6C6C6C"),
@@ -111,6 +116,8 @@ func (m Model) commandContext() command.Context {
 		ModelName:       m.session.ModelName,
 		PromptTemplates: m.promptTemplates,
 		Skills:          m.slashSkills,
+		GoalManager:     m.session.GoalManager(),
+
 	}
 	if cmd, _, ok := command.ResolveInput(m.input.Value(), base); ok && cmd.Name == "model" {
 		if reloaded, err := provider.LoadCatalog(""); err == nil && len(reloaded.Providers) > 0 {
@@ -350,4 +357,217 @@ func (m Model) commandPaletteHeight() int {
 		return lipgloss.Height(view)
 	}
 	return 0
+}
+
+func (m Model) handleCompactHistory(result command.Result) Model {
+	history := m.session.History
+	if len(history) == 0 {
+		m = m.addDetailMessage("Compact history", "No conversation history to compact.")
+		return m.syncLayout(true)
+	}
+
+	before := len(history)
+	beforeBytes := 0
+	for _, msg := range history {
+		beforeBytes += len(msg.Content)
+	}
+
+	// Load settings for smart compaction
+	prefs, err := settings.Load()
+	if err != nil {
+		prefs = settings.Settings{}
+	}
+
+	// Use settings for threshold
+	threshold := agent.CompactionThreshold{
+		MinMessages:  prefs.GetCompactMinMessages(),
+		MinBytes:     prefs.GetCompactMinBytes(),
+		MinTokens:    16 * 1024, // 16K tokens minimum
+		ContextUsage: prefs.GetCompactContextUsage(),
+	}
+
+	// Smart compaction: skip if conversation is too small (unless manual override)
+	if result.CompactRatio <= 0 && !agent.ShouldCompact(history, threshold) {
+		m = m.addDetailMessage("Compact history", fmt.Sprintf(
+			"Conversation too small to compact (%d messages, %s).",
+			before, formatBytes(beforeBytes)))
+		return m.syncLayout(true)
+	}
+
+	ratio := result.CompactRatio
+	if ratio <= 0 || ratio >= 100 {
+		ratio = prefs.CompactLimit()
+	}
+
+	// Use new compaction tracking
+	tokensBefore := agent.EstimateTokens(beforeBytes)
+	compactionResult := agent.CompactMessagesWithEntry(history, ratio, agent.ReasonManual, tokensBefore)
+	m.session.ApplyHistoryWithCompaction(compactionResult)
+
+	after := len(compactionResult.Messages)
+	afterBytes := 0
+	for _, msg := range compactionResult.Messages {
+		afterBytes += len(msg.Content)
+	}
+
+	var body string
+	if compactionResult.Entry != nil {
+		body = fmt.Sprintf("Reduced: %d → %d messages (%s → %s)\nCompactions: %d",
+			before, after,
+			formatBytes(beforeBytes), formatBytes(afterBytes),
+			m.session.CompactionCount)
+	} else {
+		body = fmt.Sprintf("Reduced: %d → %d messages (%s → %s)",
+			before, after,
+			formatBytes(beforeBytes), formatBytes(afterBytes))
+	}
+	m = m.addDetailMessage("Compact history", body)
+	m.session.AppendLog("detail", body)
+	return m.syncLayout(true)
+}
+
+func formatBytes(b int) string {
+	switch {
+	case b < 1<<10:
+		return fmt.Sprintf("%dB", b)
+	case b < 1<<20:
+		return fmt.Sprintf("%.1fKB", float64(b)/(1<<10))
+	default:
+		return fmt.Sprintf("%.1fMB", float64(b)/(1<<20))
+	}
+}
+
+func (m Model) handleContextUsage() Model {
+	used := m.tokensUsed
+	if used == 0 {
+		used = m.estimatedContextTokens()
+	}
+	window := m.contextWindow
+
+	usedPct := 0.0
+	if window > 0 {
+		usedPct = min(float64(used)/float64(window), 1.0) * 100
+	}
+
+	// Breakdown
+	sysPromptTokens := estimateTokens(m.session.SystemPrompt)
+	msgsTokens := 0
+	for _, msg := range m.messages {
+		msgsTokens += estimateTokens(msg.text)
+	}
+	// Avoid double-counting system prompt in message estimate
+	msgBodyTokens := msgsTokens - sysPromptTokens
+	if msgBodyTokens < 0 {
+		msgBodyTokens = 0
+	}
+	reasoningTokens := used - sysPromptTokens - msgBodyTokens
+	if reasoningTokens < 0 {
+		reasoningTokens = 0
+	}
+	freeTokens := window - used
+	if freeTokens < 0 {
+		freeTokens = 0
+	}
+
+	// Tool definitions count
+	toolDefs := tools.ProviderDefinitions()
+	toolCount := len(toolDefs)
+	// Rough token estimate for tool definitions
+	toolTokenEstimate := 0
+	for _, td := range toolDefs {
+		toolTokenEstimate += estimateTokens(td.Name) + estimateTokens(td.Description) + 200 // schema overhead
+	}
+	if toolTokenEstimate == 0 && toolCount > 0 {
+		toolTokenEstimate = toolCount * 300 / 4 // fallback estimate
+	}
+
+	// Auto-compact info
+	prefs, _ := settings.Load()
+	autoCompactPct := prefs.GetCompactContextUsage()
+	remainingTokens := window - used
+	if remainingTokens < 0 {
+		remainingTokens = 0
+	}
+
+	// Use provider-id and model-id instead of display names
+	modelLabel := m.session.ProviderID + "/" + m.session.ModelID
+	if m.session.ProviderID == "" {
+		modelLabel = m.session.ModelID
+	}
+	if modelLabel == "" || modelLabel == "/" {
+		modelLabel = "—"
+	}
+
+	var b strings.Builder
+	// Header line
+	b.WriteString(fmt.Sprintf("%s / %s tokens (%.2f%%)\n",
+		formatTokenCount(used), formatTokenCount(window), usedPct))
+	b.WriteString(modelLabel + "\n\n")
+
+	// Token breakdown
+	if window > 0 {
+		sysPct := 0.0
+		if window > 0 {
+			sysPct = float64(sysPromptTokens) / float64(window) * 100
+		}
+		msgPct := 0.0
+		if window > 0 {
+			msgPct = float64(msgBodyTokens) / float64(window) * 100
+		}
+		reasonPct := 0.0
+		if window > 0 {
+			reasonPct = float64(reasoningTokens) / float64(window) * 100
+		}
+		freePct := 0.0
+		if window > 0 {
+			freePct = float64(freeTokens) / float64(window) * 100
+		}
+		toolPct := 0.0
+		if window > 0 {
+			toolPct = float64(toolTokenEstimate) / float64(window) * 100
+		}
+		// Pick symbol based on whether the category has actual consumption
+		// ◆ filled = consumed, ◇ empty = free/zero, ◈ dotted = estimate
+		sysSym := "◆"
+		if sysPromptTokens == 0 {
+			sysSym = "◇"
+		}
+		msgSym := "◆"
+		if msgBodyTokens == 0 {
+			msgSym = "◇"
+		}
+		reasonSym := "◆"
+		if reasoningTokens == 0 {
+			reasonSym = "◇"
+		}
+
+		fmt.Fprintf(&b, "%s System prompt       %s tokens  (%.1f%%)\n", sysSym, formatTokenCount(sysPromptTokens), sysPct)
+		fmt.Fprintf(&b, "%s Messages            %s tokens  (%.1f%%)\n", msgSym, formatTokenCount(msgBodyTokens), msgPct)
+		fmt.Fprintf(&b, "%s Reasoning/overhead  %s tokens  (%.1f%%)\n", reasonSym, formatTokenCount(reasoningTokens), reasonPct)
+		fmt.Fprintf(&b, "◇ Free                %s tokens  (%.1f%%)\n\n", formatTokenCount(freeTokens), freePct)
+
+		fmt.Fprintf(&b, "◈ Tool definitions    %s tokens  (%.1f%%) · %d tools · schema est.; real cost in overhead\n\n",
+			formatTokenCount(toolTokenEstimate), toolPct, toolCount)
+	}
+
+	fmt.Fprintf(&b, "Auto-compact at %d%% · ~%s tokens remaining\n\n",
+		autoCompactPct, formatTokenCount(remainingTokens))
+
+	fmt.Fprintf(&b, "Turns: %d · Tool calls: %d · Compactions: %d",
+		m.turnCount, m.toolCallCount, m.session.CompactionCount)
+
+	m = m.addDetailMessage("Context Usage", strings.TrimRight(b.String(), "\n"))
+	// Expand by default so the full breakdown is visible immediately
+	if idx := len(m.messages) - 1; idx >= 0 {
+		m.messages[idx].detailExpanded = true
+	}
+	m.session.AppendLog("detail", "Context Usage")
+
+	// Append system prompt as a separate collapsed detail at the bottom
+	if strings.TrimSpace(m.session.SystemPrompt) != "" {
+		m = m.addDetailMessage("System prompt", m.session.SystemPrompt)
+		// Collapsed by default — user can expand with ctrl+o
+		m.session.AppendLog("detail", "System prompt")
+	}
+	return m
 }

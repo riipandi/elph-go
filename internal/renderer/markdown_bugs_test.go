@@ -5,7 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/riipandi/elph/internal/constants"
+	"github.com/riipandi/elph/internal/rendermd"
+	"github.com/riipandi/elph/internal/uiconst"
 )
 
 func TestReproRemainingBugs(t *testing.T) {
@@ -25,8 +26,8 @@ func TestReproRemainingBugs(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			plain := stripANSI(m.renderMessage(message{text: c.md, kind: constants.MessageAI}))
-			block := hasMarkdownBlockStructure(c.md)
+			plain := stripANSI(m.renderMessage(message{text: c.md, kind: uiconst.MessageAI}))
+			block := rendermd.HasMarkdownBlockStructure(c.md)
 			t.Logf("block=%v", block)
 			t.Logf("OUT:\n%s", plain)
 			fmt.Printf("\n=== %s (block=%v) ===\n%s\n", c.name, block, strings.TrimSpace(plain))

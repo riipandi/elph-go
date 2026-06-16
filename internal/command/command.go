@@ -6,7 +6,9 @@ import (
 
 	"github.com/riipandi/elph/internal/prompt/template"
 	"github.com/riipandi/elph/pkg/ai/provider"
+	"github.com/riipandi/elph/pkg/tools/goal"
 )
+
 
 // Context carries session state needed by slash command handlers.
 type Context struct {
@@ -18,6 +20,15 @@ type Context struct {
 	ProviderID      string
 	ModelID         string
 	ModelName       string
+
+	ContextUsage bool // set by /context handler
+
+	// GoalManager is an interface for the session goal manager.
+	GoalManager *goal.Manager
+
+
+	CompactHistory bool // set by /compact handler
+	CompactRatio   int  // compaction target percentage
 
 	pendingSwitch         *ModelSwitch
 	pendingOpenSelector   bool
@@ -58,6 +69,9 @@ type Result struct {
 	DetailLabel       string
 	DetailBody        string
 	DetailExpanded    bool
+	ContextUsage      bool // set by /context handler
+	CompactHistory    bool // signal to hard-compact conversation history
+	CompactRatio      int  // compaction target percentage (0 = use default)
 }
 
 // SlashCommand describes a built-in /command available in the TUI.
@@ -131,6 +145,9 @@ func Execute(input string, ctx Context) Result {
 			DetailLabel:       ctx.pendingDetailLabel,
 			DetailBody:        ctx.pendingDetailBody,
 			DetailExpanded:    ctx.pendingDetailExpanded,
+			ContextUsage:      ctx.ContextUsage,
+			CompactHistory:    ctx.CompactHistory,
+			CompactRatio:      ctx.CompactRatio,
 		}
 	}
 

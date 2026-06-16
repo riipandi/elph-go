@@ -4,8 +4,8 @@ import (
 	"testing"
 
 	"charm.land/lipgloss/v2"
-	"github.com/riipandi/elph/internal/constants"
 	"github.com/riipandi/elph/internal/settings"
+	"github.com/riipandi/elph/internal/uiconst"
 	"github.com/riipandi/elph/pkg/ai/provider"
 	"github.com/riipandi/elph/pkg/core/agent"
 	"github.com/stretchr/testify/require"
@@ -81,7 +81,7 @@ func TestActivityProgression(t *testing.T) {
 	require.False(t, m.agent.Busy)
 	require.Equal(t, agent.ActivityIdle, m.agent.Activity)
 	require.Len(t, m.messages, 1)
-	require.Equal(t, constants.MessageAI, m.messages[0].kind)
+	require.Equal(t, uiconst.MessageAI, m.messages[0].kind)
 }
 
 func TestBeginAgentTurnSwapsInputMarginForActivity(t *testing.T) {
@@ -125,7 +125,7 @@ func TestAgentThinkingDeltaRendersDimmed(t *testing.T) {
 	updated, _ := m.Update(agentEventMsg{event: agent.ThinkingDeltaEvent("reasoning chunk")})
 	m = updated.(Model)
 	require.Len(t, m.messages, 1)
-	require.Equal(t, constants.MessageThinking, m.messages[0].kind)
+	require.Equal(t, uiconst.MessageThinking, m.messages[0].kind)
 	require.Equal(t, "reasoning chunk", m.messages[0].text)
 
 	updated, _ = m.Update(agentEventMsg{event: agent.ThinkingDeltaEvent(" more")})
@@ -135,7 +135,7 @@ func TestAgentThinkingDeltaRendersDimmed(t *testing.T) {
 	updated, _ = m.Update(agentEventMsg{event: agent.ResponseDeltaEvent("answer")})
 	m = updated.(Model)
 	require.Len(t, m.messages, 2)
-	require.Equal(t, constants.MessageAI, m.messages[1].kind)
+	require.Equal(t, uiconst.MessageAI, m.messages[1].kind)
 }
 
 func TestAgentPhaseDelaysAreOrdered(t *testing.T) {

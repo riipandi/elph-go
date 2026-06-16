@@ -9,8 +9,8 @@
   publish = "public"
   command = """\
   git config core.quotepath false && \
-  hugo build --gc --minify --baseURL "${URL}" && \
-	cp ../schemas/*.json ./public/
+  hugo build --config ./docsite/hugo.yaml --gc --minify --baseURL "${URL}" && \
+	cp ./schemas/*.json ./docsite/public/
   """
 
 [[redirects]]

@@ -58,6 +58,13 @@ func executeGetGoal(ctx context.Context, _ map[string]any) toolresult.ToolResult
 	}
 	b.WriteString(fmt.Sprintf("Turns used: %d\n", snapshot.TurnsUsed))
 	b.WriteString(fmt.Sprintf("Tokens used: %d\n", snapshot.TokensUsed))
+	if snapshot.WallClockMs > 0 {
+		b.WriteString(fmt.Sprintf("Elapsed: %s\n", formatDuration(snapshot.WallClockMs)))
+	}
+	if snapshot.WallClockBudgetMs > 0 {
+		b.WriteString(fmt.Sprintf("Wall clock budget: %s\n", formatDuration(snapshot.WallClockBudgetMs)))
+	}
+
 	return toolresult.ToolResult{Output: b.String()}
 }
 
@@ -117,24 +124,62 @@ func executeSetGoalBudget(ctx context.Context, args map[string]any) toolresult.T
 	var limits goal.BudgetLimits
 	switch strings.ToLower(unit) {
 	case "turns":
+		if intVal <= 0 {
+			return toolresult.ToolResult{Err: fmt.Errorf("turn budget must be positive")}
+		}
 		limits.TurnBudget = &intVal
 	case "tokens":
+		if intVal <= 0 {
+			return toolresult.ToolResult{Err: fmt.Errorf("token budget must be positive")}
+		}
 		limits.TokenBudget = &intVal
+	case "milliseconds":
+		if intVal < 1000 || intVal > 86400000 {
+			return toolresult.ToolResult{Err: fmt.Errorf("time budget must be between 1 second and 24 hours")}
+		}
+		limits.WallClockBudget = &intVal
 	case "seconds":
 		ms := intVal * 1000
+		if ms < 1000 || ms > 86400000 {
+			return toolresult.ToolResult{Err: fmt.Errorf("time budget must be between 1 second and 24 hours")}
+		}
 		limits.WallClockBudget = &ms
 	case "minutes":
 		ms := intVal * 60 * 1000
+		if ms < 1000 || ms > 86400000 {
+			return toolresult.ToolResult{Err: fmt.Errorf("time budget must be between 1 second and 24 hours")}
+		}
 		limits.WallClockBudget = &ms
 	case "hours":
 		ms := intVal * 60 * 60 * 1000
+		if ms < 1000 || ms > 86400000 {
+			return toolresult.ToolResult{Err: fmt.Errorf("time budget must be between 1 second and 24 hours")}
+		}
 		limits.WallClockBudget = &ms
 	default:
-		return toolresult.ToolResult{Err: fmt.Errorf("unsupported budget unit: %s (use turns, tokens, seconds, minutes, or hours)", unit)}
+		return toolresult.ToolResult{Err: fmt.Errorf("unsupported budget unit: %s (use turns, tokens, milliseconds, seconds, minutes, or hours)", unit)}
 	}
 
 	mgr.SetBudgetLimits(limits)
 	return toolresult.ToolResult{
 		Output: fmt.Sprintf("Goal budget set: %d %s", intVal, unit),
 	}
+}
+
+func formatDuration(ms int64) string {
+	if ms < 1000 {
+		return fmt.Sprintf("%dms", ms)
+	}
+	totalSeconds := ms / 1000
+	if totalSeconds < 60 {
+		return fmt.Sprintf("%ds", totalSeconds)
+	}
+	minutes := totalSeconds / 60
+	seconds := totalSeconds % 60
+	if minutes < 60 {
+		return fmt.Sprintf("%dm%ds", minutes, seconds)
+	}
+	hours := minutes / 60
+	minutes = minutes % 60
+	return fmt.Sprintf("%dh%dm", hours, minutes)
 }

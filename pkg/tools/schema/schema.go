@@ -169,7 +169,7 @@ func ProviderSchema(name string) (map[string]any, bool) {
 	case catalog.SetGoalBudget:
 		return objectSchema(map[string]propertySpec{
 			"value": {typ: "number", description: "Positive numeric budget value"},
-			"unit":  {typ: "string", description: "Budget unit: turns, tokens, seconds, minutes, hours"},
+			"unit":  {typ: "string", description: "Budget unit: turns, tokens, milliseconds, seconds, minutes, hours"},
 		}, "value", "unit"), true
 	case catalog.EnterPlanMode, catalog.ExitPlanMode:
 		return objectSchema(map[string]propertySpec{

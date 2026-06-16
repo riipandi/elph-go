@@ -36,6 +36,7 @@ type TurnOptions struct {
 	ProviderDefaultTimeout time.Duration // provider inactivity limit (0 = default)
 	MaxToolIterations      int           // max autonomous tool rounds per turn (0 = default MaxToolIterationsDefault)
 	AutoCompactContext     bool          // compact conversation history on context-limit error and retry
+	RecordGoalTurn       func(tokens int) // optional: called after each tool round to record goal turn progress
 	AutoCompactLimit       int           // compaction target percentage (0 = use default 80)
 }
 

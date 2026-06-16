@@ -157,8 +157,14 @@ func runProviderLoop(ctx context.Context, opts TurnOptions, ch chan<- Event) {
 		messages = CompactMessages(messages)
 		if toolRoundCountsTowardLimit(result.ToolCalls) {
 			step++
+			// Record goal turn if callback is configured
+			if opts.RecordGoalTurn != nil {
+				totalTokens := usage.InputTokens + usage.OutputTokens
+				opts.RecordGoalTurn(int(totalTokens))
+			}
 		}
 	}
+
 
 	sendEvent(ctx, ch, TurnDoneWithHistoryEvent(protocol.TurnResult{
 		Content: fmt.Sprintf("Stopped after %d tool rounds.", maxToolIterationsFor(opts)),

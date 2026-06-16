@@ -173,7 +173,14 @@ func (s *Session) StartTurn(ctx context.Context, opts agent.TurnOptions) <-chan 
 		opts.ExecuteTool = func(ctx context.Context, name string, args map[string]any) agent.ToolRunResult {
 			return toolRunResult(exec.ExecuteTool(ctx, s.WorkDir, name, args))
 		}
+		// Record goal turn progress when a goal is active
+		opts.RecordGoalTurn = func(tokens int) {
+			if s.goalManager != nil {
+				s.goalManager.RecordTurn(tokens)
+			}
+		}
 	}
+
 	return agent.RunTurn(ctx, opts)
 }
 

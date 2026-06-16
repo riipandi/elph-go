@@ -89,8 +89,7 @@ counters, and any budget limits.
 **UpdateGoal** accepts `status`: `active` (resume paused), `complete`, `blocked`, or `paused`.
 Only valid transitions are accepted; invalid ones return an error.
 
-**SetGoalBudget** accepts `value` (positive number) and `unit` (`turns`, `tokens`, `seconds`,
-`minutes`, `hours`). Sets the budget limit for the current goal.
+**SetGoalBudget** accepts `value` (positive number) and `unit` (`turns`, `tokens`, `milliseconds`, `seconds`, `minutes`, `hours`). Time budgets are validated between 1 second and 24 hours. Sets the budget limit for the current goal.
 
 Implementation: `pkg/tools/goal` (types + manager), `internal/runtime/exec/goal.go` (execute),
 `pkg/tools/schema` (provider schema). Goal state is scoped to the session and managed via

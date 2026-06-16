@@ -26,18 +26,17 @@ func TestFooterTokenUsageLabel(t *testing.T) {
 	require.Equal(t, "50.0% | 262k", m.footerTokenUsageLabel(0.5, 131072))
 	require.Equal(t, "100.0% | 262k", m.footerTokenUsageLabel(1.0, 262144))
 
-	// Both mode: same as percentage
+	// Both mode: used tokens | percentage | context window
 	m.footerTokenDisplay = "both"
-	require.Equal(t, "0.0% | 262k", m.footerTokenUsageLabel(0.0, 0))
-	require.Equal(t, "50.0% | 262k", m.footerTokenUsageLabel(0.5, 131072))
-
+	require.Equal(t, "— | 0.0% | 262k", m.footerTokenUsageLabel(0.0, 0))
+	require.Equal(t, "131k | 50.0% | 262k", m.footerTokenUsageLabel(0.5, 131072))
 	// Count mode: used tokens | context window
 	m.footerTokenDisplay = "count"
 	require.Equal(t, "— | 262k", m.footerTokenUsageLabel(0.0, 0))
 	require.Equal(t, "131k | 262k", m.footerTokenUsageLabel(0.5, 131072))
 	require.Equal(t, "262k | 262k", m.footerTokenUsageLabel(1.0, 262144))
 
-	// Invalid mode defaults to percentage
+	// Invalid mode defaults to both
 	m.footerTokenDisplay = "invalid"
-	require.Equal(t, "0.0% | 262k", m.footerTokenUsageLabel(0.0, 0))
+	require.Equal(t, "— | 0.0% | 262k", m.footerTokenUsageLabel(0.0, 0))
 }

@@ -35,6 +35,9 @@ func (m Model) footerTokenUsageLabel(ctxFrac float64, tokensUsed int) string {
 	mode := settings.ParseFooterTokenDisplay(m.footerTokenDisplay)
 	windowLabel := m.contextWindowLabel()
 	switch mode {
+	case settings.FooterTokenBoth:
+		// "131k | 0.0% | 262k" — used tokens | percentage | context window
+		return fmt.Sprintf("%s | %.1f%% | %s", formatTokenCount(tokensUsed), ctxFrac*100, windowLabel)
 	case settings.FooterTokenCount:
 		// "131k | 262k" — used tokens | context window
 		return fmt.Sprintf("%s | %s", formatTokenCount(tokensUsed), windowLabel)

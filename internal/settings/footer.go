@@ -8,7 +8,7 @@ type FooterTokenDisplay string
 const (
 	// FooterTokenPercentage shows percentage with context window: "0.0% | 262k"
 	FooterTokenPercentage FooterTokenDisplay = "percentage"
-	// FooterTokenBoth shows percentage and context window: "0.0% | 262k"
+	// FooterTokenBoth shows used tokens, percentage, and context window: "131k | 0.0% | 262k"
 	FooterTokenBoth FooterTokenDisplay = "both"
 	// FooterTokenCount shows used tokens with context window: "131k | 262k"
 	FooterTokenCount FooterTokenDisplay = "count"

@@ -215,11 +215,11 @@ project_dir [session_id] mode               turn: 0 | branch [+N -N]
 
 The token display format is configurable via `footerTokenDisplay` setting (see [configuration.md](./configuration.md#settings-reference)). Context limit is always displayed.
 
-| Format       | Example               | Description                                   |
-|--------------|-----------------------|-----------------------------------------------|
-| `both`       | `$0.00 | 0.0% | 262k` | Default — shows percentage and context window |
-| `percentage` | `$0.00 | 0.0% | 262k` | Same as `both` (backward compatible)          |
-| `count`      | `$0.00 | 131k | 262k` | Shows used tokens and context window          |
+| Format       | Example                    | Description                                            |
+|--------------|----------------------------|--------------------------------------------------------|
+| `both`       | `$0.00 | 131k | 0.0% | 262k` | Default — shows used tokens, percentage, and limit     |
+| `percentage` | `$0.00 | 0.0% | 262k`       | Shows percentage and context window only                |
+| `count`      | `$0.00 | 131k | 262k`       | Shows used tokens and context window only              |
 
 ### Line 1
 

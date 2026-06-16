@@ -139,7 +139,7 @@
 				"count"
 			],
 			"default": "both",
-			"description": "How token usage is displayed in the footer. Context limit is always shown. percentage/both: '0.0% | 262k'; count: '131k | 262k' (used tokens)."
+			"description": "How token usage is displayed in the footer. Context limit is always shown. both: '131k | 0.0% | 262k' (used tokens + percentage); percentage: '0.0% | 262k'; count: '131k | 262k' (used tokens only)."
 		},
 		"provider": {
 			"type": "object",

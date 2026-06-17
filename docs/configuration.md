@@ -4,33 +4,35 @@ Where Elph stores settings, how to override paths, and what each file controls.
 
 ## Directory layout
 
-Default home: `~/.elph/` (override individual dirs with env vars below).
+Default config: `~/.elph/` | Default data: `~/.local/share/elph/`
 
 ```
-~/.elph/
+~/.elph/                                    # Config (XDG_CONFIG_HOME)
 ├── settings.json          # UI preferences, session provider/model/mode (or settings.jsonc)
-├── version.json           # models.dev sync timestamp, release metadata (see below)
-└── providers/
-    ├── openai.json
-    ├── anthropic.json
-    └── …                    # one .json or .jsonc file per provider id
+├── providers/
+│   ├── openai.json
+│   ├── anthropic.json
+│   └── …                    # one .json or .jsonc file per provider id
+├── prompts/
+│   └── *.md                 # global prompt templates → /name commands
+└── skills/
+    └── <name>/SKILL.md      # global agent skills (listed in system prompt)
 
-~/.elph/prompts/
-└── *.md                     # global prompt templates → /name commands
+~/.local/share/elph/                         # Data (XDG_DATA_HOME)
+├── version.json           # models.dev sync timestamp, release metadata
+├── metadata.db            # SQLite database (sessions, messages, todos, goals, snip)
+├── attachments/            # pasted images per session
+└── logs/                   # session logs
 
-~/.elph/skills/
-└── <name>/SKILL.md          # global agent skills (listed in system prompt)
-
-<workDir>/.agents/elph/
-├── .gitignore               # ignores metadata/, settings, mcp/, attachments/, and itself; prompts/skills stay committable
-├── settings.json            # optional project overrides (or settings.jsonc); merged on load, not written by Save
+<workDir>/.agents/elph/                      # Project-local (gitignored)
+├── .gitignore               # ignores metadata/, settings, mcp/, and itself
+├── settings.json            # optional project overrides (or settings.jsonc)
 ├── prompts/*.md             # project templates (override global by filename)
 ├── skills/<name>/SKILL.md   # project skills (override global by name)
-├── attachments/             # pasted images per session (gitignored; created on first paste)
 └── metadata/
     └── <session_id>/
-        ├── todos.jsonl      # latest TodoList snapshot (overwrite, not append)
-        ├── log_events.json  # session events (user, system, ai, thinking, shell, …)
+        ├── todos.jsonl      # latest TodoList snapshot
+        ├── log_events.json  # session events
         └── log_requests.json # provider and tool trace
 ```
 
@@ -92,34 +94,36 @@ On first launch, `settings.Ensure()` creates `~/.elph/settings.json` with defaul
 
 ### Fields
 
-| Field                      | Default      | Description                                                                                                                                                                                                                 |
-|----------------------------|--------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `syncInterval`             | `24h`        | Minimum interval before the TUI checks models.dev again at startup (Go duration, e.g. `24h`, `12h`, `30m`)                                                                                                                  |
-| `theme`                    | `auto`       | `auto`, `dark`, or `light`                                                                                                                                                                                                  |
-| `showThinking`             | `true`       | Stream reasoning blocks in TUI                                                                                                                                                                                              |
-| `autoExpandThinking`       | `false`      | Thinking blocks start expanded                                                                                                                                                                                              |
-| `useRawPaste`              | `false`      | When `false`, long text pastes (≥ 4 lines or ≥ 400 runes) collapse to `[Pasted: N lines]` in the input; preview/edit with **Ctrl+O**. When `true`, paste verbatim. See [tui.md § Long text paste](./tui.md#long-text-paste) |
-| `stickyScroll`             | `true`       | Pin the latest user prompt to the top of the viewport while scrolling assistant replies                                                                                                                                     |
-| `preferedResponseLanguage` | `inherit`    | Reply language: `inherit` matches the user's message language; set a fixed language (for example `English`) to always default to that; overridden when the user explicitly asks for another language                        |
-| `thinkingBudgets`          | —            | Per-level token budget overrides                                                                                                                                                                                            |
-| `maxToolIterations`        | `0` (25)     | Max autonomous tool rounds per turn. `0` uses the built-in default (25). Increase if the agent stops prematurely with "Stopped after N tool rounds."                                                                        |
-| `autoCompactContext`       | `true`       | Automatically compact conversation history and retry when the provider reports a context-limit error, instead of showing the error to the user                                                                              |
-| `autoCompactLimit`         | `80`         | Compaction target as percentage of history budget (10-100). Lower = more aggressive. Used by both auto-compaction and `/compact` slash command                                                                              |
-| `footerTokenDisplay`       | `both`      | How token usage is displayed in the footer. Context limit is always shown. `both`: `131k | 0.0% | 262k` (used tokens + percentage); `percentage`: `0.0% | 262k`; `count`: `131k | 262k`                                                                                                       |
-| `session.providerId`       | —            | Last selected provider (saved to `~/.elph` on change)                                                                                                                                                                       |
-| `session.modelId`          | —            | Last selected model (saved to `~/.elph` on change)                                                                                                                                                                          |
-| `session.agentMode`        | `build`      | `build`, `plan`, `ask`, `brave` — **brave** skips tool approval prompts                                                                                                                                                     |
-| `session.thinkingLevel`    | `high`       | `off` … `xhigh`                                                                                                                                                                                                             |
+| Field                      | Default   | Description                                                                                                                                                                                                                 |
+|----------------------------|-----------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `syncInterval`             | `24h`     | Minimum interval before the TUI checks models.dev again at startup (Go duration, e.g. `24h`, `12h`, `30m`)                                                                                                                  |
+| `theme`                    | `auto`    | `auto`, `dark`, or `light`                                                                                                                                                                                                  |
+| `showThinking`             | `true`    | Stream reasoning blocks in TUI                                                                                                                                                                                              |
+| `autoExpandThinking`       | `false`   | Thinking blocks start expanded                                                                                                                                                                                              |
+| `useRawPaste`              | `false`   | When `false`, long text pastes (≥ 4 lines or ≥ 400 runes) collapse to `[Pasted: N lines]` in the input; preview/edit with **Ctrl+O**. When `true`, paste verbatim. See [tui.md § Long text paste](./tui.md#long-text-paste) |
+| `stickyScroll`             | `true`    | Pin the latest user prompt to the top of the viewport while scrolling assistant replies                                                                                                                                     |
+| `preferedResponseLanguage` | `inherit` | Reply language: `inherit` matches the user's message language; set a fixed language (for example `English`) to always default to that; overridden when the user explicitly asks for another language                        |
+| `thinkingBudgets`          | —         | Per-level token budget overrides                                                                                                                                                                                            |
+| `maxToolIterations`        | `0` (25)  | Max autonomous tool rounds per turn. `0` uses the built-in default (25). Increase if the agent stops prematurely with "Stopped after N tool rounds."                                                                        |
+| `autoCompactContext`       | `true`    | Automatically compact conversation history and retry when the provider reports a context-limit error, instead of showing the error to the user                                                                              |
+| `autoCompactLimit`         | `80`      | Compaction target as percentage of history budget (10-100). Lower = more aggressive. Used by both auto-compaction and `/compact` slash command                                                                              |
+| `footerTokenDisplay`       | `both`    | How token usage is displayed in the footer. Context limit is always shown. `both`: `131k | 0.0% | 262k` (used tokens + percentage); `percentage`: `0.0% | 262k`; `count`: `131k | 262k`                                     |
+| `session.providerId`       | —         | Last selected provider (saved to `~/.elph` on change)                                                                                                                                                                       |
+| `session.modelId`          | —         | Last selected model (saved to `~/.elph` on change)                                                                                                                                                                          |
+| `session.agentMode`        | `build`   | `build`, `plan`, `ask`, `brave` — **brave** skips tool approval prompts                                                                                                                                                     |
+| `session.thinkingLevel`    | `high`    | `off` … `xhigh`                                                                                                                                                                                                             |
+| `database.url`             | —         | Database URL. Default: `~/.local/share/elph/metadata.db`. For Turso Cloud: `libsql://your-db.turso.io`                                                                                                                      |
+| `database.token`           | —         | Turso Cloud authentication token. Optional for local databases.                                                                                                                                                             |
 Legacy `models.syncInterval` and `models.lastSync` in older settings files are migrated on load (`syncInterval` is promoted to the top level; `lastSync` moves to `version.json`).
 
 ### Provider HTTP settings
 
 HTTP clients use [resty v3](https://resty.dev) with built-in retry and configurable timeouts.
 
-| Setting | Default | Description |
-|---------|---------|-------------|
-| `provider.maxRetries` | `2` | Retries for retriable provider failures (5xx, network errors). `0` disables. |
-| `provider.defaultTimeout` | `120s` | Provider inactivity timeout and SSE stall detection limit. |
+| Setting                   | Default | Description                                                                  |
+|---------------------------|---------|------------------------------------------------------------------------------|
+| `provider.maxRetries`     | `2`     | Retries for retriable provider failures (5xx, network errors). `0` disables. |
+| `provider.defaultTimeout` | `120s`  | Provider inactivity timeout and SSE stall detection limit.                   |
 
 Tool packages (websearch, codesearch, fetchurl) have independent retry: 2 retries on 5xx/network errors with 1s-5s backoff.
 

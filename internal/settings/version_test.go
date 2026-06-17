@@ -65,5 +65,5 @@ func TestVersionPathUsesElphHome(t *testing.T) {
 
 	path, err := VersionPath()
 	require.NoError(t, err)
-	require.Equal(t, filepath.Join(home, ".elph", "version.json"), path)
+	require.Equal(t, filepath.Join(home, ".local", "share", "elph", "version.json"), path)
 }

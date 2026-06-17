@@ -4,26 +4,27 @@ Index of user and contributor documentation. All docs are written in English.
 
 ## Guides
 
-| Document                                     | Description                                        |
-|----------------------------------------------|----------------------------------------------------|
-| [architecture.md](./architecture.md)         | Repository layout, packages, and data flow         |
-| [configuration.md](./configuration.md)       | `~/.elph` paths, settings, env vars, provider JSON |
-| [cli.md](./cli.md)                           | `elph` CLI subcommands (`provider`, `version`, …)  |
-| [agent-runtime.md](./agent-runtime.md)       | Turn loop, native tools, sessions, logging         |
-| [tools.md](./tools.md)                       | Built-in tool catalog and provider API exposure    |
-| [slash-commands.md](./slash-commands.md)     | TUI `/` commands — implemented vs planned          |
-| [prompt-templates.md](./prompt-templates.md) | Custom `/name` prompt templates                    |
-| [tui.md](./tui.md)                           | TUI layout, colors, keybindings                    |
-| [progress.md](./progress.md)                 | Development log — agent tools & provider work      |
+| Document                                     | Description                                                                |
+|----------------------------------------------|----------------------------------------------------------------------------|
+| [architecture.md](./architecture.md)         | Repository layout, packages, and data flow                                 |
+| [configuration.md](./configuration.md)       | `~/.elph` + `~/.local/share/elph` paths, settings, env vars, provider JSON |
+| [cli.md](./cli.md)                           | `elph` CLI subcommands (`provider`, `version`, …)                          |
+| [agent-runtime.md](./agent-runtime.md)       | Turn loop, native tools, sessions, logging                                 |
+| [tools.md](./tools.md)                       | Built-in tool catalog and provider API exposure                            |
+| [slash-commands.md](./slash-commands.md)     | TUI `/` commands — implemented vs planned                                  |
+| [prompt-templates.md](./prompt-templates.md) | Custom `/name` prompt templates                                            |
+| [datastore.md](./datastore.md)               | SQLite/Turso database, migrations, schema                                  |
+| [tui.md](./tui.md)                           | TUI layout, colors, keybindings                                            |
+| [progress.md](./progress.md)                 | Development log — agent tools & provider work                              |
 
 ## JSON schemas
 
-| File                                                               | Purpose                                                            |
-|--------------------------------------------------------------------|--------------------------------------------------------------------|
-| [../schemas/provider-schema.json](../schemas/provider-schema.json) | Provider config format (`~/.elph/providers/*.json`)                |
-| [../schemas/config-schema.json](../schemas/config-schema.json)     | Settings (`~/.elph` + optional `<workDir>/.agents/elph` overrides) |
-| [../schemas/version-schema.json](../schemas/version-schema.json)   | `~/.elph/version.json` (sync timestamp, release metadata)          |
-| [../schemas/mcp-schema.json](../schemas/mcp-schema.json)           | **Planned** MCP config — not consumed by runtime yet               |
+| File                                                               | Purpose                                                               |
+|--------------------------------------------------------------------|-----------------------------------------------------------------------|
+| [../schemas/provider-schema.json](../schemas/provider-schema.json) | Provider config format (`~/.elph/providers/*.json`)                   |
+| [../schemas/config-schema.json](../schemas/config-schema.json)     | Settings (`~/.elph` + optional `<workDir>/.agents/elph` overrides)    |
+| [../schemas/version-schema.json](../schemas/version-schema.json)   | `~/.local/share/elph/version.json` (sync timestamp, release metadata) |
+| [../schemas/mcp-schema.json](../schemas/mcp-schema.json)           | **Planned** MCP config — not consumed by runtime yet                  |
 
 ## Documentation gaps (audit summary)
 

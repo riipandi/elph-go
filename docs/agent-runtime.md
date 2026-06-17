@@ -192,7 +192,7 @@ When the TUI attaches clipboard images and the model supports vision, `Session.S
 `TurnOptions.UserImages` (`[]provider.ImageAttachment`) into `agent.RunTurn`. `prepareTurnMessages`
 appends a user message with `Images` set (text may be empty for image-only turns). Provider adapters
 in `pkg/ai/providers/openai` and `pkg/ai/providers/anthropic` map these blocks to API image content.
-Pasted files live under `<workDir>/.agents/elph/attachments/` (gitignored). Non-vision models receive
+Pasted files live under `~/.local/share/elph/attachments/` (XDG data dir). Non-vision models receive
 attachment paths in the text prompt instead. UI: [tui.md § Image attachments](./tui.md#image-attachments).
 
 ### Session metadata

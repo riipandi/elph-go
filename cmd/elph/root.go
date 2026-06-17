@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/riipandi/elph/internal/config"
+	"github.com/riipandi/elph/internal/datastore"
 	"github.com/riipandi/elph/internal/renderer"
 	"github.com/riipandi/elph/internal/settings"
 	"github.com/riipandi/elph/internal/uiconst"
@@ -39,6 +40,13 @@ modes, and manage providers from one place.`,
 				os.Exit(1)
 			}
 		}
+
+		// Initialize database and run migrations
+		if _, err := datastore.Open(cmd.Context()); err != nil {
+			fmt.Fprintf(os.Stderr, "failed to initialize database: %v\n", err)
+			os.Exit(1)
+		}
+		defer datastore.Close()
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := renderer.Render(); err != nil {

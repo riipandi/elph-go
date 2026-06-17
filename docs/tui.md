@@ -156,7 +156,7 @@ See [prompt-templates.md](./prompt-templates.md) for format, argument placeholde
 ### Image attachments
 
 When the selected model supports vision, **Ctrl+V** / **Cmd+V** pastes a clipboard image into the
-pending turn (up to **4** images). Files are saved under `<workDir>/.agents/elph/attachments/` as
+pending turn (up to **4** images). Files are saved under `~/.local/share/elph/attachments/` as
 `paste_<session_suffix>_*.png` and listed below the input while pending.
 
 | UI element       | Behavior                                                                    |

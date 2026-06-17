@@ -25,6 +25,7 @@ coverage.*
 !.vscode/launch.json
 !.vscode/mcp.json
 !.vscode/tasks.json
+*_gsx.go
 *.bak
 
 # SQLite
@@ -48,9 +49,6 @@ release/
 .temp
 .tmp
 
-# Generated
-*_gsx.go
-
 # Envars
 .env.*
 !.env.example
@@ -70,3 +68,7 @@ terraform.tfvars*
 docsite/docsite/
 docsite/public/
 /public/
+
+# Misc
+.agents/prompts/
+.agents/skills/

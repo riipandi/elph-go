@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/riipandi/elph/internal/appdir"
 	"github.com/riipandi/elph/internal/theme"
 )
 
@@ -22,7 +23,6 @@ const (
 )
 
 // Settings is persisted at ~/.elph/settings.json.
-// Settings is persisted at ~/.elph/settings.json.
 type Settings struct {
 	SyncInterval             string            `json:"syncInterval,omitempty"`
 	Models                   *ModelsSettings   `json:"models,omitempty"`
@@ -34,7 +34,8 @@ type Settings struct {
 	PreferedResponseLanguage string            `json:"preferedResponseLanguage,omitempty"`
 	ThinkingBudgets          map[string]int    `json:"thinkingBudgets,omitempty"`
 	Provider                 *ProviderSettings `json:"provider,omitempty"`
-	Session                  SessionSettings   `json:"session,omitempty"`
+	Session                  SessionSettings   `json:"session"`
+	Database                 DatabaseSettings  `json:"database"`
 	MaxToolIterations        *int              `json:"maxToolIterations,omitempty"`
 	AutoCompactContext       *bool             `json:"autoCompactContext,omitempty"`
 	AutoCompactLimit         *int              `json:"autoCompactLimit,omitempty"`
@@ -54,6 +55,15 @@ type ModelsSettings struct {
 
 func (m ModelsSettings) legacyLastSync() string {
 	return strings.TrimSpace(m.LastSync)
+}
+
+// DatabaseSettings configures the SQLite database connection.
+type DatabaseSettings struct {
+	// URL is the database URL. For local mode, this is a file path (default: ~/.elph/metadata.db).
+	// For Turso Cloud, this is a libsql:// URL.
+	URL string `json:"url,omitempty"`
+	// Token is the authentication token for Turso Cloud. Optional for local databases.
+	Token string `json:"token,omitempty"`
 }
 
 // Path returns the active home settings file path (~/.elph/settings.json or settings.jsonc).
@@ -219,6 +229,29 @@ func (s Settings) StickyScrollEnabled() bool {
 // ResponseLanguage returns the default language for assistant replies.
 func (s Settings) ResponseLanguage() string {
 	return s.withDefaults().PreferedResponseLanguage
+}
+
+// DatabasePath returns the default local database path at ~/.local/share/elph/metadata.db.
+func DatabasePath() (string, error) {
+	return appdir.DatabasePath()
+}
+
+// DatabaseURL returns the configured database URL, falling back to the default local path.
+func (s Settings) DatabaseURL() string {
+	cfg := s.withDefaults()
+	if cfg.Database.URL != "" {
+		return cfg.Database.URL
+	}
+	path, err := DatabasePath()
+	if err != nil {
+		return ""
+	}
+	return path
+}
+
+// DatabaseToken returns the configured database authentication token.
+func (s Settings) DatabaseToken() string {
+	return s.withDefaults().Database.Token
 }
 
 // ToolRoundsLimit returns the configured max tool rounds (0 = use default).

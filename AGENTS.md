@@ -19,10 +19,11 @@ Run focused tests before wide `go test ./...`. Check `git status` — provider r
 | Path              | Role                                                                                                  |
 |-------------------|-------------------------------------------------------------------------------------------------------|
 | `cmd/elph/`       | CLI (Cobra)                                                                                           |
-| `internal/`       | App-private: renderer, runtime, prompt, settings                                                      |
+| `internal/`       | App-private: renderer, runtime, prompt, settings, **datastore**                                       |
 | `pkg/core/agent/` | Turn loop, history limits, tool loop                                                                  |
 | `pkg/tools/`      | Built-in catalog (`catalog/`), exposure (`exposure/`), schemas (`schema/`), `todolist/`, `websearch/` |
 | `pkg/ai/`         | Provider facade (`LoadProviders`, `ResolveProvider`)                                                  |
+| `pkg/snip/`       | Snip command tracking (migrations in `pkg/snip/migrations.go`)                                        |
 | `docs/`           | Architecture, runtime, tools, config                                                                  |
 
 Diagnostic slash helpers live in `internal/tools` — not model-callable. Agent tools live in `pkg/tools`.
@@ -35,7 +36,7 @@ Three layers — **do not collapse them**:
 pkg/ai/protocol/     Turn contract (TurnRequest, Provider, Compat, errors)
                      No catalog imports. Adapters import this only.
 
-pkg/ai/provider/     Catalog (~/.elph/providers), NewProvider routing,
+pkg/ai/provider/     Catalog (~/.elph/providers or ~/.local/share/elph/), NewProvider routing,
                      thinking resolve, models.dev. Re-exports protocol via aliases.go.
 
 pkg/ai/providers/      SDK adapters: openai, openaicompat, openrouter, anthropic, google

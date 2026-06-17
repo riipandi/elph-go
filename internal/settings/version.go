@@ -7,10 +7,9 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/riipandi/elph/internal/appdir"
 	"github.com/riipandi/elph/pkg/jsoncfg"
 )
-
-const versionFileName = "version.json"
 
 // Dummy release metadata until update checks are implemented.
 const (
@@ -26,13 +25,9 @@ type VersionFile struct {
 	Version           string `json:"version,omitempty"`
 }
 
-// VersionPath returns ~/.elph/version.json.
+// VersionPath returns ~/.local/share/elph/version.json.
 func VersionPath() (string, error) {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "", err
-	}
-	return filepath.Join(home, defaultElphHomeDir, versionFileName), nil
+	return appdir.VersionPath()
 }
 
 // LoadVersion reads version metadata from disk. Missing files return defaults.

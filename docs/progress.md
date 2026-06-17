@@ -520,7 +520,7 @@ Docs: [slash-commands.md § Diagnostic detail boxes](./slash-commands.md#diagnos
 | ReadMediaFile       | `internal/runtime/media.go`, `internal/mediaimage` — PNG/JPEG/GIF/WebP; video rejected   |
 | API exposure        | Eighth provider tool alongside Read, Write, Edit, Grep, Glob, AskUser, Bash              |
 | User paste          | `golang.design/x/clipboard` via `internal/clipboardmedia`; **Ctrl+V** / **Cmd+V** in TUI |
-| Storage             | `<workDir>/.agents/elph/attachments/paste_<sess>_*.png` (gitignored)                     |
+| Storage             | `~/.local/share/elph/attachments/paste_<sess>_*.png` (XDG data dir)                      |
 | Multimodal turn     | `TurnOptions.UserImages` → `prepareTurnMessages` → OpenAI/Anthropic image blocks         |
 | Footer **IMG**      | `provider.SupportsImageInput` when active model accepts images                           |
 | Non-vision fallback | Paths appended to text prompt; model uses ReadMediaFile                                  |

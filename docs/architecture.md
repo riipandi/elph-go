@@ -6,13 +6,15 @@ High-level map of the Elph codebase. Module: `github.com/riipandi/elph` (Go 1.26
 
 ```
 elph/
-├── cmd/elph/     CLI entry (Cobra): TUI, provider management, version
-├── internal/             Application-private packages (not importable externally)
-├── pkg/                  Reusable libraries (agent, tools, AI providers)
-├── docs/                 Documentation
-├── schemas/              JSON schemas for provider/MCP/config formats
-└── Makefile              build, test, lint, install
-```
+├── cmd/elph/          CLI entry (Cobra): TUI, provider management, version
+├── internal/          Application-private packages (not importable externally)
+│   ├── appdir/        XDG-compliant paths (config, data)
+│   ├── datastore/     SQLite DB init, migrations, global singleton
+│   └── ...
+├── pkg/               Reusable libraries (agent, tools, AI providers)
+├── docs/              Documentation
+├── schemas/           JSON schemas for provider/MCP/config formats
+└── Makefile           build, test, lint, install
 
 ## `cmd/elph`
 
@@ -33,7 +35,7 @@ elph/
 | `command`         | Slash commands, fuzzy suggest, `/model` handler                                                                             |
 | `config`          | Build-time version/hash/date (Makefile ldflags)                                                                             |
 | `constants`       | Agent modes, thinking levels, colors, keybindings, tips                                                                     |
-| `datastore`       | **Stub** — empty package, reserved                                                                                          |
+| `datastore`       | SQLite DB via Turso (`turso.tech/database/tursogo`), migration runner, global singleton                                     |
 | `git`             | Git footer: lightweight `ReadBranch` (`.git/HEAD`) + full `Read` (go-git line stats on demand)                              |
 | `mention`         | `@` file/path autocomplete in input                                                                                         |
 | `prompt`          | System prompt assembly (`AGENTS.md`, skills, session state, response language, tools)                                       |
@@ -54,7 +56,7 @@ elph/
 | `ai/provider`      | Provider catalog (`~/.elph/providers`), resolve/select, thinking templates, models.dev sync                                                                                                                                                           |
 | `ai/providers`     | Reusable SDK adapters: `openai`, `openaicompat`, `openrouter`, `anthropic`, `google` ([openai-go](https://github.com/openai/openai-go), [anthropic-sdk-go](https://github.com/anthropics/anthropic-sdk-go), [genai](https://google.golang.org/genai)) |
 | `ai/providertests` | Cross-provider httptest suites (fantasy-style)                                                                                                                                                                                                        |
-| `ai/utils`         | Resty v3 HTTP helpers, SSE streaming, retry, stall detection                                                                                                              |
+| `ai/utils`         | Resty v3 HTTP helpers, SSE streaming, retry, stall detection                                                                                                                                                                                          |
 | `core/agent`       | Turn loop, events, text-markup tool parser, native tool loop, history/tool truncation limits                                                                                                                                                          |
 | `core/fuzzy`       | Subsequence fuzzy matching                                                                                                                                                                                                                            |
 | `tool`             | Built-in tool catalog, provider schemas, `IsProviderExposed`                                                                                                                                                                                          |

@@ -118,6 +118,8 @@ func TestAgentThinkingDeltaHiddenWhenDisabled(t *testing.T) {
 }
 
 func TestAgentThinkingDeltaRendersDimmed(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
 	m := New()
 	m.width = 80
 	m = m.beginAgentTurn()

@@ -121,6 +121,8 @@ func kindForMarker(marker string) uiconst.MessageKind {
 }
 
 func TestActiveTurnMessageSpacingConsistent(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
 	m := testModel()
 	m.height = 24
 	m.ready = true

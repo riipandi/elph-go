@@ -73,11 +73,11 @@ Goal tools let the agent create, inspect, and manage a session goal. The goal li
 `active` → `complete` / `blocked` / `paused` → `active` (resume). Tools are always exposed
 but return clear error messages when no goal exists.
 
-| Tool         | Default Approval | Description                                   |
-|--------------|------------------|-----------------------------------------------|
-| CreateGoal   | Auto-allow       | Create a new goal with a verifiable objective  |
-| GetGoal      | Auto-allow       | Get the current goal status and usage          |
-| UpdateGoal   | Auto-allow       | Update goal lifecycle status                   |
+| Tool          | Default Approval | Description                                    |
+|---------------|------------------|------------------------------------------------|
+| CreateGoal    | Auto-allow       | Create a new goal with a verifiable objective  |
+| GetGoal       | Auto-allow       | Get the current goal status and usage          |
+| UpdateGoal    | Auto-allow       | Update goal lifecycle status                   |
 | SetGoalBudget | Auto-allow       | Set a token, turn, or time budget for the goal |
 
 **CreateGoal** accepts `objective` (required), optional `completionCriterion`, and `replace`

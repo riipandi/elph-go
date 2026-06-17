@@ -25,15 +25,15 @@ See [prompt-templates.md](./prompt-templates.md) for template format and argumen
 
 ### `/goal` subcommands
 
-| Subcommand                  | Description                                                          |
-|----------------------------|----------------------------------------------------------------------|
-| `/goal` or `/goal status`  | Display current goal with status, elapsed time, turn count, tokens   |
-| `/goal pause`              | Pause an active goal                                                 |
-| `/goal resume`             | Resume a paused or blocked goal                                      |
-| `/goal cancel`             | Remove the current goal                                              |
-| `/goal replace <objective>`| Replace the current goal with a new objective                        |
-| `/goal next <objective>`   | Queue an upcoming goal (starts immediately if no active goal)        |
-| `/goal <objective>`        | Create a new goal from the argument text                             |
+| Subcommand                  | Description                                                        |
+|-----------------------------|--------------------------------------------------------------------|
+| `/goal` or `/goal status`   | Display current goal with status, elapsed time, turn count, tokens |
+| `/goal pause`               | Pause an active goal                                               |
+| `/goal resume`              | Resume a paused or blocked goal                                    |
+| `/goal cancel`              | Remove the current goal                                            |
+| `/goal replace <objective>` | Replace the current goal with a new objective                      |
+| `/goal next <objective>`    | Queue an upcoming goal (starts immediately if no active goal)      |
+| `/goal <objective>`         | Create a new goal from the argument text                           |
 
 Inspired by [Kimi Code CLI](https://moonshotai.github.io/kimi-code/en/reference/slash-commands.html#autonomous-goal).
 

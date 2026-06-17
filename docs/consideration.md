@@ -53,7 +53,7 @@ Today **Read**, **Write**, **Edit**, **Grep**, **Glob**, **ReadMediaFile**, **Ba
 | [golang.design/x/clipboard](https://golang.design/x/clipboard)                            | **used**  | Image paste in TUI (`internal/clipboardmedia`)            |
 | [aymanbagabas/go-udiff](https://github.com/aymanbagabas/go-udiff)                         | **later** | **Edit** approval preview (functional, not TUI chrome)    |
 | [invopop/jsonschema](https://github.com/invopop/jsonschema)                               | **later** | Optional schema gen from structs (hand-written today)     |
-| [itchyny/gojq](https://github.com/itchyny/gojq)                                         | **later** | **jq** — JSON/JSONL query in tool output & Bash fallback  |
+| [itchyny/gojq](https://github.com/itchyny/gojq)                                           | **later** | **jq** — JSON/JSONL query in tool output & Bash fallback  |
 
 **Optional** — add only when a specific tool needs them: [tidwall/gjson](https://github.com/tidwall/gjson), [charlievieth/fastwalk](https://github.com/charlievieth/fastwalk) (if Glob is hot on huge trees; else `WalkDir` + doublestar).
 

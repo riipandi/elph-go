@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"resty.dev/v3"
 )
 
 func TestFetchHTML(t *testing.T) {
@@ -20,7 +21,7 @@ func TestFetchHTML(t *testing.T) {
 	t.Cleanup(func() { SetAllowPrivateHostsForTest(false) })
 	orig := HTTPClient
 	t.Cleanup(func() { HTTPClient = orig })
-	HTTPClient = srv.Client()
+	HTTPClient = resty.New().SetTransport(srv.Client().Transport)
 
 	result, err := Fetch(context.Background(), srv.URL)
 	require.NoError(t, err)

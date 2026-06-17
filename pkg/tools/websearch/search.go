@@ -5,8 +5,8 @@ package websearch
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"os"
+	"resty.dev/v3"
 	"sort"
 	"strings"
 	"time"
@@ -35,7 +35,7 @@ const (
 )
 
 // HTTPClient is the client used for outbound search requests. Tests may replace it.
-var HTTPClient = &http.Client{Timeout: 20 * time.Second}
+var HTTPClient = resty.New().SetTimeout(20 * time.Second)
 
 type engine struct {
 	id          EngineID
@@ -46,7 +46,7 @@ type engine struct {
 	search      searchFunc
 }
 
-type searchFunc func(ctx context.Context, client *http.Client, query, apiKey string) ([]Result, error)
+type searchFunc func(ctx context.Context, client *resty.Client, query, apiKey string) ([]Result, error)
 
 var engines = []engine{
 	{id: EngineDuckDuckGo, name: "DuckDuckGo", rank: 1, search: searchDuckDuckGo},

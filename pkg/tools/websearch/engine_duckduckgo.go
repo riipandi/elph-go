@@ -4,8 +4,9 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"net/http"
 	"regexp"
+
+	"resty.dev/v3"
 )
 
 var (
@@ -13,21 +14,18 @@ var (
 	ddgSnippetRe = regexp.MustCompile(`<a[^>]*class="result__snippet"[^>]*>([\s\S]*?)</a>`)
 )
 
-func searchDuckDuckGo(ctx context.Context, client *http.Client, query, _ string) ([]Result, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet,
-		"https://html.duckduckgo.com/html/?q="+urlQueryEscape(query), nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
-
-	resp, err := client.Do(req)
+func searchDuckDuckGo(ctx context.Context, client *resty.Client, query, _ string) ([]Result, error) {
+	resp, err := client.R().
+		SetContext(ctx).
+		SetHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36").
+		SetResponseDoNotParse(true).
+		Get("https://html.duckduckgo.com/html/?q=" + urlQueryEscape(query))
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("status %s", resp.Status)
+	if resp.StatusCode() != 200 {
+		return nil, fmt.Errorf("status %s", resp.Status())
 	}
 	body, err := io.ReadAll(io.LimitReader(resp.Body, 2<<20))
 	if err != nil {

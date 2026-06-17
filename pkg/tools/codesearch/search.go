@@ -5,7 +5,7 @@ package codesearch
 import (
 	"context"
 	"fmt"
-	"net/http"
+	"resty.dev/v3"
 	"strings"
 	"time"
 )
@@ -27,7 +27,7 @@ type Result struct {
 }
 
 // HTTPClient is used for outbound API requests. Tests may replace it.
-var HTTPClient = &http.Client{Timeout: 20 * time.Second}
+var HTTPClient = resty.New().SetTimeout(20 * time.Second)
 
 // Available returns providers that CodeSearch may use.
 func Available() []ProviderID {
@@ -133,7 +133,7 @@ func orderedProviders(preferred ProviderID) []ProviderID {
 	return out
 }
 
-func searchProvider(ctx context.Context, client *http.Client, p ProviderID, query string) ([]Result, error) {
+func searchProvider(ctx context.Context, client *resty.Client, p ProviderID, query string) ([]Result, error) {
 	switch p {
 	case ProviderGitHub:
 		return searchGitHubDispatch(ctx, client, query, GitHubToken())

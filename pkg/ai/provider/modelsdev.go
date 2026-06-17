@@ -3,7 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
-	"net/http"
+	"resty.dev/v3"
 	"strings"
 
 	"github.com/riipandi/elph/pkg/ai/utils"
@@ -70,7 +70,7 @@ type ModelsDevData struct {
 }
 
 // FetchModelsDev downloads catalog.json and models.json from models.dev.
-func FetchModelsDev(ctx context.Context, client *http.Client) (ModelsDevData, error) {
+func FetchModelsDev(ctx context.Context, client *resty.Client) (ModelsDevData, error) {
 	if client == nil {
 		client = utils.NewHTTPClient()
 	}

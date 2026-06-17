@@ -3,11 +3,11 @@ package websearch
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"net/url"
+	"resty.dev/v3"
 )
 
-func searchSerpAPI(ctx context.Context, client *http.Client, query, apiKey string) ([]Result, error) {
+func searchSerpAPI(ctx context.Context, client *resty.Client, query, apiKey string) ([]Result, error) {
 	if apiKey == "" {
 		return nil, fmt.Errorf("missing SERPAPI_KEY")
 	}
@@ -25,7 +25,7 @@ func searchSerpAPI(ctx context.Context, client *http.Client, query, apiKey strin
 			Snippet string `json:"snippet"`
 		} `json:"organic_results"`
 	}
-	err := doJSON(ctx, client, http.MethodGet, u.String(), nil, nil, &data)
+	err := doJSON(ctx, client, "GET", u.String(), nil, nil, &data)
 	if err != nil {
 		return nil, fmt.Errorf("serpapi: %w", err)
 	}

@@ -1,58 +1,49 @@
 package websearch
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
 	"net/url"
+	"strings"
+
+	"resty.dev/v3"
 )
 
 func urlQueryEscape(s string) string {
 	return url.QueryEscape(s)
 }
 
-func doJSON(ctx context.Context, client *http.Client, method, rawURL string, headers map[string]string, body any, out any) error {
-	var r io.Reader
+func doJSON(ctx context.Context, client *resty.Client, method, rawURL string, headers map[string]string, body any, out any) error {
+	r := client.R().SetContext(ctx).SetResponseBodyLimit(4 << 20)
 	if body != nil {
-		b, err := json.Marshal(body)
-		if err != nil {
-			return err
-		}
-		r = bytes.NewReader(b)
+		r.SetBody(body)
 	}
-	req, err := http.NewRequestWithContext(ctx, method, rawURL, r)
-	if err != nil {
-		return err
-	}
-	if body != nil {
-		req.Header.Set("Content-Type", "application/json")
+	if out != nil {
+		r.SetResult(out)
 	}
 	for k, v := range headers {
-		req.Header.Set(k, v)
+		r.SetHeader(k, v)
 	}
-	resp, err := client.Do(req)
+
+	var resp *resty.Response
+	var err error
+	switch method {
+	case "GET":
+		resp, err = r.Get(rawURL)
+	default:
+		resp, err = r.Post(rawURL)
+	}
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
-	data, err := io.ReadAll(io.LimitReader(resp.Body, 4<<20))
-	if err != nil {
-		return err
+	if !resp.IsStatusSuccess() {
+		return fmt.Errorf("status %s: %s", resp.Status(), trimHTTPErrorBody(resp.Bytes()))
 	}
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return fmt.Errorf("status %s: %s", resp.Status, trimHTTPErrorBody(data))
-	}
-	if out == nil {
-		return nil
-	}
-	return json.Unmarshal(data, out)
+	return nil
 }
 
 func trimHTTPErrorBody(data []byte) string {
-	s := string(bytes.TrimSpace(data))
+	s := strings.TrimSpace(string(data))
 	if len(s) > 240 {
 		return s[:240] + "..."
 	}

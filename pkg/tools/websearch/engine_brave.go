@@ -3,10 +3,10 @@ package websearch
 import (
 	"context"
 	"fmt"
-	"net/http"
+	"resty.dev/v3"
 )
 
-func searchBrave(ctx context.Context, client *http.Client, query, apiKey string) ([]Result, error) {
+func searchBrave(ctx context.Context, client *resty.Client, query, apiKey string) ([]Result, error) {
 	if apiKey == "" {
 		return nil, fmt.Errorf("missing BRAVE_SEARCH_API_KEY")
 	}
@@ -19,7 +19,7 @@ func searchBrave(ctx context.Context, client *http.Client, query, apiKey string)
 			} `json:"results"`
 		} `json:"web"`
 	}
-	err := doJSON(ctx, client, http.MethodGet,
+	err := doJSON(ctx, client, "GET",
 		"https://api.search.brave.com/res/v1/web/search?q="+urlQueryEscape(query),
 		map[string]string{
 			"Accept":               "application/json",

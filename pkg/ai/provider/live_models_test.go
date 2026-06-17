@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"resty.dev/v3"
 )
 
 func TestFetchLiveModelsWithAuthHeader(t *testing.T) {
@@ -24,7 +25,7 @@ func TestFetchLiveModelsWithAuthHeader(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	ids, err := FetchLiveModels(context.Background(), srv.Client(), LiveModelsOptions{
+	ids, err := FetchLiveModels(context.Background(), resty.New().SetTransport(srv.Client().Transport), LiveModelsOptions{
 		BaseURL:    srv.URL,
 		APIKey:     "sk-test",
 		AuthHeader: true,
@@ -43,7 +44,7 @@ func TestFetchLiveModelsWithoutAuth(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	ids, err := FetchLiveModels(context.Background(), srv.Client(), LiveModelsOptions{BaseURL: srv.URL})
+	ids, err := FetchLiveModels(context.Background(), resty.New().SetTransport(srv.Client().Transport), LiveModelsOptions{BaseURL: srv.URL})
 	require.NoError(t, err)
 	require.Equal(t, []string{"big-pickle"}, ids)
 }

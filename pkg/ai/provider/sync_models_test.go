@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"resty.dev/v3"
+
 	"github.com/stretchr/testify/require"
 )
 
@@ -208,7 +210,7 @@ func TestUpdateModelsFromModelsDevSyncsDeepSeekFromLiveAPI(t *testing.T) {
 
 	result, err := UpdateModelsFromModelsDev(UpdateModelsOptions{
 		Dir:        dir,
-		HTTPClient: srv.Client(),
+		HTTPClient: resty.New().SetTransport(srv.Client().Transport),
 		Data: ModelsDevData{
 			Catalog: catalog,
 			Models:  map[string]ModelsDevModel{},
@@ -289,7 +291,7 @@ func TestUpdateModelsFromModelsDevSyncsOpenCodeFromLiveAPI(t *testing.T) {
 
 	result, err := UpdateModelsFromModelsDev(UpdateModelsOptions{
 		Dir:        dir,
-		HTTPClient: srv.Client(),
+		HTTPClient: resty.New().SetTransport(srv.Client().Transport),
 		Data: ModelsDevData{
 			Catalog: catalog,
 			Models:  map[string]ModelsDevModel{},
@@ -434,7 +436,7 @@ func TestUpdateModelsFromModelsDevSyncsKimiViaMoonshotAlias(t *testing.T) {
 
 	result, err := UpdateModelsFromModelsDev(UpdateModelsOptions{
 		Dir:        dir,
-		HTTPClient: srv.Client(),
+		HTTPClient: resty.New().SetTransport(srv.Client().Transport),
 		Data: ModelsDevData{
 			Catalog: catalog,
 			Models:  map[string]ModelsDevModel{},

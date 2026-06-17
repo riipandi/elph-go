@@ -10,6 +10,7 @@ import (
 	"github.com/riipandi/elph/pkg/tools/codesearch"
 	"github.com/riipandi/elph/pkg/tools/fetchurl"
 	"github.com/stretchr/testify/require"
+	"resty.dev/v3"
 )
 
 func TestExecuteFetchURL(t *testing.T) {
@@ -25,7 +26,7 @@ func TestExecuteFetchURL(t *testing.T) {
 	t.Cleanup(func() { fetchurl.SetAllowPrivateHostsForTest(false) })
 	orig := fetchurl.HTTPClient
 	t.Cleanup(func() { fetchurl.HTTPClient = orig })
-	fetchurl.HTTPClient = srv.Client()
+	fetchurl.HTTPClient = resty.New().SetTransport(srv.Client().Transport)
 
 	result := ExecuteTool(context.Background(), t.TempDir(), tools.FetchURL, map[string]any{
 		"url": srv.URL,
@@ -44,7 +45,7 @@ func TestExecuteCodeSearch(t *testing.T) {
 	defer srv.Close()
 
 	t.Cleanup(codesearch.SetSearchFuncsForTest(
-		func(ctx context.Context, client *http.Client, query, _ string) ([]codesearch.Result, error) {
+		func(ctx context.Context, client *resty.Client, query, _ string) ([]codesearch.Result, error) {
 			return codesearch.SearchGitHubAt(ctx, client, srv.URL, query, "")
 		},
 		nil,

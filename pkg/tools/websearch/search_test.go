@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"resty.dev/v3"
 )
 
 func TestNormalizeEngine(t *testing.T) {
@@ -62,7 +63,7 @@ func TestSearchFallbackToDuckDuckGo(t *testing.T) {
 	SetEnginesForTest([]EngineDef{
 		{
 			ID: EngineTavily, Name: "Tavily", Rank: 5, RequiresKey: true, KeyEnv: "TAVILY_API_KEY",
-			Search: func(context.Context, *http.Client, string, string) ([]Result, error) {
+			Search: func(context.Context, *resty.Client, string, string) ([]Result, error) {
 				return nil, errTest("tavily down")
 			},
 		},
@@ -87,14 +88,14 @@ func TestSearchRequiresKeyForExplicitEngine(t *testing.T) {
 func TestSearchTavilyViaMockServer(t *testing.T) {
 	clearSearchAPIKeys(t)
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		require.Equal(t, http.MethodPost, r.Method)
+		require.Equal(t, "POST", r.Method)
 		require.Equal(t, "/search", r.URL.Path)
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"results":[{"title":"Hit","url":"https://hit.test","content":"snippet"}]}`))
 	}))
 	defer srv.Close()
 
-	tavily := func(ctx context.Context, _ *http.Client, query, apiKey string) ([]Result, error) {
+	tavily := func(ctx context.Context, _ *resty.Client, query, apiKey string) ([]Result, error) {
 		require.Equal(t, "elph", query)
 		require.Equal(t, "tv-key", apiKey)
 		return searchTavilyAt(ctx, HTTPClient, srv.URL+"/search", query, apiKey)
@@ -118,7 +119,7 @@ type errTest string
 
 func (e errTest) Error() string { return string(e) }
 
-func searchTavilyAt(ctx context.Context, client *http.Client, endpoint, query, apiKey string) ([]Result, error) {
+func searchTavilyAt(ctx context.Context, client *resty.Client, endpoint, query, apiKey string) ([]Result, error) {
 	var data struct {
 		Results []struct {
 			Title   string `json:"title"`
@@ -126,7 +127,7 @@ func searchTavilyAt(ctx context.Context, client *http.Client, endpoint, query, a
 			Content string `json:"content"`
 		} `json:"results"`
 	}
-	err := doJSON(ctx, client, http.MethodPost, endpoint, nil, map[string]any{
+	err := doJSON(ctx, client, "POST", endpoint, nil, map[string]any{
 		"api_key": apiKey, "query": query,
 	}, &data)
 	if err != nil {
@@ -167,6 +168,6 @@ func TestFormatOutput(t *testing.T) {
 }
 
 func TestMain(m *testing.M) {
-	HTTPClient = &http.Client{}
+	HTTPClient = resty.New()
 	os.Exit(m.Run())
 }

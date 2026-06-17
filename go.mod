@@ -30,6 +30,7 @@ require (
 	golang.org/x/image v0.42.0
 	gopkg.in/yaml.v3 v3.0.1
 	mvdan.cc/sh/v3 v3.13.1
+	resty.dev/v3 v3.0.0-rc.2
 )
 
 require (

@@ -3,7 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
-	"net/http"
+	"resty.dev/v3"
 	"strings"
 
 	"github.com/riipandi/elph/pkg/ai/utils"
@@ -82,7 +82,7 @@ func liveModelsRequestHeaders(opts LiveModelsOptions) map[string]string {
 }
 
 // FetchLiveModels returns model IDs from an OpenAI-compatible /models endpoint.
-func FetchLiveModels(ctx context.Context, client *http.Client, opts LiveModelsOptions) ([]string, error) {
+func FetchLiveModels(ctx context.Context, client *resty.Client, opts LiveModelsOptions) ([]string, error) {
 	baseURL := strings.TrimSpace(opts.BaseURL)
 	if baseURL == "" {
 		return nil, fmt.Errorf("missing baseUrl")

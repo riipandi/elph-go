@@ -8,14 +8,16 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"resty.dev/v3"
 )
 
 const MaxBytes = 256 << 10
 
 // HTTPClient is used for outbound requests. Tests may replace it.
-var HTTPClient = &http.Client{
-	Timeout: 30 * time.Second,
-	CheckRedirect: func(req *http.Request, via []*http.Request) error {
+var HTTPClient = resty.New().
+	SetTimeout(30 * time.Second).
+	SetRedirectPolicy(resty.RedirectPolicyFunc(func(req *http.Request, via []*http.Request) error {
 		if len(via) >= 5 {
 			return fmt.Errorf("too many redirects")
 		}
@@ -23,8 +25,7 @@ var HTTPClient = &http.Client{
 			return err
 		}
 		return nil
-	},
-}
+	}))
 
 // Result holds normalized fetch output.
 type Result struct {
@@ -40,14 +41,12 @@ func Fetch(ctx context.Context, rawURL string) (Result, error) {
 		return Result{}, err
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
-	if err != nil {
-		return Result{}, err
-	}
-	req.Header.Set("User-Agent", "Elph/1.0 (+https://github.com/riipandi/elph)")
-	req.Header.Set("Accept", "text/html,application/json,text/plain,*/*")
-
-	resp, err := HTTPClient.Do(req)
+	resp, err := HTTPClient.R().
+		SetContext(ctx).
+		SetHeader("User-Agent", "Elph/1.0 (+https://github.com/riipandi/elph)").
+		SetHeader("Accept", "text/html,application/json,text/plain,*/*").
+		SetResponseDoNotParse(true).
+		Get(u.String())
 	if err != nil {
 		return Result{}, err
 	}
@@ -62,7 +61,7 @@ func Fetch(ctx context.Context, rawURL string) (Result, error) {
 		data = data[:MaxBytes]
 	}
 
-	ct := resp.Header.Get("Content-Type")
+	ct := resp.Header().Get("Content-Type")
 	body := string(data)
 	if isHTMLContentType(ct) {
 		body = htmlToText(data)
@@ -71,14 +70,14 @@ func Fetch(ctx context.Context, rawURL string) (Result, error) {
 		}
 	}
 
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return Result{}, fmt.Errorf("status %s: %s", resp.Status, trimBody(body))
+	if !resp.IsStatusSuccess() {
+		return Result{}, fmt.Errorf("status %s: %s", resp.Status(), trimBody(body))
 	}
 	if truncated {
 		body += "\n\n(output truncated)"
 	}
 	return Result{
-		URL:         resp.Request.URL.String(),
+		URL:         resp.Request.URL,
 		ContentType: ct,
 		Body:        strings.TrimRight(body, "\n"),
 	}, nil

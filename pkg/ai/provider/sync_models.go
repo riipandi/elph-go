@@ -4,9 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net/http"
 	"os"
 	"path/filepath"
+	"resty.dev/v3"
 	"sort"
 	"strings"
 
@@ -25,7 +25,7 @@ type UpdateModelsResult struct {
 // UpdateModelsOptions configures a models.dev metadata sync.
 type UpdateModelsOptions struct {
 	Dir         string
-	HTTPClient  *http.Client
+	HTTPClient  *resty.Client
 	Data        ModelsDevData
 	Reporter    ProviderProgressReporter
 	DryRun      bool // compare only; populate Updated without writing files
@@ -298,7 +298,7 @@ func syncCatalogProviderModels(
 
 func syncLiveProviderModels(
 	ctx context.Context,
-	client *http.Client,
+	client *resty.Client,
 	providerID string,
 	catalogID string,
 	cfg FileConfig,

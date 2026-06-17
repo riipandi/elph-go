@@ -3,7 +3,8 @@ package websearch
 import (
 	"context"
 	"io"
-	"net/http"
+
+	"resty.dev/v3"
 )
 
 // EngineDef describes a search backend for tests in other packages.
@@ -44,12 +45,11 @@ func ResetEnginesForTest() {
 
 // MockDuckDuckGoAt returns a search func that reads HTML results from a test server base URL.
 func MockDuckDuckGoAt(baseURL string) searchFunc {
-	return func(ctx context.Context, client *http.Client, query, _ string) ([]Result, error) {
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+"?q="+urlQueryEscape(query), nil)
-		if err != nil {
-			return nil, err
-		}
-		resp, err := client.Do(req)
+	return func(ctx context.Context, client *resty.Client, query, _ string) ([]Result, error) {
+		resp, err := client.R().
+			SetContext(ctx).
+			SetResponseDoNotParse(true).
+			Get(baseURL + "?q=" + urlQueryEscape(query))
 		if err != nil {
 			return nil, err
 		}

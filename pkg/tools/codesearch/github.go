@@ -4,18 +4,18 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
 	"net/url"
 	"strings"
+
+	"resty.dev/v3"
 )
 
-func searchGitHub(ctx context.Context, client *http.Client, query, token string) ([]Result, error) {
+func searchGitHub(ctx context.Context, client *resty.Client, query, token string) ([]Result, error) {
 	base := strings.TrimRight(GitHubRESTBase(), "/")
 	return searchGitHubAt(ctx, client, base+"/search/code", query, token)
 }
 
-func searchGitHubAt(ctx context.Context, client *http.Client, endpoint, query, token string) ([]Result, error) {
+func searchGitHubAt(ctx context.Context, client *resty.Client, endpoint, query, token string) ([]Result, error) {
 	u, err := url.Parse(endpoint)
 	if err != nil {
 		return nil, err
@@ -27,33 +27,26 @@ func searchGitHubAt(ctx context.Context, client *http.Client, endpoint, query, t
 		u.RawQuery = q.Encode()
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Accept", "application/vnd.github.text-match+json")
-	req.Header.Set("X-GitHub-Api-Version", "2022-11-28")
-	req.Header.Set("User-Agent", "Elph/1.0 (+https://github.com/riipandi/elph)")
+	r := client.R().SetContext(ctx).
+		SetHeader("Accept", "application/vnd.github.text-match+json").
+		SetHeader("X-GitHub-Api-Version", "2022-11-28").
+		SetHeader("User-Agent", "Elph/1.0 (+https://github.com/riipandi/elph)").
+		SetResponseBodyLimit(4 << 20)
 	if token != "" {
-		req.Header.Set("Authorization", "Bearer "+token)
+		r.SetHeader("Authorization", "Bearer "+token)
 	}
 
-	resp, err := client.Do(req)
+	resp, err := r.Get(u.String())
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
-
-	data, err := io.ReadAll(io.LimitReader(resp.Body, 4<<20))
-	if err != nil {
-		return nil, err
-	}
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+	data := resp.Bytes()
+	if !resp.IsStatusSuccess() {
 		msg := trimAPIError(data)
-		if resp.StatusCode == http.StatusUnauthorized && token == "" {
+		if resp.StatusCode() == 401 && token == "" {
 			msg += " (set GITHUB_PERSONAL_ACCESS_TOKEN to authenticate — token is optional but required by the GitHub code search API)"
 		}
-		return nil, fmt.Errorf("status %s: %s", resp.Status, msg)
+		return nil, fmt.Errorf("status %s: %s", resp.Status(), msg)
 	}
 
 	var payload struct {

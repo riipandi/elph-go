@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"resty.dev/v3"
 )
 
 func clearCodeSearchEnv(t *testing.T) {
@@ -50,7 +51,7 @@ func TestSearchGitHubWithToken(t *testing.T) {
 	defer srv.Close()
 
 	t.Cleanup(SetSearchFuncsForTest(
-		func(ctx context.Context, client *http.Client, query, token string) ([]Result, error) {
+		func(ctx context.Context, client *resty.Client, query, token string) ([]Result, error) {
 			require.Equal(t, "elph cli", query)
 			require.Equal(t, "gh-test", token)
 			return searchGitHubAt(ctx, client, srv.URL, query, token)
@@ -82,10 +83,10 @@ func TestSearchGitHubAndGitLab(t *testing.T) {
 	defer gl.Close()
 
 	t.Cleanup(SetSearchFuncsForTest(
-		func(ctx context.Context, client *http.Client, query, token string) ([]Result, error) {
+		func(ctx context.Context, client *resty.Client, query, token string) ([]Result, error) {
 			return searchGitHubAt(ctx, client, gh.URL, query, token)
 		},
-		func(ctx context.Context, client *http.Client, query, token, _ string) ([]Result, error) {
+		func(ctx context.Context, client *resty.Client, query, token, _ string) ([]Result, error) {
 			return searchGitLabAt(ctx, client, gl.URL, query, token)
 		},
 	))
@@ -117,7 +118,7 @@ func TestSearchGitHubWithoutToken(t *testing.T) {
 	defer srv.Close()
 
 	t.Cleanup(SetSearchFuncsForTest(
-		func(ctx context.Context, client *http.Client, query, token string) ([]Result, error) {
+		func(ctx context.Context, client *resty.Client, query, token string) ([]Result, error) {
 			require.Empty(t, token)
 			return searchGitHubAt(ctx, client, srv.URL, query, token)
 		},
@@ -145,10 +146,10 @@ func TestSearchGitLabTokenStillQueriesGitHub(t *testing.T) {
 	defer gl.Close()
 
 	t.Cleanup(SetSearchFuncsForTest(
-		func(ctx context.Context, client *http.Client, query, token string) ([]Result, error) {
+		func(ctx context.Context, client *resty.Client, query, token string) ([]Result, error) {
 			return searchGitHubAt(ctx, client, gh.URL, query, token)
 		},
-		func(ctx context.Context, client *http.Client, query, token, _ string) ([]Result, error) {
+		func(ctx context.Context, client *resty.Client, query, token, _ string) ([]Result, error) {
 			return searchGitLabAt(ctx, client, gl.URL, query, token)
 		},
 	))

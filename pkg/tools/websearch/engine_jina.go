@@ -3,10 +3,10 @@ package websearch
 import (
 	"context"
 	"fmt"
-	"net/http"
+	"resty.dev/v3"
 )
 
-func searchJina(ctx context.Context, client *http.Client, query, apiKey string) ([]Result, error) {
+func searchJina(ctx context.Context, client *resty.Client, query, apiKey string) ([]Result, error) {
 	headers := map[string]string{"Accept": "application/json"}
 	if apiKey != "" {
 		headers["Authorization"] = "Bearer " + apiKey
@@ -18,7 +18,7 @@ func searchJina(ctx context.Context, client *http.Client, query, apiKey string) 
 			Snippet string `json:"snippet"`
 		} `json:"data"`
 	}
-	err := doJSON(ctx, client, http.MethodGet, "https://s.jina.ai/"+urlQueryEscape(query), headers, nil, &data)
+	err := doJSON(ctx, client, "GET", "https://s.jina.ai/"+urlQueryEscape(query), headers, nil, &data)
 	if err != nil {
 		return nil, fmt.Errorf("jina: %w", err)
 	}

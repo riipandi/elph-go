@@ -2,22 +2,23 @@ package codesearch
 
 import (
 	"context"
-	"net/http"
+
+	"resty.dev/v3"
 )
 
-type githubSearchFunc func(context.Context, *http.Client, string, string) ([]Result, error)
-type gitlabSearchFunc func(context.Context, *http.Client, string, string, string) ([]Result, error)
+type githubSearchFunc func(context.Context, *resty.Client, string, string) ([]Result, error)
+type gitlabSearchFunc func(context.Context, *resty.Client, string, string, string) ([]Result, error)
 
 var (
 	githubSearchFn = searchGitHub
 	gitlabSearchFn = searchGitLab
 )
 
-func searchGitHubDispatch(ctx context.Context, client *http.Client, query, token string) ([]Result, error) {
+func searchGitHubDispatch(ctx context.Context, client *resty.Client, query, token string) ([]Result, error) {
 	return githubSearchFn(ctx, client, query, token)
 }
 
-func searchGitLabDispatch(ctx context.Context, client *http.Client, query, token, apiBase string) ([]Result, error) {
+func searchGitLabDispatch(ctx context.Context, client *resty.Client, query, token, apiBase string) ([]Result, error) {
 	return gitlabSearchFn(ctx, client, query, token, apiBase)
 }
 
@@ -37,11 +38,11 @@ func SetSearchFuncsForTest(gh githubSearchFunc, gl gitlabSearchFunc) func() {
 }
 
 // SearchGitHubAt calls a GitHub code search endpoint (for tests in other packages).
-func SearchGitHubAt(ctx context.Context, client *http.Client, endpoint, query, token string) ([]Result, error) {
+func SearchGitHubAt(ctx context.Context, client *resty.Client, endpoint, query, token string) ([]Result, error) {
 	return searchGitHubAt(ctx, client, endpoint, query, token)
 }
 
 // SearchGitLabAt calls a GitLab code search endpoint (for tests in other packages).
-func SearchGitLabAt(ctx context.Context, client *http.Client, endpoint, query, token string) ([]Result, error) {
+func SearchGitLabAt(ctx context.Context, client *resty.Client, endpoint, query, token string) ([]Result, error) {
 	return searchGitLabAt(ctx, client, endpoint, query, token)
 }

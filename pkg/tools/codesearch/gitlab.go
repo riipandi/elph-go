@@ -4,17 +4,17 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
 	"net/url"
 	"strings"
+
+	"resty.dev/v3"
 )
 
-func searchGitLab(ctx context.Context, client *http.Client, query, token, apiBase string) ([]Result, error) {
+func searchGitLab(ctx context.Context, client *resty.Client, query, token, apiBase string) ([]Result, error) {
 	return searchGitLabAt(ctx, client, apiBase+"/search", query, token)
 }
 
-func searchGitLabAt(ctx context.Context, client *http.Client, endpoint, query, token string) ([]Result, error) {
+func searchGitLabAt(ctx context.Context, client *resty.Client, endpoint, query, token string) ([]Result, error) {
 	u, err := url.Parse(endpoint)
 	if err != nil {
 		return nil, err
@@ -27,24 +27,16 @@ func searchGitLabAt(ctx context.Context, client *http.Client, endpoint, query, t
 		u.RawQuery = q.Encode()
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
+	resp, err := client.R().SetContext(ctx).
+		SetHeader("PRIVATE-TOKEN", token).
+		SetResponseBodyLimit(4 << 20).
+		Get(u.String())
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("PRIVATE-TOKEN", token)
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	data, err := io.ReadAll(io.LimitReader(resp.Body, 4<<20))
-	if err != nil {
-		return nil, err
-	}
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return nil, fmt.Errorf("status %s: %s", resp.Status, trimAPIError(data))
+	data := resp.Bytes()
+	if !resp.IsStatusSuccess() {
+		return nil, fmt.Errorf("status %s: %s", resp.Status(), trimAPIError(data))
 	}
 
 	var items []struct {

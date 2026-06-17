@@ -3,11 +3,11 @@ package websearch
 import (
 	"context"
 	"fmt"
-	"net/http"
+	"resty.dev/v3"
 	"strings"
 )
 
-func searchExa(ctx context.Context, client *http.Client, query, apiKey string) ([]Result, error) {
+func searchExa(ctx context.Context, client *resty.Client, query, apiKey string) ([]Result, error) {
 	if apiKey == "" {
 		return nil, fmt.Errorf("missing EXA_API_KEY")
 	}
@@ -22,7 +22,7 @@ func searchExa(ctx context.Context, client *http.Client, query, apiKey string) (
 			Author        string   `json:"author"`
 		} `json:"results"`
 	}
-	err := doJSON(ctx, client, http.MethodPost, "https://api.exa.ai/search",
+	err := doJSON(ctx, client, "POST", "https://api.exa.ai/search",
 		map[string]string{"x-api-key": apiKey},
 		map[string]any{
 			"query":      query,

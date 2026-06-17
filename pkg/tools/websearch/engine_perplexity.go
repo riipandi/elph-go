@@ -4,14 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net/http"
 	"regexp"
+	"resty.dev/v3"
 	"strings"
 )
 
 var jsonArrayRe = regexp.MustCompile(`\[[\s\S]*\]`)
 
-func searchPerplexity(ctx context.Context, client *http.Client, query, apiKey string) ([]Result, error) {
+func searchPerplexity(ctx context.Context, client *resty.Client, query, apiKey string) ([]Result, error) {
 	if apiKey == "" {
 		return nil, fmt.Errorf("missing PERPLEXITY_API_KEY")
 	}
@@ -25,7 +25,7 @@ func searchPerplexity(ctx context.Context, client *http.Client, query, apiKey st
 			} `json:"citations"`
 		} `json:"choices"`
 	}
-	err := doJSON(ctx, client, http.MethodPost, "https://api.perplexity.ai/chat/completions",
+	err := doJSON(ctx, client, "POST", "https://api.perplexity.ai/chat/completions",
 		map[string]string{"Authorization": "Bearer " + apiKey},
 		map[string]any{
 			"model": "sonar",

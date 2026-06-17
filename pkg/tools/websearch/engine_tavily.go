@@ -3,10 +3,10 @@ package websearch
 import (
 	"context"
 	"fmt"
-	"net/http"
+	"resty.dev/v3"
 )
 
-func searchTavily(ctx context.Context, client *http.Client, query, apiKey string) ([]Result, error) {
+func searchTavily(ctx context.Context, client *resty.Client, query, apiKey string) ([]Result, error) {
 	if apiKey == "" {
 		return nil, fmt.Errorf("missing TAVILY_API_KEY")
 	}
@@ -17,7 +17,7 @@ func searchTavily(ctx context.Context, client *http.Client, query, apiKey string
 			Content string `json:"content"`
 		} `json:"results"`
 	}
-	err := doJSON(ctx, client, http.MethodPost, "https://api.tavily.com/search", nil, map[string]any{
+	err := doJSON(ctx, client, "POST", "https://api.tavily.com/search", nil, map[string]any{
 		"api_key":             apiKey,
 		"query":               query,
 		"search_depth":        "basic",

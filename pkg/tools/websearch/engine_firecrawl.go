@@ -3,10 +3,10 @@ package websearch
 import (
 	"context"
 	"fmt"
-	"net/http"
+	"resty.dev/v3"
 )
 
-func searchFirecrawl(ctx context.Context, client *http.Client, query, apiKey string) ([]Result, error) {
+func searchFirecrawl(ctx context.Context, client *resty.Client, query, apiKey string) ([]Result, error) {
 	if apiKey == "" {
 		return nil, fmt.Errorf("missing FIRECRAWL_API_KEY")
 	}
@@ -18,7 +18,7 @@ func searchFirecrawl(ctx context.Context, client *http.Client, query, apiKey str
 			Description string `json:"description"`
 		} `json:"data"`
 	}
-	err := doJSON(ctx, client, http.MethodPost, "https://api.firecrawl.dev/v1/search",
+	err := doJSON(ctx, client, "POST", "https://api.firecrawl.dev/v1/search",
 		map[string]string{"Authorization": "Bearer " + apiKey},
 		map[string]any{"query": query, "limit": 10},
 		&data)

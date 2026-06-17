@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -13,10 +12,11 @@ import (
 	"time"
 
 	provider "github.com/riipandi/elph/pkg/ai/protocol"
+	"resty.dev/v3"
 )
 
 // PostSSE sends a JSON POST request and invokes onData for each SSE data payload.
-func PostSSE(ctx context.Context, client *http.Client, url string, headers map[string]string, body any, stallTimeout time.Duration, onData func(data []byte) error) error {
+func PostSSE(ctx context.Context, client *resty.Client, url string, headers map[string]string, body any, stallTimeout time.Duration, onData func(data []byte) error) error {
 	if client == nil {
 		client = NewStreamingHTTPClient()
 	}
@@ -28,55 +28,72 @@ func PostSSE(ctx context.Context, client *http.Client, url string, headers map[s
 		return fmt.Errorf("encode request: %w", err)
 	}
 
-	req, err := http.NewRequestWithContext(streamCtx, http.MethodPost, url, bytes.NewReader(payload))
-	if err != nil {
-		return fmt.Errorf("build request: %w", err)
-	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Accept", "text/event-stream")
-	for key, value := range headers {
-		req.Header.Set(key, value)
+	var (
+		callbackErr error
+		httpErr     error
+	)
+
+	sse := resty.NewSSESource()
+	sse.SetURL(url).
+		SetMethod("POST").
+		SetBody(bytes.NewReader(payload)).
+		SetContext(streamCtx).
+		SetTransport(client.Client().Transport).
+		SetHeader("Content-Type", "application/json").
+		SetHeader("Accept", "text/event-stream").
+		OnRequestFailure(func(err error, res *http.Response) {
+			if res != nil {
+				defer res.Body.Close()
+				raw, _ := io.ReadAll(io.LimitReader(res.Body, 1<<20))
+				httpErr = upstreamHTTPError(res.StatusCode, raw)
+			} else if err != nil {
+				httpErr = err
+			}
+		}).
+		OnMessage(func(e any) {
+			if callbackErr != nil {
+				return
+			}
+			bump()
+			event := e.(*resty.SSE)
+			data := strings.TrimSpace(event.Data)
+			if data == "" || data == "[DONE]" {
+				if data == "[DONE]" {
+					sse.Close()
+				}
+				return
+			}
+			if err := onData([]byte(data)); err != nil {
+				callbackErr = err
+				sse.Close()
+			}
+		}, nil).
+		OnError(func(err error) {
+			if callbackErr != nil {
+				return
+			}
+			if errors.Is(err, context.Canceled) && errors.Is(context.Cause(streamCtx), ErrStreamStall) {
+				callbackErr = ErrStreamStall
+			} else {
+				callbackErr = err
+			}
+		})
+
+	for k, v := range headers {
+		sse.SetHeader(k, v)
 	}
 
-	resp, err := client.Do(req)
-	if err != nil {
+	if err := sse.Get(); err != nil {
+		if httpErr != nil {
+			return httpErr
+		}
 		return err
 	}
-	defer resp.Body.Close()
 
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		raw, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
-		return upstreamHTTPError(resp.StatusCode, raw)
+	if httpErr != nil {
+		return httpErr
 	}
-
-	bump()
-	scanner := bufio.NewScanner(resp.Body)
-	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
-	for scanner.Scan() {
-		line := scanner.Text()
-		// Any bytes on the wire (including SSE comments/keepalives) reset the stall timer.
-		bump()
-		if !strings.HasPrefix(line, "data:") {
-			continue
-		}
-		data := strings.TrimSpace(strings.TrimPrefix(line, "data:"))
-		if data == "" || data == "[DONE]" {
-			if data == "[DONE]" {
-				break
-			}
-			continue
-		}
-		if err := onData([]byte(data)); err != nil {
-			return err
-		}
-	}
-	if err := scanner.Err(); err != nil {
-		if errors.Is(err, context.Canceled) && errors.Is(context.Cause(streamCtx), ErrStreamStall) {
-			return ErrStreamStall
-		}
-		return fmt.Errorf("read stream: %w", err)
-	}
-	return nil
+	return callbackErr
 }
 
 func upstreamHTTPError(statusCode int, body []byte) error {

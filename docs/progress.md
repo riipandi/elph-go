@@ -378,7 +378,7 @@ go build -o elph ./cmd/elph
 | **Plan mode tools**                           | EnterPlanMode / ExitPlanMode — catalog only; no runtime handlers yet           |
 | **MCP tools in provider schemas**             | `internal/tools/lookup.go` stub; wire to `ProviderDefinitions`                 |
 | **Disable XML parser when native-only**       | Reduce dual-path complexity once providers are stable                          |
-| **Slash commands**                            | `/diff`, `/settings`, `/changelog` still `notImplemented`; `/commit` not added |
+| **Slash commands**                            | `/diff`, `/settings`, `/changelog` still `notImplemented`                               |
 
 When adding an API-exposed tool, follow the checklist in
 [docs/tools.md § Adding a new API-exposed tool](./tools.md#adding-a-new-api-exposed-tool).
@@ -785,3 +785,52 @@ Key implementation details:
 ### Verification
 
 All 1085 tests pass. Build succeeds.
+
+---
+
+## 23. `/commit` slash command (June 2026)
+
+Added a native `/commit` slash command that generates a commit message from git diff
+and executes `git commit -m` with the model's response.
+
+### New Files
+
+| File                              | Description                                                  |
+|-----------------------------------|--------------------------------------------------------------|
+| `internal/command/commit.go`      | Handler: git diff → Lumen-style prompt → agent turn → commit |
+| `internal/command/commit_test.go` | 21 tests covering handler, wiring, context, truncation, git  |
+
+### Modified Files
+
+| File                          | Changes                                                                                    |
+|-------------------------------|--------------------------------------------------------------------------------------------|
+| `internal/command/command.go` | Added `ClearSystemPrompt`, `SystemPromptOverride`, `CommitAfterTurn`, `pendingAgentPrompt` |
+| `internal/command/builtin.go` | Registered `/commit` with `ArgumentHint: "[--unstaged]"`                                   |
+| `internal/renderer/state.go`  | Added `CommitWorkDir`, `SavedSystemPrompt`, `SuppressThinking` to `AgentState`             |
+| `internal/renderer/input.go`  | Save original prompt, override for commit turn, suppress diff/thinking, start agent turn   |
+| `internal/renderer/agent.go`  | `commitResponse` executes git commit; restore system prompt; suppress thinking             |
+
+### Key Features
+
+| Feature                         | Description                                                                                            |
+|---------------------------------|--------------------------------------------------------------------------------------------------------|
+| Lumen-style prompt              | System prompt matches Lumen's `build_draft_prompt` with type-to-description JSON                       |
+| Clear system prompt for commit  | Project system prompt replaced with minimal commit generator during turn, restored after               |
+| `--unstaged` flag               | Uses `git diff --no-color` instead of `git diff --cached`                                              |
+| Context support                 | Args after `--unstaged` become context: "Use the following context to understand intent: ..."          |
+| Automatic git commit            | After model generates the message, pipes it to `git commit -m`                                         |
+| Concise output                  | Diff, thinking, and AI response suppressed; only user message + commit result shown                    |
+| 72-char max + translation guard | "Commit message must be a maximum of 72 characters. Exclude anything unnecessary such as translation." |
+
+### Commands
+
+| Command                       | Behavior                                            |
+|-------------------------------|-----------------------------------------------------|
+| `/commit`                     | Generate from staged diff, then run `git commit -m` |
+| `/commit --unstaged`          | Generate from working tree diff                     |
+| `/commit Fix login bug`       | Include context for better commit messages          |
+| `/commit --unstaged Refactor` | Unstaged diff with context                          |
+
+### Verification
+
+All 1170+ tests pass. Build succeeds.

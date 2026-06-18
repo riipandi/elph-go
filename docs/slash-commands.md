@@ -8,20 +8,21 @@ See [prompt-templates.md](./prompt-templates.md) for template format and argumen
 
 ## Built-in commands
 
-| Command                     | Aliases       | Status              | Description                                                                             |
-|-----------------------------|---------------|---------------------|-----------------------------------------------------------------------------------------|
-| `/help`                     | —             | **Implemented**     | List all slash commands                                                                 |
-| `/model`                    | —             | **Implemented**     | Open model selector (or filter by args)                                                 |
-| `/goal`                     | `/goals`      | **Implemented**     | Manage session goals: status, pause, resume, cancel, replace, next                      |
-| `/exit`                     | `/quit`, `/q` | **Implemented**     | Quit the application                                                                    |
-| `/compact`                  | `/c`          | **Implemented**     | Compact conversation history; optional percentage arg (e.g. `/compact 50`)              |
-| `/diagnostic:list-tools`    | —             | **Implemented**     | List agent and diagnostic tools in a collapsible detail box (expanded by default)       |
-| `/diagnostic:system-prompt` | —             | **Implemented**     | Show assembled system prompt in a collapsible detail box (collapsed by default)         |
-| `/diagnostic:open-log`      | —             | **Implemented**     | Tail session or requests log (`system`, `thinking`, `ai`, `requests`, `thinking_delta`) |
-| `/changelog`                | —             | **Not implemented** | Shows placeholder message                                                               |
-| `/settings`                 | `/config`     | **Not implemented** | Shows placeholder message                                                               |
-| `/diff`                     | —             | **Not implemented** | Shows placeholder message                                                               |
-| `/diagnostic:debug`         | —             | **Not implemented** | Shows placeholder message                                                               |
+| Command                     | Aliases       | Status              | Description                                                                                    |
+|-----------------------------|---------------|---------------------|------------------------------------------------------------------------------------------------|
+| `/help`                     | —             | **Implemented**     | List all slash commands                                                                        |
+| `/model`                    | —             | **Implemented**     | Open model selector (or filter by args)                                                        |
+| `/goal`                     | `/goals`      | **Implemented**     | Manage session goals: status, pause, resume, cancel, replace, next                             |
+| `/exit`                     | `/quit`, `/q` | **Implemented**     | Quit the application                                                                           |
+| `/commit`                   | —             | **Implemented**     | Generate a commit message from staged (default) or `--unstaged` changes, then run `git commit` |
+| `/compact`                  | `/c`          | **Implemented**     | Compact conversation history; optional percentage arg (e.g. `/compact 50`)                     |
+| `/diagnostic:list-tools`    | —             | **Implemented**     | List agent and diagnostic tools in a collapsible detail box (expanded by default)              |
+| `/diagnostic:system-prompt` | —             | **Implemented**     | Show assembled system prompt in a collapsible detail box (collapsed by default)                |
+| `/diagnostic:open-log`      | —             | **Implemented**     | Tail session or requests log (`system`, `thinking`, `ai`, `requests`, `thinking_delta`)        |
+| `/changelog`                | —             | **Not implemented** | Shows placeholder message                                                                      |
+| `/settings`                 | `/config`     | **Not implemented** | Shows placeholder message                                                                      |
+| `/diff`                     | —             | **Not implemented** | Shows placeholder message                                                                      |
+| `/diagnostic:debug`         | —             | **Not implemented** | Shows placeholder message                                                                      |
 
 ### `/goal` subcommands
 

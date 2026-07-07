@@ -1,8 +1,8 @@
-# Elph - minimalist AI agent companion
+# [ARCHIVED] Elph - minimalist AI agent companion
 
-> [!WARNING]
-> This project is under active development, so you may encounter bugs.<br/>
-> Please review the release notes thoroughly before updating, as breaking changes can occur!
+> [!IMPORTANT]
+> **This repository is archived.** Active development has moved to [elph](https://github.com/riipandi/elph).
+> Please use the new repository for issues, contributions, and latest releases.
 
 ## Quick Start
 
